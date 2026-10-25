@@ -39,27 +39,7 @@ export default function AdvertisementsPage() {
   const [planDuration, setPlanDuration] = useState("1"); // 1 month, 3 months, 12 months
   const [coverUrl, setCoverUrl] = useState("");
 
-  const pricingPlans = [
-    {
-      months: 1,
-      price: 500,
-      label: "૧ મહિનો (ટ્રાયલ)",
-      features: ["બિઝનેસ ડિરેક્ટરી લિસ્ટિંગ", "મોબાઇલ & ડેસ્કટોપ સપોર્ટ"],
-    },
-    {
-      months: 3,
-      price: 1200,
-      label: "૩ મહિના (લોકપ્રિય)",
-      features: ["હોમપેજ પર ફીચર્ડ બેનર", "બિઝનેસ ડિરેક્ટરીમાં ટોચનું સ્થાન", "સમિતિ સોશિયલ મીડિયા પર શેર"],
-      isPopular: true,
-    },
-    {
-      months: 12,
-      price: 3500,
-      label: "૧ વર્ષ (વાર્ષિક સ્પોન્સર)",
-      features: ["વાર્ષિક સ્નેહમિલનમાં પ્રચાર", "સમગ્ર વર્ષ દરમિયાન ટોચનું સ્થાન", "વિશેષ જાહેરાત પરિપત્ર"],
-    },
-  ];
+
 
   const paidBusinesses = businesses.filter((b) => b.is_featured || b.is_paid);
 
@@ -124,7 +104,7 @@ export default function AdvertisementsPage() {
               <Megaphone className="w-6 h-6" />
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900">
-              સમાજ જાહેરાતો & સ્પોન્સરશિપ (Advertisements)
+              સમાજ જાહેરાતો (Advertisements)
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-charcoal-600 mt-1">
@@ -145,73 +125,6 @@ export default function AdvertisementsPage() {
           <Plus className="w-4 h-4" />
           <span>નવી જાહેરાત આપો</span>
         </button>
-      </div>
-
-      {/* Pricing / Sponsorship Plans Grid */}
-      <div>
-        <div className="text-center max-w-xl mx-auto mb-8">
-          <span className="text-xs font-bold text-saffron-700 uppercase tracking-wider bg-saffron-100 px-3 py-1 rounded-full">
-            સ્પોન્સરશિપ યોજનાઓ
-          </span>
-          <h2 className="text-xl sm:text-2xl font-bold text-charcoal-900 mt-2">
-            આપના વ્યવસાયને સમાજના દરેક ઘર સુધી પહોંચાડો
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {pricingPlans.map((plan) => (
-            <div
-              key={plan.months}
-              className={`rounded-3xl p-6 border transition-all flex flex-col justify-between ${
-                plan.isPopular
-                  ? "bg-white border-saffron-500 shadow-hover ring-2 ring-saffron-400/40"
-                  : "bg-white border-ivory-300 shadow-card"
-              }`}
-            >
-              <div>
-                {plan.isPopular && (
-                  <span className="inline-block text-[10px] font-bold bg-saffron-600 text-white px-2.5 py-0.5 rounded-full mb-3">
-                    સૌથી વધુ પસંદગી
-                  </span>
-                )}
-                <h3 className="font-bold text-base text-charcoal-900">{plan.label}</h3>
-                <div className="mt-3 mb-4">
-                  <span className="text-3xl font-black text-charcoal-900">₹{plan.price}</span>
-                  <span className="text-xs text-charcoal-500 font-medium"> / અવધિ</span>
-                </div>
-
-                <ul className="space-y-2 text-xs text-charcoal-600 border-t border-ivory-200 pt-4">
-                  {plan.features.map((f, idx) => (
-                    <li key={idx} className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-forest-600 flex-shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="pt-6">
-                <button
-                  onClick={() => {
-                    if (!currentUser) {
-                      setShowLoginPrompt(true);
-                      return;
-                    }
-                    setPlanDuration(String(plan.months));
-                    setShowSubmitModal(true);
-                  }}
-                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors shadow-xs ${
-                    plan.isPopular
-                      ? "bg-saffron-600 hover:bg-saffron-700 text-white"
-                      : "bg-ivory-100 hover:bg-saffron-50 text-charcoal-800 hover:text-saffron-800 border border-ivory-300"
-                  }`}
-                >
-                  આ પ્લાન પસંદ કરો
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Active Featured Advertisements Showcase */}
@@ -337,15 +250,15 @@ export default function AdvertisementsPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-charcoal-700 mb-1">સ્પોન્સરશિપ પ્લાન</label>
+                <label className="block font-bold text-charcoal-700 mb-1">જાહેરાત સમયગાળો (અવધિ)</label>
                 <select
                   value={planDuration}
                   onChange={(e) => setPlanDuration(e.target.value)}
                   className="w-full px-3 py-2 border border-ivory-300 rounded-xl bg-white focus:outline-none"
                 >
-                  <option value="1">૧ મહિનો — ₹૫૦૦</option>
-                  <option value="3">૩ મહિના — ₹૧,૨૦૦ (લોકપ્રિય)</option>
-                  <option value="12">૧ વર્ષ — ₹૩,૫૦૦ (વાર્ષિક સ્પોન્સર)</option>
+                  <option value="1">૧ મહિનો</option>
+                  <option value="3">૩ મહિના</option>
+                  <option value="12">૧ વર્ષ</option>
                 </select>
               </div>
 
@@ -407,7 +320,7 @@ export default function AdvertisementsPage() {
                 જાહેરાત આપવા માટે લૉગિન કરો
               </h3>
               <p className="text-xs text-charcoal-600 mt-2 leading-relaxed">
-                અડાઆઠમ દરજી સમાજના પોર્ટલ પર વ્યવસાય અથવા સ્પોન્સરશિપ જાહેરાત આપવા માટે સભ્ય લૉગિન આવશ્યક છે. આપના ખાતામાં લૉગિન કરો અથવા નવા સભ્ય તરીકે જોડાઓ.
+                અડાઆઠમ દરજી સમાજના પોર્ટલ પર વ્યવસાયની જાહેરાત આપવા માટે સભ્ય લૉગિન આવશ્યક છે. આપના ખાતામાં લૉગિન કરો અથવા નવા સભ્ય તરીકે જોડાઓ.
               </p>
             </div>
 
