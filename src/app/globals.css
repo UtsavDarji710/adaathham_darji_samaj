@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #faf7f2;
+  --foreground: #161b22;
+  --primary-saffron: #c2410c;
+  --primary-forest: #166534;
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: var(--font-gujarati), "Shruti", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f3ece0;
+}
+::-webkit-scrollbar-thumb {
+  background: #d5c5ad;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c2410c;
+}
+
+/* React Flow custom styling overrides */
+.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__controls-button {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e7decb !important;
+  color: #384454 !important;
+}
+.react-flow__controls-button:hover {
+  background: #fff7ed !important;
+  color: #c2410c !important;
+}
+
+/* Glassmorphism accents */
+.glass-header {
+  background: rgba(253, 252, 249, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.subtle-pattern {
+  background-color: #faf7f2;
+  background-image: radial-gradient(#e7decb 0.75px, transparent 0.75px), radial-gradient(#e7decb 0.75px, #faf7f2 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}

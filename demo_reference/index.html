@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10284b">
+<title>શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</title>
+<style>
+:root{--navy:#10284b;--navy2:#183b68;--gold:#d6ad55;--gold2:#f3dfaa;--bg:#f4f6fa;--ink:#18263a;--muted:#6d7889;--white:#fff;--line:#e3e8f0;--green:#247a58}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Gujarati","Shruti",sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.topbar{background:linear-gradient(115deg,var(--navy),var(--navy2));color:white;padding:18px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 5px 18px #10284b22}
+.logo{width:54px;height:54px;border:2px solid var(--gold);border-radius:16px;display:grid;place-items:center;color:var(--gold2);font-size:25px;font-weight:800;background:#ffffff0d;flex-shrink:0}
+.brand h1{font-size:clamp(17px,2.5vw,24px);margin:0 0 4px;line-height:1.35}.brand p{margin:0;color:#dce5f2;font-size:13px}
+.top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:650}.btn-gold{background:var(--gold);color:#18263a}.btn-light{background:#ffffff15;color:#fff;border:1px solid #ffffff40}.btn-primary{background:var(--navy);color:white}.btn-outline{background:white;border:1px solid var(--line);color:var(--navy)}
+.layout{max-width:1250px;margin:22px auto;padding:0 16px;display:grid;grid-template-columns:240px 1fr;gap:20px}
+.sidebar,.panel,.card{background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 5px 18px #132b4d08}
+.sidebar{padding:12px;height:max-content;position:sticky;top:12px}.nav-title{padding:10px 12px 8px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.4px}.nav-btn{width:100%;text-align:left;border:0;background:transparent;padding:12px;border-radius:10px;color:#36465d;margin:2px 0;display:flex;gap:10px;align-items:center}.nav-btn:hover,.nav-btn.active{background:#edf2fa;color:var(--navy);font-weight:750}.nav-btn .ico{width:22px;text-align:center}.main{min-width:0}.welcome{padding:22px;background:linear-gradient(115deg,#fff,#fff9ea);border:1px solid #eadcb8;border-radius:16px;margin-bottom:18px}.welcome h2{margin:0 0 8px;font-size:24px;color:var(--navy)}.welcome p{margin:0;color:#59687b;line-height:1.7}.tag{display:inline-block;background:#f7ebc9;color:#70521a;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:750;margin-bottom:10px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.stat{padding:16px}.stat .sico{font-size:22px}.stat .num{font-size:25px;font-weight:850;color:var(--navy);margin:6px 0 2px}.stat .label{font-size:13px;color:var(--muted)}
+.content-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.panel{padding:18px;margin-bottom:16px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.panel h3{margin:0;color:var(--navy);font-size:18px}.muted{color:var(--muted);font-size:13px}.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.quick{border:1px solid var(--line);background:#fff;border-radius:12px;padding:14px 10px;text-align:center;color:var(--navy)}.quick:hover{border-color:var(--gold);background:#fffdf7}.quick .big{font-size:24px;display:block;margin-bottom:6px}.quick span:last-child{font-size:13px;font-weight:700}
+.list{display:flex;flex-direction:column;gap:9px}.list-item{padding:12px;border:1px solid var(--line);border-radius:11px;display:flex;align-items:center;gap:10px}.list-item .dot{width:38px;height:38px;border-radius:12px;background:#eef2f8;display:grid;place-items:center;font-size:18px;flex-shrink:0}.list-item strong{display:block;font-size:14px}.list-item small{color:var(--muted)}
+.section{display:none}.section.active{display:block}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px}.section-title h2{margin:0;color:var(--navy);font-size:24px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:13px;font-weight:750;color:#42516a}.field input,.field select,.field textarea{width:100%;border:1px solid #d7deea;border-radius:9px;padding:11px;background:#fff;color:var(--ink)}.field textarea{min-height:80px;resize:vertical}.form-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:520px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px}th{background:#f6f8fb;color:#46546b}td .pill{background:#e6f5ed;color:#246c4d;padding:4px 8px;border-radius:99px;font-size:11px;font-weight:750}
+.notice{background:#fff7df;border:1px solid #f0dfad;border-radius:11px;padding:12px;color:#69531d;font-size:13px;line-height:1.6}.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed #ccd5e2;border-radius:12px}.footer{text-align:center;color:#8590a0;font-size:12px;padding:12px 0 28px}
+.modal-backdrop{position:fixed;inset:0;background:#0d1c32a8;display:none;align-items:center;justify-content:center;padding:18px;z-index:5}.modal-backdrop.open{display:flex}.modal{background:white;border-radius:16px;padding:22px;width:min(480px,100%);box-shadow:0 20px 60px #0003}.modal h2{margin-top:0;color:var(--navy)}.modal p{color:var(--muted);font-size:14px;line-height:1.6}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow-x:auto;gap:4px;padding:8px}.nav-title{display:none}.nav-btn{white-space:nowrap;width:auto;flex-shrink:0;padding:10px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.content-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.topbar{padding:14px}.logo{width:44px;height:44px;border-radius:12px}.top-actions{display:none}.layout{margin:14px auto;padding:0 10px}.welcome{padding:17px}.welcome h2{font-size:20px}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid{grid-template-columns:1fr}.panel{padding:14px}.section-title h2{font-size:21px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo" id="logoMark">અ</div>
+  <div class="brand"><h1 id="orgName">શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</h1><p>સમાજનું પોતાનું ડિજિટલ પ્લેટફોર્મ</p></div>
+  <div class="top-actions"><button class="btn btn-light" onclick="openLogoSettings()">લોગો બદલો</button><button class="btn btn-gold" onclick="openAdminInfo()">એડમિન પેનલ</button></div>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="મુખ્ય મેનુ">
+    <div class="nav-title">મુખ્ય મેનુ</div>
+    <button class="nav-btn active" data-page="home"><span class="ico">🏠</span> હોમ</button>
+    <button class="nav-btn" data-page="members"><span class="ico">👥</span> સભ્યો</button>
+    <button class="nav-btn" data-page="business"><span class="ico">💼</span> બિઝનેસ</button>
+    <button class="nav-btn" data-page="jobs"><span class="ico">🧑‍💼</span> નોકરી અને રોજગાર</button>
+    <button class="nav-btn" data-page="education"><span class="ico">🎓</span> શિક્ષણ</button>
+    <button class="nav-btn" data-page="events"><span class="ico">📅</span> કાર્યક્રમો</button>
+    <button class="nav-btn" data-page="donors"><span class="ico">💝</span> દાતા યાદી</button>
+    <button class="nav-btn" data-page="news"><span class="ico">📢</span> સમાચાર</button>
+    <button class="nav-btn" data-page="admin"><span class="ico">🔐</span> એડમિન વિભાગ</button>
+  </aside>
+  <main class="main">
+    <section id="page-home" class="section active">
+      <div class="welcome"><span class="tag">સમાજને જોડતું એક મંચ</span><h2>જય શ્રી ચામુંડા માતાજી 🙏</h2><p>સમાજના સભ્યો, વ્યવસાય, રોજગાર અને કાર્યક્રમોની માહિતી એક જ જગ્યાએ મેળવો. આ પ્રથમ ડેમો છે—અહીં ઉમેરેલો ડેટા આ બ્રાઉઝરમાં જ સાચવાય છે.</p></div>
+      <div class="stats">
+        <div class="card stat"><div class="sico">👥</div><div class="num" id="memberCount">0</div><div class="label">નોંધાયેલા સભ્યો</div></div>
+        <div class="card stat"><div class="sico">💼</div><div class="num" id="businessCount">0</div><div class="label">વ્યવસાય નોંધણીઓ</div></div>
+        <div class="card stat"><div class="sico">📅</div><div class="num" id="eventCount">0</div><div class="label">આગામી કાર્યક્રમો</div></div>
+        <div class="card stat"><div class="sico">💝</div><div class="num" id="donorCount">0</div><div class="label">દાતા નોંધણીઓ</div></div>
+      </div>
+      <div class="content-grid">
+        <div class="panel"><div class="panel-head"><h3>ઝડપી સેવાઓ</h3><span class="muted">એક ક્લિકમાં</span></div><div class="quick-grid">
+          <button class="quick" onclick="showPage('members')"><span class="big">👥</span><span>સભ્ય નોંધણી</span></button>
+          <button class="quick" onclick="showPage('business')"><span class="big">💼</span><span>બિઝનેસ ઉમેરો</span></button>
+          <button class="quick" onclick="showPage('jobs')"><span class="big">🧑‍💼</span><span>નોકરી માહિતી</span></button>
+          <button class="quick" onclick="showPage('education')"><span class="big">🎓</span><span>શિક્ષણ</span></button>
+          <button class="quick" onclick="showPage('events')"><span class="big">📅</span><span>કાર્યક્રમો</span></button>
+          <button class="quick" onclick="showPage('news')"><span class="big">📢</span><span>સમાચાર</span></button>
+        </div></div>
+        <div class="panel"><div class="panel-head"><h3>સમાજની સૂચનાઓ</h3><button class="btn btn-outline" onclick="showPage('news')">બધી જુઓ</button></div><div id="homeNews" class="list"><div class="empty">હજુ કોઈ સૂચના ઉમેરાઈ નથી.</div></div></div>
+      </div>
+    </section>
+
+    <section id="page-members" class="section">
+      <div class="section-title"><h2>👥 સભ્ય નોંધણી</h2><span class="muted">સભ્યોની વિગતો</span></div>
+      <div class="panel"><h3>નવા સભ્યની માહિતી ઉમેરો</h3><p class="muted">ડેમોમાં ખાનગી માહિતી જાહેર ન કરો.</p>
+        <form id="memberForm"><div class="form-grid">
+          <div class="field"><label>પૂરું નામ *</label><input name="name" required placeholder="સભ્યનું નામ"></div>
+          <div class="field"><label>ગામ / શહેર *</label><input name="city" required placeholder="મોડાસા"></div>
+          <div class="field"><label>વ્યવસાય</label><input name="profession" placeholder="જેમ કે દુકાન, નોકરી"></div>
+          <div class="field"><label>મોબાઇલ નંબર (ખાનગી)</label><input name="phone" inputmode="tel" placeholder="મોબાઇલ નંબર"></div>
+        </div><div class="form-actions"><button class="btn btn-primary">સભ્ય ઉમેરો</button><button class="btn btn-outline" type="reset">ફોર્મ સાફ કરો</button></div></form>
+      </div>
+      <div class="panel"><div class="panel-head"><h3>સભ્યોની ડિરેક્ટરી</h3><input id="memberSearch" placeholder="નામ / ગામ શોધો" style="max-width:220px;padding:9px;border:1px solid var(--line);border-radius:9px"></div><div id="membersList"></div></div>
+    </section>
+
+    <section id="page-business" class="section">
+      <div class="section-title"><h2>💼 બિઝનેસ ડિરેક્ટરી</h2></div>
+      <div class="panel"><h3>વ્યવસાય ઉમેરો</h3><form id="businessForm"><div class="form-grid">
+        <div class="field"><label>વ્યવસાય / દુકાનનું નામ *</label><input name="name" required></div><div class="field"><label>માલિકનું નામ</label><input name="owner"></div>
+        <div class="field"><label>વ્યવસાયનો પ્રકાર</label><input name="type" placeholder="ટેલરિંગ, વેપાર વગેરે"></div><div class="field"><label>ગામ / શહેર</label><input name="city"></div>
+      </div><div class="form-actions"><button class="btn btn-primary">વ્યવસાય ઉમેરો</button></div></form></div>
+      <div class="panel"><h3>નોંધાયેલા વ્યવસાયો</h3><div id="businessList"></div></div>
+    </section>
+
+    <section id="page-jobs" class="section">
+      <div class="section-title"><h2>🧑‍💼 નોકરી અને રોજગાર</h2></div>
+      <div class="panel"><h3>નોકરીની માહિતી ઉમેરો</h3><form id="jobForm"><div class="form-grid">
+        <div class="field"><label>નોકરી / તકનું નામ *</label><input name="title" required></div><div class="field"><label>કંપની / સંસ્થા</label><input name="company"></div>
+        <div class="field"><label>સ્થળ</label><input name="location"></div><div class="field"><label>સંપર્ક (વૈકલ્પિક)</label><input name="contact"></div>
+      </div><div class="form-actions"><button class="btn btn-primary">તક ઉમેરો</button></div></form></div>
+      <div class="panel"><h3>રોજગારની તકો</h3><div id="jobsList"></div></div>
+    </section>
+
+    <section id="page-education" class="section">
+      <div class="section-title"><h2>🎓 શિક્ષણ</h2></div>
+      <div class="panel"><h3>શૈક્ષણિક માહિતી ઉમેરો</h3><form id="educationForm"><div class="form-grid">
+        <div class="field"><label>વિદ્યાર્થીનું નામ *</label><input name="name" required></div><div class="field"><label>અભ્યાસ / લાયકાત</label><input name="course"></div>
+        <div class="field"><label>શાળા / કોલેજ</label><input name="institution"></div><div class="field"><label>વર્ષ</label><input name="year"></div>
+      </div><div class="form-actions"><button class="btn btn-primary">માહિતી ઉમેરો</button></div></form></div>
+      <div class="panel"><h3>શૈક્ષણિક નોંધો</h3><div id="educationList"></div></div>
+    </section>
+
+    <section id="page-events" class="section">
+      <div class="section-title"><h2>📅 સમાજના કાર્યક્રમો</h2></div>
+      <div class="panel"><h3>કાર્યક્રમ ઉમેરો</h3><form id="eventForm"><div class="form-grid">
+        <div class="field"><label>કાર્યક્રમનું નામ *</label><input name="title" required></div><div class="field"><label>તારીખ</label><input name="date" type="date"></div>
+        <div class="field"><label>સ્થળ</label><input name="place"></div><div class="field"><label>સમય</label><input name="time" placeholder="સાંજે 6:00"></div>
+      </div><div class="form-actions"><button class="btn btn-primary">કાર્યક્રમ ઉમેરો</button></div></form></div>
+      <div class="panel"><h3>કાર્યક્રમોની યાદી</h3><div id="eventsList"></div></div>
+    </section>
+
+    <section id="page-donors" class="section">
+      <div class="section-title"><h2>💝 દાતાઓની યાદી</h2></div>
+      <div class="notice">આ ડેમોમાં વાસ્તવિક નાણાકીય વ્યવહારો ન કરો અને સાચી બેંક/વ્યક્તિગત વિગતો ન ઉમેરો. વાસ્તવિક ઉપયોગ પહેલાં સુરક્ષિત ડેટાબેઝ અને એડમિન મંજૂરી જરૂરી છે.</div>
+      <div class="panel"><h3>દાનની નોંધ ઉમેરો</h3><form id="donorForm"><div class="form-grid">
+        <div class="field"><label>દાતાનું નામ *</label><input name="name" required></div><div class="field"><label>દાનની રકમ (₹)</label><input name="amount" type="number" min="0"></div>
+        <div class="field"><label>દાનનો હેતુ</label><input name="purpose" placeholder="સમાજ સેવા / કાર્યક્રમ"></div><div class="field"><label>તારીખ</label><input name="date" type="date"></div>
+      </div><div class="form-actions"><button class="btn btn-primary">દાનની નોંધ ઉમેરો</button></div></form></div>
+      <div class="panel"><h3>દાનની નોંધો</h3><div id="donorsList"></div></div>
+    </section>
+
+    <section id="page-news" class="section">
+      <div class="section-title"><h2>📢 સમાચાર અને સૂચનાઓ</h2></div>
+      <div class="panel"><h3>નવી સૂચના ઉમેરો</h3><form id="newsForm"><div class="form-grid">
+        <div class="field"><label>શીર્ષક *</label><input name="title" required></div><div class="field"><label>તારીખ</label><input name="date" type="date"></div>
+        <div class="field" style="grid-column:1/-1"><label>સંદેશ</label><textarea name="body" placeholder="સમાજની સૂચના અહીં લખો"></textarea></div>
+      </div><div class="form-actions"><button class="btn btn-primary">સૂચના પ્રકાશિત કરો</button></div></form></div>
+      <div class="panel"><h3>બધી સૂચનાઓ</h3><div id="newsList"></div></div>
+    </section>
+
+    <section id="page-admin" class="section">
+      <div class="section-title"><h2>🔐 એડમિન વિભાગ</h2></div>
+      <div class="notice">આ માત્ર ડિઝાઇન/કાર્યપ્રવાહનો ડેમો છે. અહીં હજી વાસ્તવિક સુરક્ષિત લોગિન નથી. ઇન્ટરનેટ પર પ્રકાશિત કરતાં પહેલાં પ્રમુખ, મંત્રી અને ખજાનચી માટે સર્વર આધારિત સુરક્ષિત લોગિન અને અલગ અધિકારો ગોઠવવા પડશે.</div>
+      <div class="content-grid" style="margin-top:16px">
+        <div class="panel"><h3>એડમિનની ભૂમિકાઓ</h3><div class="list">
+          <div class="list-item"><div class="dot">👑</div><div><strong>પ્રમુખ</strong><small>મુખ્ય સંચાલન અને મંજૂરી</small></div></div>
+          <div class="list-item"><div class="dot">📝</div><div><strong>મંત્રી</strong><small>સભ્યો, સમાચાર અને કાર્યક્રમો</small></div></div>
+          <div class="list-item"><div class="dot">💰</div><div><strong>ખજાનચી</strong><small>દાતા યાદી અને હિસાબની નોંધ</small></div></div>
+        </div></div>
+        <div class="panel"><h3>સેટિંગ્સ</h3><div class="field"><label>સમિતિનું નામ</label><input id="nameSetting" value="શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા"></div><div class="field" style="margin-top:12px"><label>લોગોમાં દેખાડવાનું અક્ષર / ચિહ્ન</label><input id="logoSetting" value="અ" maxlength="4"></div><div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">સેટિંગ્સ સાચવો</button><button class="btn btn-outline" onclick="exportData()">ડેટા બેકઅપ ડાઉનલોડ કરો</button><button class="btn btn-outline" onclick="clearDemoData()">ડેમો ડેટા સાફ કરો</button></div></div>
+      </div>
+    </section>
+    <div class="footer">પ્રથમ ડેમો વર્ઝન • શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</div>
+  </main>
+</div>
+<div class="modal-backdrop" id="infoModal" onclick="if(event.target===this)closeModal()"><div class="modal"><h2 id="modalTitle">માહિતી</h2><p id="modalText"></p><button class="btn btn-primary" onclick="closeModal()">બરાબર</button></div></div>
+<script>
+const KEYS={members:'ad8_members',business:'ad8_business',jobs:'ad8_jobs',education:'ad8_education',events:'ad8_events',donors:'ad8_donors',news:'ad8_news'};
+const getData=k=>JSON.parse(localStorage.getItem(KEYS[k])||'[]');
+const saveData=(k,v)=>localStorage.setItem(KEYS[k],JSON.stringify(v));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function showPage(page){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});renderAll();}
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+function empty(msg='હજુ કોઈ માહિતી ઉમેરાઈ નથી.'){return `<div class="empty">${msg}</div>`}
+function renderCards(id,items,fn,none){document.getElementById(id).innerHTML=items.length?`<div class="list">${items.map(fn).join('')}</div>`:empty(none)}
+function renderTable(id,items,cols,none){document.getElementById(id).innerHTML=items.length?`<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${items.map(x=>`<tr>${cols.map(c=>`<td>${c[1](x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:empty(none)}
+function renderAll(){
+ const m=getData('members'),b=getData('business'),e=getData('events'),d=getData('donors'),n=getData('news');
+ document.getElementById('memberCount').textContent=m.length;document.getElementById('businessCount').textContent=b.length;document.getElementById('eventCount').textContent=e.length;document.getElementById('donorCount').textContent=d.length;
+ const q=(document.getElementById('memberSearch')?.value||'').toLowerCase();
+ const filtered=m.filter(x=>(x.name+' '+x.city+' '+x.profession).toLowerCase().includes(q));
+ renderTable('membersList',filtered,[['નામ',x=>esc(x.name)],['ગામ / શહેર',x=>esc(x.city)],['વ્યવસાય',x=>esc(x.profession||'—')],['મોબાઇલ',x=>x.phone?'<span class="pill">ખાનગી</span>':'—']], 'હજુ કોઈ સભ્ય ઉમેરાયો નથી.');
+ renderCards('businessList',b,x=>`<div class="list-item"><div class="dot">💼</div><div><strong>${esc(x.name)}</strong><small>${esc(x.type||'વ્યવસાય')} • ${esc(x.city||'સ્થળ આપ્યું નથી')} ${x.owner?' • '+esc(x.owner):''}</small></div></div>`,'હજુ કોઈ વ્યવસાય ઉમેરાયો નથી.');
+ renderCards('jobsList',getData('jobs'),x=>`<div class="list-item"><div class="dot">🧑‍💼</div><div><strong>${esc(x.title)}</strong><small>${esc(x.company||'')} ${x.location?' • '+esc(x.location):''} ${x.contact?' • સંપર્ક: '+esc(x.contact):''}</small></div></div>`,'હજુ કોઈ નોકરીની તક ઉમેરાઈ નથી.');
+ renderCards('educationList',getData('education'),x=>`<div class="list-item"><div class="dot">🎓</div><div><strong>${esc(x.name)}</strong><small>${esc(x.course||'')} ${x.institution?' • '+esc(x.institution):''} ${x.year?' • '+esc(x.year):''}</small></div></div>`,'હજુ કોઈ શૈક્ષણિક નોંધ નથી.');
+ renderCards('eventsList',e,x=>`<div class="list-item"><div class="dot">📅</div><div><strong>${esc(x.title)}</strong><small>${esc(x.date||'તારીખ નક્કી નથી')} ${x.time?' • '+esc(x.time):''} ${x.place?' • '+esc(x.place):''}</small></div></div>`,'હજુ કોઈ કાર્યક્રમ ઉમેરાયો નથી.');
+ renderTable('donorsList',d,[['દાતાનું નામ',x=>esc(x.name)],['રકમ',x=>x.amount?'₹'+esc(x.amount):'—'],['હેતુ',x=>esc(x.purpose||'—')],['તારીખ',x=>esc(x.date||'—')]],'હજુ કોઈ દાનની નોંધ નથી.');
+ renderCards('newsList',n,x=>`<div class="list-item"><div class="dot">📢</div><div><strong>${esc(x.title)}</strong><small>${esc(x.date||'')}<br>${esc(x.body||'')}</small></div></div>`,'હજુ કોઈ સૂચના ઉમેરાઈ નથી.');
+ renderCards('homeNews',n.slice().reverse().slice(0,3),x=>`<div class="list-item"><div class="dot">📢</div><div><strong>${esc(x.title)}</strong><small>${esc(x.date||'')} ${esc(x.body||'')}</small></div></div>`,'હજુ કોઈ સૂચના ઉમેરાઈ નથી.');
+}
+function bindForm(id,key,mapper,msg){document.getElementById(id).addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);const obj=mapper(Object.fromEntries(f.entries()));const data=getData(key);data.push({...obj,createdAt:new Date().toISOString()});saveData(key,data);ev.target.reset();renderAll();showModal('માહિતી સાચવાઈ',msg);});}
+bindForm('memberForm','members',x=>x,'સભ્યની નોંધ આ બ્રાઉઝરમાં સાચવાઈ છે.');
+bindForm('businessForm','business',x=>x,'વ્યવસાયની નોંધ આ બ્રાઉઝરમાં સાચવાઈ છે.');
+bindForm('jobForm','jobs',x=>x,'નોકરીની નોંધ આ બ્રાઉઝરમાં સાચવાઈ છે.');
+bindForm('educationForm','education',x=>x,'શૈક્ષણિક નોંધ આ બ્રાઉઝરમાં સાચવાઈ છે.');
+bindForm('eventForm','events',x=>x,'કાર્યક્રમની નોંધ આ બ્રાઉઝરમાં સાચવાઈ છે.');
+bindForm('donorForm','donors',x=>x,'દાનની નોંધ આ બ્રાઉઝરમાં સાચવાઈ છે.');
+bindForm('newsForm','news',x=>x,'સૂચના આ બ્રાઉઝરમાં સાચવાઈ છે.');
+document.getElementById('memberSearch').addEventListener('input',renderAll);
+function showModal(title,txt){document.getElementById('modalTitle').textContent=title;document.getElementById('modalText').textContent=txt;document.getElementById('infoModal').classList.add('open')}
+function closeModal(){document.getElementById('infoModal').classList.remove('open')}
+function openLogoSettings(){showPage('admin');document.getElementById('logoSetting').focus()}
+function openAdminInfo(){showPage('admin')}
+function saveSettings(){const name=document.getElementById('nameSetting').value.trim()||'શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા';const logo=document.getElementById('logoSetting').value.trim()||'અ';localStorage.setItem('ad8_orgname',name);localStorage.setItem('ad8_logo',logo);applySettings();showModal('સેટિંગ્સ સાચવાઈ','સમિતિનું નામ અને લોગો આ બ્રાઉઝરમાં અપડેટ થયા છે.')}
+function applySettings(){const n=localStorage.getItem('ad8_orgname');const l=localStorage.getItem('ad8_logo');if(n){document.getElementById('orgName').textContent=n;document.getElementById('nameSetting').value=n}if(l){document.getElementById('logoMark').textContent=l;document.getElementById('logoSetting').value=l}}
+function exportData(){const all={exportedAt:new Date().toISOString(),organization:localStorage.getItem('ad8_orgname')||'શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા'};Object.keys(KEYS).forEach(k=>all[k]=getData(k));const blob=new Blob([JSON.stringify(all,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='adaathham-samaj-backup.json';a.click();URL.revokeObjectURL(a.href)}
+function clearDemoData(){if(!confirm('આ બ્રાઉઝરમાં સાચવેલી ડેમો માહિતી કાઢી નાખવી છે?'))return;Object.values(KEYS).forEach(k=>localStorage.removeItem(k));renderAll();showModal('ડેમો માહિતી સાફ થઈ','આ બ્રાઉઝરમાં રહેલી નોંધો કાઢી નાખવામાં આવી છે.')}
+applySettings();renderAll();
+</script>
+</body>
+</html>
