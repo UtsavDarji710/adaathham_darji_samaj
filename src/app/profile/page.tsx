@@ -20,6 +20,7 @@ import {
   UserPlus,
   Sparkles,
   ArrowRight,
+  Building,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
@@ -27,7 +28,7 @@ import { PrivacyVisibility, ChildEducation } from "@/types";
 
 export default function ProfilePage() {
   const { currentUser, updateCurrentUserProfile, updatePrivacySettings, loginAs } = useAuth();
-  const { relationships } = useData();
+  const { relationships, businesses, addBusiness, updateBusiness } = useData();
 
   const [activeTab, setActiveTab] = useState<"general" | "privacy" | "employment" | "education">("general");
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -36,19 +37,35 @@ export default function ProfilePage() {
   const [name, setName] = useState(currentUser?.name || "");
   const [phone, setPhone] = useState(currentUser?.phone || "");
   const [address, setAddress] = useState(currentUser?.address || "");
-  const [city, setCity] = useState(currentUser?.city || "મોડાસા");
-  const [district, setDistrict] = useState(currentUser?.district || "અરવલ્લી");
   const [nativePlace, setNativePlace] = useState(currentUser?.native_place || "અડાઆઠમ");
-  const [pincode, setPincode] = useState(currentUser?.pincode || "383315");
+  const [city, setCity] = useState(currentUser?.city || "મોડાસા");
+  const [fatherName, setFatherName] = useState(currentUser?.father_name || "");
+  const [grandfatherName, setGrandfatherName] = useState(currentUser?.grandfather_name || "");
+  const [maternalUncleName, setMaternalUncleName] = useState(currentUser?.maternal_uncle_name || "");
+  const [maternalGrandfatherName, setMaternalGrandfatherName] = useState(currentUser?.maternal_grandfather_name || "");
+  const [maritalStatus, setMaritalStatus] = useState(currentUser?.marital_status || "પરણિત (Married)");
   const [bloodGroup, setBloodGroup] = useState(currentUser?.blood_group || "B+");
   const [photoUrl, setPhotoUrl] = useState(currentUser?.photo_url || "");
 
-  // Employment
-  const [company, setCompany] = useState(currentUser?.employment?.company || "");
+  // ૧. બિઝનેસ / વ્યવસાય (ઉપર બિઝનેસ)
+  const [businessOwnerName, setBusinessOwnerName] = useState(currentUser?.business?.owner_name || currentUser?.name || "");
+  const [businessName, setBusinessName] = useState(currentUser?.business?.business_name || "");
+  const [businessCategory, setBusinessCategory] = useState(currentUser?.business?.category || "");
+  const [businessRole, setBusinessRole] = useState(currentUser?.business?.role || "Owner");
+  const [businessCity, setBusinessCity] = useState(currentUser?.business?.city || currentUser?.city || "");
+  const [businessPhone, setBusinessPhone] = useState(currentUser?.business?.phone || currentUser?.phone || "");
+  const [businessAddress, setBusinessAddress] = useState(currentUser?.business?.address || "");
+  const [businessBannerUrl, setBusinessBannerUrl] = useState(currentUser?.business?.banner_url || "");
+
+  // ૨. નોકરી / રોજગાર (નીચે નોકરી)
+  const [jobFullName, setJobFullName] = useState(currentUser?.employment?.full_name || currentUser?.name || "");
+  const [jobSector, setJobSector] = useState(currentUser?.employment?.job_type || "ખાનગી ક્ષેત્ર (Private Sector)");
+  const [jobCompany, setJobCompany] = useState(currentUser?.employment?.company || "");
   const [jobTitle, setJobTitle] = useState(currentUser?.employment?.job_title || "");
-  const [industry, setIndustry] = useState(currentUser?.employment?.industry || "");
-  const [workCity, setWorkCity] = useState(currentUser?.employment?.city || "");
-  const [experience, setExperience] = useState(currentUser?.employment?.experience_years || "");
+  const [jobCity, setJobCity] = useState(currentUser?.employment?.city || currentUser?.city || "");
+  const [jobPhone, setJobPhone] = useState(currentUser?.employment?.phone || currentUser?.phone || "");
+  const [jobIndustry, setJobIndustry] = useState(currentUser?.employment?.industry || "");
+  const [jobExperience, setJobExperience] = useState(currentUser?.employment?.experience_years || "");
 
   // Education
   const [degree, setDegree] = useState(currentUser?.education?.highest_degree || "");
@@ -71,20 +88,6 @@ export default function ProfilePage() {
   const [privacyEmployment, setPrivacyEmployment] = useState<PrivacyVisibility>(currentUser?.privacy.employment || "members");
   const [privacyEducation, setPrivacyEducation] = useState<PrivacyVisibility>(currentUser?.privacy.education || "members");
 
-  if (!currentUser) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-xl font-bold text-charcoal-900">કૃપા કરીને પ્રથમ લોગિન કરો.</h2>
-        <p className="text-xs text-charcoal-500 mt-2">આ પેજ જોવા માટે સભ્ય તરીકે લોગિન હોવું જરૂરી છે.</p>
-        <Link
-          href="/login"
-          className="mt-4 inline-block px-6 py-2.5 bg-saffron-600 text-white rounded-xl text-xs font-bold"
-        >
-          લોગિન પેજ પર જાઓ
-        </Link>
-      </div>
-    );
-  }
 
   const handleSaveGeneral = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,9 +96,12 @@ export default function ProfilePage() {
       phone,
       address,
       city,
-      district,
       native_place: nativePlace,
-      pincode,
+      father_name: fatherName,
+      grandfather_name: grandfatherName,
+      maternal_uncle_name: maternalUncleName,
+      maternal_grandfather_name: maternalGrandfatherName,
+      marital_status: maritalStatus,
       blood_group: bloodGroup,
       photo_url: photoUrl,
       completeness: 95,
@@ -119,16 +125,63 @@ export default function ProfilePage() {
 
   const handleSaveEmployment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
+
+    // Save on member profile
     updateCurrentUserProfile({
+      business: {
+        owner_name: businessOwnerName,
+        business_name: businessName,
+        category: businessCategory,
+        role: businessRole,
+        city: businessCity,
+        phone: businessPhone,
+        address: businessAddress,
+        banner_url: businessBannerUrl,
+      },
       employment: {
-        company,
+        full_name: jobFullName,
+        job_type: jobSector,
+        company: jobCompany,
         job_title: jobTitle,
-        industry,
-        city: workCity,
-        experience_years: experience,
+        city: jobCity,
+        phone: jobPhone,
+        industry: jobIndustry,
+        experience_years: jobExperience,
       },
     });
-    showToast("વ્યવસાય અને નોકરીની વિગતો સાચવાઈ!");
+
+    // Auto-sync business with Community Business directory if business name provided
+    if (businessName.trim()) {
+      const existing = businesses.find((b) => b.owner_id === currentUser.id);
+      if (existing) {
+        updateBusiness(existing.id, {
+          name: businessName,
+          category: businessCategory || "સામાન્ય વેપાર",
+          city: businessCity || currentUser.city,
+          address: businessAddress || currentUser.address,
+          phone: businessPhone || currentUser.phone,
+          cover_url: businessBannerUrl || existing.cover_url,
+        });
+      } else {
+        addBusiness({
+          owner_id: currentUser.id,
+          owner_name: businessOwnerName || currentUser.name,
+          name: businessName,
+          category: businessCategory || "સામાન્ય વેપાર",
+          description: `${businessRole ? businessRole + " તરીકે સંચાલિત." : ""} ${businessName}`,
+          city: businessCity || currentUser.city,
+          address: businessAddress || currentUser.address,
+          phone: businessPhone || currentUser.phone,
+          cover_url: businessBannerUrl || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800",
+          is_featured: false,
+          is_paid: false,
+          status: "active",
+        });
+      }
+    }
+
+    showToast("બિઝનેસ અને નોકરીની વિગતો સફળતાપૂર્વક સાચવાઈ ગઈ!");
   };
 
   const handleAddChild = () => {
@@ -185,16 +238,34 @@ export default function ProfilePage() {
       setPhone(currentUser.phone || "");
       setAddress(currentUser.address || "");
       setCity(currentUser.city || "મોડાસા");
-      setDistrict(currentUser.district || "અરવલ્લી");
       setNativePlace(currentUser.native_place || "અડાઆઠમ");
-      setPincode(currentUser.pincode || "383315");
+      setFatherName(currentUser.father_name || "");
+      setGrandfatherName(currentUser.grandfather_name || "");
+      setMaternalUncleName(currentUser.maternal_uncle_name || "");
+      setMaternalGrandfatherName(currentUser.maternal_grandfather_name || "");
+      setMaritalStatus(currentUser.marital_status || "પરણિત (Married)");
       setBloodGroup(currentUser.blood_group || "B+");
       setPhotoUrl(currentUser.photo_url || "");
-      setCompany(currentUser.employment?.company || "");
+
+      // Business fields (ઉપર બિઝનેસ)
+      setBusinessOwnerName(currentUser.business?.owner_name || currentUser.name || "");
+      setBusinessName(currentUser.business?.business_name || "");
+      setBusinessCategory(currentUser.business?.category || "");
+      setBusinessRole(currentUser.business?.role || "Owner");
+      setBusinessCity(currentUser.business?.city || currentUser.city || "");
+      setBusinessPhone(currentUser.business?.phone || currentUser.phone || "");
+      setBusinessAddress(currentUser.business?.address || "");
+      setBusinessBannerUrl(currentUser.business?.banner_url || "");
+
+      // Job / Employment fields (નીચે નોકરી)
+      setJobFullName(currentUser.employment?.full_name || currentUser.name || "");
+      setJobSector(currentUser.employment?.job_type || "ખાનગી ક્ષેત્ર (Private Sector)");
+      setJobCompany(currentUser.employment?.company || "");
       setJobTitle(currentUser.employment?.job_title || "");
-      setIndustry(currentUser.employment?.industry || "");
-      setWorkCity(currentUser.employment?.city || "");
-      setExperience(currentUser.employment?.experience_years || "");
+      setJobCity(currentUser.employment?.city || currentUser.city || "");
+      setJobPhone(currentUser.employment?.phone || currentUser.phone || "");
+      setJobIndustry(currentUser.employment?.industry || "");
+      setJobExperience(currentUser.employment?.experience_years || "");
       setDegree(currentUser.education?.highest_degree || "");
       setInstitution(currentUser.education?.institution || "");
       setFieldOfStudy(currentUser.education?.field_of_study || "");
@@ -553,24 +624,63 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">જિલ્લો *</label>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">પિતાનું પૂરું નામ *</label>
               <input
                 type="text"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
+                value={fatherName}
+                onChange={(e) => setFatherName(e.target.value)}
+                placeholder="પિતાશ્રીનું પૂરું નામ"
                 required
                 className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">પિનકોડ</label>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">દાદાનું પૂરું નામ *</label>
               <input
                 type="text"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
+                value={grandfatherName}
+                onChange={(e) => setGrandfatherName(e.target.value)}
+                placeholder="દાદાશ્રીનું પૂરું નામ"
+                required
                 className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">મામાનું પૂરું નામ</label>
+              <input
+                type="text"
+                value={maternalUncleName}
+                onChange={(e) => setMaternalUncleName(e.target.value)}
+                placeholder="મામાશ્રીનું પૂરું નામ"
+                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">નાનાનું પૂરું નામ</label>
+              <input
+                type="text"
+                value={maternalGrandfatherName}
+                onChange={(e) => setMaternalGrandfatherName(e.target.value)}
+                placeholder="નાનાશ્રીનું પૂરું નામ"
+                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">લગ્ન સ્થિતિ (Married Status) *</label>
+              <select
+                value={maritalStatus}
+                onChange={(e) => setMaritalStatus(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
+              >
+                <option value="પરણિત (Married)">પરણિત (Married)</option>
+                <option value="અપરણિત (Unmarried)">અપરણિત (Unmarried)</option>
+                <option value="સગાઈ થયેલ (Engaged)">સગાઈ થયેલ (Engaged)</option>
+                <option value="અન્ય (Other)">અન્ય (Other)</option>
+              </select>
             </div>
 
             <div className="sm:col-span-2">
@@ -743,73 +853,266 @@ export default function ProfilePage() {
         </form>
       )}
 
-      {/* TAB 3: EMPLOYMENT FORM */}
+      {/* TAB 3: BUSINESS & EMPLOYMENT (ઉપર બિઝનેસ, નીચે નોકરી) */}
       {activeTab === "employment" && (
-        <form onSubmit={handleSaveEmployment} className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">કંપની / પેઢીનું નામ</label>
-              <input
-                type="text"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                placeholder="જેમ કે ટાટા કન્સલ્ટન્સી સર્વિસીસ"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
+        <form onSubmit={handleSaveEmployment} className="space-y-8">
+          {/* ૧. ઉપલો વિભાગ: બિઝનેસ / પેઢીનું વિવરણ (Business Details) */}
+          <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-ivory-200">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-gradient-to-br from-saffron-500 to-amber-600 text-white shadow-sm">
+                  <Briefcase className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-base text-charcoal-900">
+                    ૧. બિઝનેસ / પેઢીની વિગતો (Business & Firm)
+                  </h3>
+                  <p className="text-xs text-charcoal-500">
+                    આપનો સ્વતંત્ર વેપાર, દુકાન, ડિસ્ટ્રિબ્યુશન અથવા પેઢી હોય તો તેની વિગત અહીં ભરો.
+                  </p>
+                </div>
+              </div>
+              <span className="self-start sm:self-auto text-[11px] font-bold bg-saffron-50 text-saffron-800 px-3 py-1 rounded-full border border-saffron-200">
+                ઉપર: બિઝનેસ (Top)
+              </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">હોદ્દો / ડેઝિગ્નેશન</label>
-              <input
-                type="text"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="જેમ કે સીનિયર સોફ્ટવેર એન્જિનિયર"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૧. પૂરું નામ (માલિક / ઓનરનું નામ)
+                </label>
+                <input
+                  type="text"
+                  value={businessOwnerName}
+                  onChange={(e) => setBusinessOwnerName(e.target.value)}
+                  placeholder="દા.ત. Bharatbhai Dahyalal Darji (Bolundra)"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">ઉદ્યોગ / ક્ષેત્ર (Industry)</label>
-              <input
-                type="text"
-                value={industry}
-                onChange={(e) => setIndustry(e.target.value)}
-                placeholder="જેમ કે આઈટી, બેંકિંગ, ટેક્સટાઇલ"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૨. બિઝનેસ / પેઢીનું નામ *
+                </label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="દા.ત. Dhaval Marketing"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-900"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">કામનું સ્થળ (શહેર)</label>
-              <input
-                type="text"
-                value={workCity}
-                onChange={(e) => setWorkCity(e.target.value)}
-                placeholder="અમદાવાદ, ગાંધીનગર, વડોદરા વગેરે"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૩. વ્યવસાયનો પ્રકાર *
+                </label>
+                <input
+                  type="text"
+                  value={businessCategory}
+                  onChange={(e) => setBusinessCategory(e.target.value)}
+                  placeholder="દા.ત. FMCG Distributor, ટેલરિંગ, જ્વેલર્સ, એન્જિનિયરિંગ"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">અનુભવ (વર્ષમાં)</label>
-              <input
-                type="text"
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
-                placeholder="જેમ કે ૫ વર્ષ"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૪. હોદ્દો (Designation / Role) *
+                </label>
+                <input
+                  type="text"
+                  value={businessRole}
+                  onChange={(e) => setBusinessRole(e.target.value)}
+                  placeholder="દા.ત. Owner, Partner, ડિરેક્ટર, પ્રોપ્રાઇટર"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૫. શહેરનું નામ *
+                </label>
+                <input
+                  type="text"
+                  value={businessCity}
+                  onChange={(e) => setBusinessCity(e.target.value)}
+                  placeholder="દા.ત. Navi Mumbai, મોડાસા, અમદાવાદ"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૬. મોબાઇલ નંબર *
+                </label>
+                <input
+                  type="text"
+                  value={businessPhone}
+                  onChange={(e) => setBusinessPhone(e.target.value)}
+                  placeholder="દા.ત. 9820941970 / 9322241970"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-bold"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૭. પેઢીનું સરનામું (Pedhi nu Sarnamu) *
+                </label>
+                <textarea
+                  value={businessAddress}
+                  onChange={(e) => setBusinessAddress(e.target.value)}
+                  rows={2}
+                  placeholder="દુકાન/ઓફિસ નં, કોમ્પ્લેક્સ, રોડ અને વિસ્તારનું પૂરું સરનામું"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-ivory-200">
+          {/* ૨. નીચલો વિભાગ: નોકરી / રોજગારની વિગતો (Job & Employment Details) */}
+          <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-ivory-200">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-gradient-to-br from-forest-600 to-emerald-700 text-white shadow-sm">
+                  <Building className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-base text-charcoal-900">
+                    ૨. નોકરી / રોજગારની વિગતો (Job & Service Details)
+                  </h3>
+                  <p className="text-xs text-charcoal-500">
+                    જો આપ સરકારી, ગ્રાન્ટેડ કે ખાનગી ક્ષેત્રમાં નોકરી કરતા હોવ તો તેની માહિતી અહીં ભરો.
+                  </p>
+                </div>
+              </div>
+              <span className="self-start sm:self-auto text-[11px] font-bold bg-forest-50 text-forest-800 px-3 py-1 rounded-full border border-forest-200">
+                નીચે: નોકરી (Bottom)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૧. પૂરું નામ (કર્મચારીનું નામ)
+                </label>
+                <input
+                  type="text"
+                  value={jobFullName}
+                  onChange={(e) => setJobFullName(e.target.value)}
+                  placeholder="દા.ત. Ashokbhai Lakhabhai Darji (Limbhoi)"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૨. નોકરી કરતા હોવ તો સરકારી / ખાનગી ક્ષેત્ર *
+                </label>
+                <select
+                  value={jobSector}
+                  onChange={(e) => setJobSector(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-800"
+                >
+                  <option value="સરકારી ક્ષેત્ર (Goverment)">સરકારી ક્ષેત્ર (Goverment)</option>
+                  <option value="અર્ધ-સરકારી / ગ્રાન્ટેડ (Semi-Goverment)">અર્ધ-સરકારી / ગ્રાન્ટેડ (Semi-Goverment)</option>
+                  <option value="ખાનગી ક્ષેત્ર (Private Sector)">ખાનગી ક્ષેત્ર (Private Sector)</option>
+                  <option value="પ્રોફેશનલ / અન્ય (Other)">પ્રોફેશનલ / અન્ય (Other)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૩. કંપની / સંસ્થા / વિભાગનું નામ *
+                </label>
+                <input
+                  type="text"
+                  value={jobCompany}
+                  onChange={(e) => setJobCompany(e.target.value)}
+                  placeholder="દા.ત. Higher Secondary School, TCS, બેંક"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none font-semibold text-charcoal-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૪. હોદ્દો (Designation / Post) *
+                </label>
+                <input
+                  type="text"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="દા.ત. Teacher, સોફ્ટવેર એન્જિનિયર, મેનેજર, ક્લાર્ક"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૫. શહેરનું નામ (કામનું સ્થળ) *
+                </label>
+                <input
+                  type="text"
+                  value={jobCity}
+                  onChange={(e) => setJobCity(e.target.value)}
+                  placeholder="દા.ત. Vadagam, ગાંધીનગર, અમદાવાદ"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૬. મોબાઇલ નંબર
+                </label>
+                <input
+                  type="tel"
+                  value={jobPhone}
+                  onChange={(e) => setJobPhone(e.target.value)}
+                  placeholder="દા.ત. 9313194260"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૭. ઉદ્યોગ / ક્ષેત્ર (Industry)
+                </label>
+                <input
+                  type="text"
+                  value={jobIndustry}
+                  onChange={(e) => setJobIndustry(e.target.value)}
+                  placeholder="દા.ત. શિક્ષણ & વિદ્યા, આઈટી, બેંકિંગ, આરોગ્ય"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૮. અનુભવ (વર્ષમાં)
+                </label>
+                <input
+                  type="text"
+                  value={jobExperience}
+                  onChange={(e) => setJobExperience(e.target.value)}
+                  placeholder="દા.ત. ૧૫ વર્ષ, ૫ વર્ષ"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Unified Save Action Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-ivory-300 shadow-sm">
+            <div className="text-xs text-charcoal-600">
+              💡 બંને વિભાગોમાંથી આપને લાગુ પડતી એક અથવા બંને વિગતો ભરીને સાચવી શકો છો.
+            </div>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2"
+              className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>વિગતો સાચવો</span>
+              <span>વિગતો સાચવો (Save Details)</span>
             </button>
           </div>
         </form>

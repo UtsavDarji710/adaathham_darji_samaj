@@ -22,9 +22,12 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [nativePlace, setNativePlace] = useState("અડાઆઠમ");
   const [city, setCity] = useState("મોડાસા");
-  const [district, setDistrict] = useState("અરવલ્લી");
+  const [fatherName, setFatherName] = useState("");
+  const [grandfatherName, setGrandfatherName] = useState("");
+  const [maternalUncleName, setMaternalUncleName] = useState("");
+  const [maternalGrandfatherName, setMaternalGrandfatherName] = useState("");
+  const [maritalStatus, setMaritalStatus] = useState("પરણિત (Married)");
   const [address, setAddress] = useState("");
-  const [pincode, setPincode] = useState("383315");
   const [gender, setGender] = useState<"male" | "female" | "other">("male");
   const [profession, setProfession] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(true);
@@ -46,9 +49,12 @@ export default function RegisterPage() {
       phone,
       native_place: nativePlace,
       city,
-      district,
+      father_name: fatherName,
+      grandfather_name: grandfatherName,
+      maternal_uncle_name: maternalUncleName,
+      maternal_grandfather_name: maternalGrandfatherName,
+      marital_status: maritalStatus,
       address,
-      pincode,
       gender,
       employment: profession
         ? {
@@ -156,13 +162,63 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-charcoal-700 mb-1">જિલ્લો</label>
+              <label className="block font-bold text-charcoal-700 mb-1">પિતાનું પૂરું નામ *</label>
               <input
                 type="text"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
+                value={fatherName}
+                onChange={(e) => setFatherName(e.target.value)}
+                placeholder="પિતાશ્રીનું પૂરું નામ"
+                required
                 className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
               />
+            </div>
+
+            <div>
+              <label className="block font-bold text-charcoal-700 mb-1">દાદાનું પૂરું નામ *</label>
+              <input
+                type="text"
+                value={grandfatherName}
+                onChange={(e) => setGrandfatherName(e.target.value)}
+                placeholder="દાદાશ્રીનું પૂરું નામ"
+                required
+                className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-charcoal-700 mb-1">મામાનું પૂરું નામ</label>
+              <input
+                type="text"
+                value={maternalUncleName}
+                onChange={(e) => setMaternalUncleName(e.target.value)}
+                placeholder="મામાશ્રીનું પૂરું નામ"
+                className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-charcoal-700 mb-1">નાનાનું પૂરું નામ</label>
+              <input
+                type="text"
+                value={maternalGrandfatherName}
+                onChange={(e) => setMaternalGrandfatherName(e.target.value)}
+                placeholder="નાનાશ્રીનું પૂરું નામ"
+                className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-charcoal-700 mb-1">લગ્ન સ્થિતિ (Married Status) *</label>
+              <select
+                value={maritalStatus}
+                onChange={(e) => setMaritalStatus(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl bg-white focus:outline-none font-semibold text-charcoal-800"
+              >
+                <option value="પરણિત (Married)">પરણિત (Married)</option>
+                <option value="અપરણિત (Unmarried)">અપરણિત (Unmarried)</option>
+                <option value="સગાઈ થયેલ (Engaged)">સગાઈ થયેલ (Engaged)</option>
+                <option value="અન્ય (Other)">અન્ય (Other)</option>
+              </select>
             </div>
 
             <div>

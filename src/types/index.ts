@@ -15,9 +15,24 @@ export type AdminRole = "president" | "secretary" | "joint_secretary" | "treasur
 export interface EmploymentDetail {
   company: string;
   job_title: string;
-  industry: string;
+  industry?: string;
   city: string;
-  experience_years: string;
+  experience_years?: string;
+  full_name?: string;
+  job_type?: string; // સરકારી / ખાનગી ક્ષેત્ર
+  phone?: string;
+}
+
+export interface MemberBusinessDetail {
+  owner_name?: string;
+  business_name?: string;
+  category?: string; // વ્યવસાયનો પ્રકાર
+  role?: string; // હોદ્દો
+  city?: string;
+  phone?: string;
+  address?: string; // પેઢીનું સરનામું
+  banner_url?: string; // બિઝનેસનું બેનર / ફોટો
+  description?: string;
 }
 
 export interface ChildEducation {
@@ -45,9 +60,14 @@ export interface Member {
   email?: string;
   address: string;
   city: string;
-  district: string;
+  district?: string;
   native_place: string; // વતન
-  pincode: string;
+  pincode?: string;
+  father_name?: string; // પિતાનું પૂરું નામ
+  grandfather_name?: string; // દાદાનું પૂરું નામ
+  maternal_uncle_name?: string; // મામાનું પૂરું નામ
+  maternal_grandfather_name?: string; // નાનાનું પૂરું નામ
+  marital_status?: string; // લગ્ન સ્થિતિ (Married Status)
   gender: "male" | "female" | "other";
   dob?: string;
   blood_group?: string;
@@ -56,6 +76,7 @@ export interface Member {
   committee_role?: string;
   committee_order?: number;
   privacy: PrivacySettings;
+  business?: MemberBusinessDetail;
   employment?: EmploymentDetail;
   education?: EducationDetail;
   business_id?: string;

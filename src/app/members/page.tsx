@@ -45,7 +45,10 @@ export default function MembersDirectoryPage() {
         m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.native_place.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.employment?.company && m.employment.company.toLowerCase().includes(searchQuery.toLowerCase()));
+        (m.business?.business_name && m.business.business_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (m.business?.category && m.business.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (m.employment?.company && m.employment.company.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (m.employment?.job_title && m.employment.job_title.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchCity = selectedCity === "all" || m.city === selectedCity;
       const matchNative = selectedNative === "all" || m.native_place === selectedNative;
@@ -250,14 +253,21 @@ export default function MembersDirectoryPage() {
                     )}
                   </div>
 
-                  {member.employment && (
+                  {member.business ? (
                     <div className="flex items-center justify-between">
-                      <span className="text-charcoal-500 text-[11px]">વ્યવસાય:</span>
-                      <span className="font-medium text-charcoal-800 truncate max-w-[150px]">
-                        {member.employment.job_title}
+                      <span className="text-charcoal-500 text-[11px]">બિઝનેસ:</span>
+                      <span className="font-medium text-charcoal-800 truncate max-w-[150px]" title={member.business.business_name}>
+                        {member.business.business_name}
                       </span>
                     </div>
-                  )}
+                  ) : member.employment ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-charcoal-500 text-[11px]">નોકરી:</span>
+                      <span className="font-medium text-charcoal-800 truncate max-w-[150px]" title={member.employment.job_title}>
+                        {member.employment.job_title} ({member.employment.company})
+                      </span>
+                    </div>
+                  ) : null}
 
                   {member.education && (
                     <div className="flex items-center justify-between">
@@ -338,9 +348,50 @@ export default function MembersDirectoryPage() {
                 </div>
                 <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
                   <span className="text-[11px] text-charcoal-500 block">હાલનું શહેર:</span>
-                  <span className="font-bold text-charcoal-900">{activeModalMember.city} ({activeModalMember.district})</span>
+                  <span className="font-bold text-charcoal-900">{activeModalMember.city}</span>
                 </div>
               </div>
+
+              {(activeModalMember.father_name || activeModalMember.grandfather_name) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {activeModalMember.father_name && (
+                    <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
+                      <span className="text-[11px] text-charcoal-500 block">પિતાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{activeModalMember.father_name}</span>
+                    </div>
+                  )}
+                  {activeModalMember.grandfather_name && (
+                    <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
+                      <span className="text-[11px] text-charcoal-500 block">દાદાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{activeModalMember.grandfather_name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(activeModalMember.maternal_uncle_name || activeModalMember.maternal_grandfather_name) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {activeModalMember.maternal_uncle_name && (
+                    <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
+                      <span className="text-[11px] text-charcoal-500 block">મામાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{activeModalMember.maternal_uncle_name}</span>
+                    </div>
+                  )}
+                  {activeModalMember.maternal_grandfather_name && (
+                    <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
+                      <span className="text-[11px] text-charcoal-500 block">નાનાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{activeModalMember.maternal_grandfather_name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeModalMember.marital_status && (
+                <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
+                  <span className="text-[11px] text-charcoal-500 block">લગ્ન સ્થિતિ (Married Status):</span>
+                  <span className="font-bold text-saffron-800">{activeModalMember.marital_status}</span>
+                </div>
+              )}
 
               <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
                 <span className="text-[11px] text-charcoal-500 block">સરનામું:</span>
@@ -362,15 +413,56 @@ export default function MembersDirectoryPage() {
                 )}
               </div>
 
+              {activeModalMember.business && (
+                <div className="p-3 rounded-xl bg-saffron-50/50 border border-saffron-200 space-y-1">
+                  <span className="text-[11px] font-bold text-saffron-900 flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-saffron-700" />
+                    ૧. બિઝનેસ / પેઢીની વિગતો (Business & Firm)
+                  </span>
+                  <div className="text-xs">
+                    <span className="font-bold text-charcoal-900">{activeModalMember.business.business_name}</span>
+                    {activeModalMember.business.category && (
+                      <span className="text-charcoal-600"> ({activeModalMember.business.category})</span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-charcoal-600 space-y-0.5">
+                    {activeModalMember.business.role && <div>હોદ્દો: <span className="font-semibold text-charcoal-800">{activeModalMember.business.role}</span></div>}
+                    {activeModalMember.business.city && <div>શહેર: <span className="font-semibold text-charcoal-800">{activeModalMember.business.city}</span></div>}
+                    {activeModalMember.business.phone && <div>સંપર્ક: <span className="font-bold text-forest-800">{activeModalMember.business.phone}</span></div>}
+                    {activeModalMember.business.address && <div>પેઢીનું સરનામું: <span className="text-charcoal-700">{activeModalMember.business.address}</span></div>}
+                  </div>
+                </div>
+              )}
+
               {activeModalMember.employment && (
-                <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
-                  <span className="text-[11px] text-charcoal-500 block">વ્યવસાય / કંપની:</span>
-                  <span className="font-bold text-charcoal-900 block">
-                    {activeModalMember.employment.company} — {activeModalMember.employment.job_title}
+                <div className="p-3 rounded-xl bg-forest-50/50 border border-forest-200 space-y-1">
+                  <span className="text-[11px] font-bold text-forest-900 flex items-center gap-1.5">
+                    <span className="text-sm">💼</span>
+                    ૨. નોકરી / રોજગારની વિગતો (Job & Employment)
                   </span>
-                  <span className="text-charcoal-600 block mt-0.5">
-                    ક્ષેત્ર: {activeModalMember.employment.industry} (અનુભવ: {activeModalMember.employment.experience_years})
-                  </span>
+                  <div className="text-xs">
+                    <span className="font-bold text-charcoal-900">{activeModalMember.employment.company}</span>
+                    {activeModalMember.employment.job_title && (
+                      <span className="text-charcoal-700 font-semibold"> — {activeModalMember.employment.job_title}</span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-charcoal-600 space-y-0.5">
+                    {activeModalMember.employment.job_type && (
+                      <div>ક્ષેત્ર: <span className="font-semibold text-charcoal-800">{activeModalMember.employment.job_type}</span></div>
+                    )}
+                    {activeModalMember.employment.city && (
+                      <div>કામનું શહેર: <span className="font-semibold text-charcoal-800">{activeModalMember.employment.city}</span></div>
+                    )}
+                    {activeModalMember.employment.phone && (
+                      <div>મોબાઇલ નંબર: <span className="font-bold text-forest-800">{activeModalMember.employment.phone}</span></div>
+                    )}
+                    {activeModalMember.employment.industry && (
+                      <div>ઉદ્યોગ / ક્ષેત્ર: {activeModalMember.employment.industry}</div>
+                    )}
+                    {activeModalMember.employment.experience_years && (
+                      <div>અનુભવ: {activeModalMember.employment.experience_years}</div>
+                    )}
+                  </div>
                 </div>
               )}
 

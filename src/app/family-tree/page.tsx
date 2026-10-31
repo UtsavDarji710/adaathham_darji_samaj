@@ -728,6 +728,51 @@ export default function FamilyTreePage() {
                 </div>
               </div>
 
+              {/* Lineage Details */}
+              {(inspectedMember.father_name || inspectedMember.grandfather_name) && (
+                <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200 space-y-1">
+                  {inspectedMember.father_name && (
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-charcoal-500">પિતાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{inspectedMember.father_name}</span>
+                    </div>
+                  )}
+                  {inspectedMember.grandfather_name && (
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-charcoal-500">દાદાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{inspectedMember.grandfather_name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(inspectedMember.maternal_uncle_name || inspectedMember.maternal_grandfather_name) && (
+                <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200 space-y-1">
+                  {inspectedMember.maternal_uncle_name && (
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-charcoal-500">મામાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{inspectedMember.maternal_uncle_name}</span>
+                    </div>
+                  )}
+                  {inspectedMember.maternal_grandfather_name && (
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-charcoal-500">નાનાનું નામ:</span>
+                      <span className="font-bold text-charcoal-900">{inspectedMember.maternal_grandfather_name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {inspectedMember.marital_status && (
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 flex-shrink-0 text-center text-xs">💍</div>
+                  <div className="flex-1">
+                    <span className="text-charcoal-500 block">લગ્ન સ્થિતિ (Married Status):</span>
+                    <span className="font-bold text-saffron-800">{inspectedMember.marital_status}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Address with Privacy Check */}
               <div className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-saffron-600 flex-shrink-0 mt-0.5" />
