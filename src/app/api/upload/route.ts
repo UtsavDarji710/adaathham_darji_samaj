@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { INITIAL_MEMBERS } from "@/lib/mockData";
+import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  getMemberByIdOrSession,
+  ensureSessionUser,
+  isAdminRole,
+  ADMIN_ROLES,
+} from "@/lib/memberStore";
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -22,18 +27,9 @@ const BUCKET_POLICIES = {
   "payment-proofs": { isPublic: false }, // Private sensitive storage (Requirement 15)
 };
 
-const ADMIN_ROLES = [
-  "president",
-  "secretary",
-  "joint_secretary",
-  "treasurer",
-  "assistant_treasurer",
-  "admin",
-];
-
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate Request via Session Cookie (Task 2 Requirement 10 & Task 3)
+    // 1. Authenticate Request via Session Cookie
     const cookieStore = cookies();
     const sessionVal = cookieStore.get("ad8_session")?.value;
 
@@ -48,12 +44,7 @@ export async function POST(request: Request) {
     }
 
     const cleanSession = decodeURIComponent(sessionVal).trim().toLowerCase();
-    const user = INITIAL_MEMBERS.find((m) => {
-      if (m.email && m.email.toLowerCase() === cleanSession) return true;
-      if (m.phone && m.phone.replace(/\D/g, "") === cleanSession.replace(/\D/g, "")) return true;
-      if (m.id && m.id.toLowerCase() === cleanSession) return true;
-      return false;
-    });
+    const user = getMemberByIdOrSession(cleanSession) || ensureSessionUser(cleanSession);
 
     if (!user) {
       return NextResponse.json(
@@ -112,7 +103,7 @@ export async function POST(request: Request) {
 
     // 6. Role-based check for protected categories (e.g. samiti official assets)
     const bucketConfig = BUCKET_POLICIES[category] || { isPublic: true, requireAdmin: false };
-    if ((bucketConfig as any).requireAdmin && !ADMIN_ROLES.includes(user.role)) {
+    if ((bucketConfig as any).requireAdmin && !isAdminRole(user.role)) {
       return NextResponse.json(
         {
           success: false,
@@ -123,33 +114,64 @@ export async function POST(request: Request) {
     }
 
     const extension = file.name.split(".").pop() || "jpg";
-    const filename = `${category}/${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${extension}`;
+    const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${extension}`;
 
     // 7. If Supabase is configured with real credentials, upload to bucket
     if (isSupabaseConfigured()) {
       const buffer = Buffer.from(await file.arrayBuffer());
-      const { data, error } = await supabase.storage
+      const client = supabaseAdmin || supabase;
+
+      let { data, error } = await client.storage
         .from(category)
         .upload(filename, buffer, {
           contentType: file.type,
-          upsert: false,
+          upsert: true,
         });
+
+      // If bucket does not exist, auto-create it using admin privileges
+      if (
+        error &&
+        (error.message?.toLowerCase().includes("bucket not found") ||
+          (error as any).statusCode === "404" ||
+          (error as any).statusCode === 404)
+      ) {
+        console.warn(`[Supabase Storage] Bucket '${category}' not found. Auto-creating bucket...`);
+        const { error: createBucketErr } = await client.storage.createBucket(category, {
+          public: bucketConfig.isPublic,
+          fileSizeLimit: MAX_FILE_SIZE,
+        });
+
+        if (!createBucketErr) {
+          const retry = await client.storage
+            .from(category)
+            .upload(filename, buffer, {
+              contentType: file.type,
+              upsert: true,
+            });
+          data = retry.data;
+          error = retry.error;
+        }
+      }
 
       if (error) {
         console.error("[Supabase Storage Upload Error]", error);
         return NextResponse.json(
-          { success: false, message: "સ્ટોરેજમાં ફાઇલ અપલોડ કરવામાં નિષ્ફળ." },
+          {
+            success: false,
+            message: `સ્ટોરેજમાં ફાઇલ અપલોડ કરવામાં નિષ્ફળ: ${error.message}`,
+            error: error.message,
+          },
           { status: 500 }
         );
       }
 
       let fileUrl = "";
       if (bucketConfig.isPublic) {
-        const { data: publicData } = supabase.storage.from(category).getPublicUrl(filename);
+        const { data: publicData } = client.storage.from(category).getPublicUrl(filename);
         fileUrl = publicData.publicUrl;
       } else {
         // Private signed URL for sensitive payment proofs
-        const { data: signedData } = await supabase.storage.from(category).createSignedUrl(filename, 3600);
+        const { data: signedData } = await client.storage.from(category).createSignedUrl(filename, 3600);
         fileUrl = signedData?.signedUrl || filename;
       }
 

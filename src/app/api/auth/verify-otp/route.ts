@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyOtpCode } from "@/lib/otpStore";
+import { getMemberByIdOrSession, ensureSessionUser } from "@/lib/memberStore";
 import { INITIAL_MEMBERS } from "@/lib/mockData";
 
 export async function POST(request: Request) {
@@ -39,15 +40,16 @@ export async function POST(request: Request) {
     }
 
     // OTP is valid!
-    // If login, find user
-    let user = INITIAL_MEMBERS.find(
-      (m) => m.email && m.email.toLowerCase() === normalizedEmail
-    );
+    // Retrieve or initialize member from the server member store
+    let user = getMemberByIdOrSession(normalizedEmail);
 
-    // If test admin email used
     if (!user && normalizedEmail.endsWith("@adaadhamsamaj.org")) {
       const prefix = normalizedEmail.split("@")[0];
       user = INITIAL_MEMBERS.find((m) => m.role === prefix) || INITIAL_MEMBERS[0];
+    }
+
+    if (!user) {
+      user = ensureSessionUser(normalizedEmail);
     }
 
     const response = NextResponse.json({

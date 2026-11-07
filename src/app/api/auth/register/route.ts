@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Member } from "@/types";
 import { INITIAL_MEMBERS } from "@/lib/mockData";
+import { registerMember } from "@/lib/memberStore";
 
 export async function POST(request: Request) {
   try {
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
     };
 
     // Store in mock/memory list for immediate runtime access
-    INITIAL_MEMBERS.push(newMember);
+    registerMember(newMember);
 
     const response = NextResponse.json({
       success: true,

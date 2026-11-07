@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkCooldown, generateNumericOtp, storeOtp } from "@/lib/otpStore";
 import { sendOtpEmail } from "@/lib/email";
 import { INITIAL_MEMBERS } from "@/lib/mockData";
+import { getMemberByIdOrSession } from "@/lib/memberStore";
 
 export async function POST(request: Request) {
   try {
@@ -51,9 +52,7 @@ export async function POST(request: Request) {
 
     // Check account exists for login
     if (purpose === "login") {
-      const found = INITIAL_MEMBERS.find(
-        (m) => m.email && m.email.toLowerCase() === normalizedEmail
-      );
+      const found = getMemberByIdOrSession(normalizedEmail);
       // Also allow test admin emails or registered members
       const validEmails = [
         "president@adaadhamsamaj.org",
@@ -62,6 +61,7 @@ export async function POST(request: Request) {
         "treasurer@adaadhamsamaj.org",
         "assistant_treasurer@adaadhamsamaj.org",
         "member@adaadhamsamaj.org",
+        "utsavdarji102001@gmail.com",
       ];
       if (!found && !validEmails.includes(normalizedEmail)) {
         return NextResponse.json(

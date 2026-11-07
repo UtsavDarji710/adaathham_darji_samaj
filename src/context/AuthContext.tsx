@@ -48,10 +48,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated && data.user) {
-            setCurrentUserState(data.user);
+            let effectiveUser = data.user;
             if (typeof window !== "undefined") {
-              localStorage.setItem(AUTH_STORAGE_KEY, data.user.id);
+              const localMembers = localStorage.getItem("ad8_members_data");
+              if (localMembers) {
+                try {
+                  const parsed = JSON.parse(localMembers);
+                  const found = parsed.find(
+                    (m: any) =>
+                      m.id === data.user.id ||
+                      (m.email && m.email.toLowerCase() === data.user.email?.toLowerCase()) ||
+                      (m.phone && m.phone.replace(/\D/g, "") === data.user.phone?.replace(/\D/g, ""))
+                  );
+                  if (found) {
+                    effectiveUser = { ...data.user, ...found };
+                  }
+                } catch (e) {}
+              }
+              localStorage.setItem(AUTH_STORAGE_KEY, effectiveUser.id);
             }
+            setCurrentUserState(effectiveUser);
             return;
           }
         }
@@ -61,6 +77,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const savedUserId = typeof window !== "undefined" ? localStorage.getItem(AUTH_STORAGE_KEY) : null;
       if (savedUserId && savedUserId !== "guest") {
+        if (typeof window !== "undefined") {
+          const localMembers = localStorage.getItem("ad8_members_data");
+          if (localMembers) {
+            try {
+              const parsed = JSON.parse(localMembers);
+              const found = parsed.find((m: any) => m.id === savedUserId);
+              if (found) {
+                setCurrentUser(found);
+                return;
+              }
+            } catch (e) {}
+          }
+        }
         const found = INITIAL_MEMBERS.find((m) => m.id === savedUserId);
         if (found) {
           setCurrentUser(found);
@@ -279,6 +308,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUser) return;
     const updated = { ...currentUser, ...data };
     setCurrentUser(updated);
+
+    if (typeof window !== "undefined") {
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: currentUser.id, updates: data }),
+      }).catch((err) => {
+        console.warn("[AuthContext] Profile sync error:", err);
+      });
+    }
   };
 
   const updatePrivacySettings = (privacy: Partial<PrivacySettings>) => {

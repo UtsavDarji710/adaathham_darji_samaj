@@ -188,6 +188,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updated = members.map((m) => (m.id === id ? { ...m, ...updates } : m));
     setMembers(updated);
     sync(STORAGE_KEYS.members, updated);
+
+    // Asynchronously sync with the backend /api/profile endpoint
+    if (typeof window !== "undefined") {
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: id, updates }),
+      }).catch((err) => {
+        console.warn("[DataContext] Server profile sync error:", err);
+      });
+    }
   };
 
   const deleteMember = (id: string) => {

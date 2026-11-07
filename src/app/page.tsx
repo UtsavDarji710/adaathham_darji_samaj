@@ -78,100 +78,58 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-12 sm:space-y-16 pb-12">
+    <div className="pb-12">
       {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-ivory-50 to-ivory-100 border-b border-ivory-300 pt-4 pb-8 sm:pt-6 sm:pb-10 lg:pt-8 lg:pb-12">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-ivory-50 to-ivory-100 pt-6 pb-10 sm:pt-8 sm:pb-12 lg:pt-10 lg:pb-14">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-saffron-100/50 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-forest-100/40 blur-3xl pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-3.5 sm:space-y-4 text-center lg:text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-saffron-50 border border-saffron-200 text-saffron-800 text-[11px] sm:text-xs font-bold tracking-wide shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-saffron-600" />
-                <span>શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</span>
-              </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center space-y-4 sm:space-y-5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-saffron-50 border border-saffron-200 text-saffron-800 text-[11px] sm:text-xs font-bold tracking-wide shadow-2xs">
+            <Sparkles className="w-3.5 h-3.5 text-saffron-600" />
+            <span>શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</span>
+          </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-charcoal-900 tracking-tight leading-tight">
-                “આપણો સમાજ,{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-saffron-700 via-saffron-600 to-saffron-800">
-                  આપણો પરિવાર”
-                </span>
-              </h1>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-charcoal-900 tracking-tight leading-tight">
+            “આપણો સમાજ,{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-saffron-700 via-saffron-600 to-saffron-800">
+              આપણો પરિવાર”
+            </span>
+          </h1>
 
-              <p className="text-xs sm:text-sm text-charcoal-600 max-w-xl font-normal leading-relaxed">
-                અડાઆઠમ દરજી સેવા સમિતિના તમામ પરિવારોને જોડતું સત્તાવાર ડિજિટલ પોર્ટલ. પરિવાર વિગતો શોધો, સભ્યો સાથે જોડાઓ અને સમાજના વ્યવસાયોને પ્રોત્સાહન આપો.
-              </p>
+          <p className="text-xs sm:text-sm md:text-base text-charcoal-600 max-w-2xl mx-auto font-normal leading-relaxed">
+            અડાઆઠમ દરજી સેવા સમિતિના તમામ પરિવારોને જોડતું સત્તાવાર ડિજિટલ પોર્ટલ. પરિવાર વિગતો શોધો, સભ્યો સાથે જોડાઓ અને સમાજના વ્યવસાયોને પ્રોત્સાહન આપો.
+          </p>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
-                <Link
-                  href="/family-tree"
-                  className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 group hover:scale-[1.02]"
-                >
-                  <GitFork className="w-4 h-4" />
-                  <span>પરિવાર શોધો</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href="/family-tree"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 group hover:scale-[1.02]"
+            >
+              <GitFork className="w-4 h-4" />
+              <span>પરિવાર શોધો</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </Link>
 
-                <Link
-                  href="/register"
-                  className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 hover:scale-[1.02]"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>સમાજ સાથે જોડાઓ</span>
-                </Link>
-              </div>
+            <Link
+              href="/register"
+              className="px-6 py-3 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 hover:scale-[1.02]"
+            >
+              <Users className="w-4 h-4" />
+              <span>સમાજ સાથે જોડાઓ</span>
+            </Link>
+          </div>
 
-              {/* Trust Indicators */}
-              <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-6 text-[10px] sm:text-xs text-charcoal-500 font-medium">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle className="w-3.5 h-3.5 text-forest-600" />
-                  <span>૧૦૦% ચકાસાયેલા પરિવારો</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-forest-600" />
-                  <span>સંપૂર્ણ અંગત સુરક્ષા & ગોપનીયતા</span>
-                </div>
-              </div>
+          {/* Trust Indicators */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-charcoal-500 font-medium">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-forest-600" />
+              <span>૧૦૦% ચકાસાયેલા પરિવારો</span>
             </div>
-
-            {/* Right Hero Visual Card */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative rounded-2xl sm:rounded-3xl bg-white p-3 sm:p-4 border border-ivory-300 shadow-md overflow-hidden">
-                <div className="relative rounded-xl overflow-hidden aspect-[16/9] mb-3 shadow-2xs">
-                  <img
-                    src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&auto=format&fit=crop&q=80"
-                    alt="અડાઆઠમ દરજી સેવા સમિતિ સ્નેહમિલન"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/80 via-transparent to-transparent flex items-end p-3">
-                    <p className="text-white text-[11px] sm:text-xs font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-saffron-400" />
-                      સમાજ ભવન, મોડાસા — વાર્ષિક સ્નેહમિલન દર્શન
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-charcoal-900">કુળદેવી શ્રી ચામુંડા માતાજી મંદિર</span>
-                    <span className="text-forest-700 font-semibold text-[11px]">અડાઆઠમ, મોડાસા</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-ivory-100 border border-ivory-200 text-xs text-charcoal-700 flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-saffron-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                      ૐ
-                    </div>
-                    <div>
-                      <p className="font-bold text-charcoal-900 text-xs">“પરસ્પર દેવો ભવ”</p>
-                      <p className="text-[10px] text-charcoal-500">
-                        સમાજના દરેક પરિવારોનું ગૌરવ અને પ્રગતિ આપણું લક્ષ્ય છે.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-forest-600" />
+              <span>સંપૂર્ણ અંગત સુરક્ષા & ગોપનીયતા</span>
             </div>
           </div>
         </div>
@@ -235,7 +193,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. COMMUNITY DATA / STATISTICS SECTION */}
+      {/* Subsequent Sections with Consistent Vertical Rhythm */}
+      <div className="space-y-12 sm:space-y-16 mt-12 sm:mt-16">
+        {/* 3. COMMUNITY DATA / STATISTICS SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-3xl border border-ivory-300 shadow-md p-4 sm:p-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 divide-y sm:divide-y-0 sm:divide-x divide-ivory-200">
@@ -797,6 +757,7 @@ export default function HomePage() {
           </div>
         )}
       />
+      </div>
     </div>
   );
 }

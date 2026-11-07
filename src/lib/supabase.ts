@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || supabaseAnonKey;
 
 export const isSupabaseConfigured = () => {
   return (
@@ -13,4 +14,14 @@ export const isSupabaseConfigured = () => {
   );
 };
 
+// Client-safe Supabase instance (uses public anon key)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Server-side privileged Supabase instance (uses service role key to bypass RLS for API uploads)
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
+

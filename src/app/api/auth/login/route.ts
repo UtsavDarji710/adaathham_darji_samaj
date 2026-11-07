@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkCooldown, generateNumericOtp, storeOtp } from "@/lib/otpStore";
 import { sendOtpEmail } from "@/lib/email";
 import { INITIAL_MEMBERS } from "@/lib/mockData";
+import { getMemberByIdOrSession } from "@/lib/memberStore";
 
 export async function POST(request: Request) {
   try {
@@ -18,9 +19,7 @@ export async function POST(request: Request) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if account exists
-    const member = INITIAL_MEMBERS.find(
-      (m) => m.email && m.email.toLowerCase() === normalizedEmail
-    );
+    const member = getMemberByIdOrSession(normalizedEmail);
 
     const testAdminEmails = [
       "president@adaadhamsamaj.org",
