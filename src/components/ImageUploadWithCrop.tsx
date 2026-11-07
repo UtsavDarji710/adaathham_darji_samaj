@@ -118,6 +118,7 @@ export default function ImageUploadWithCrop({
   const imageElementRef = useRef<HTMLImageElement | null>(null);
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const livePreviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Sync preview when currentImageUrl prop changes
   useEffect(() => {
@@ -278,22 +279,28 @@ export default function ImageUploadWithCrop({
     ctx.clearRect(0, 0, targetW, targetH);
     ctx.save();
 
-    // Move to center of preview canvas
-    ctx.translate(targetW / 2, targetH / 2);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(zoom, zoom);
+    // High quality smoothing
+    ctx.imageSmoothingQuality = "high";
+    ctx.imageSmoothingEnabled = true;
 
     // Calculate base draw size matching the editor box ratio
-    const scaleFactor = targetW / editorBoxWidth;
+    const actualWidth = editorContainerRef.current?.clientWidth || editorBoxWidth;
+    const scaleFactor = targetW / actualWidth;
     const drawW = baseDimensions.width * scaleFactor;
     const drawH = baseDimensions.height * scaleFactor;
     const panX = pan.x * scaleFactor;
     const panY = pan.y * scaleFactor;
 
+    // 1. Move to canvas center + pan in screen coordinates (matches CSS translate before rotate/scale)
+    ctx.translate(targetW / 2 + panX, targetH / 2 + panY);
+    // 2. Rotate and Scale around the panned center
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(zoom, zoom);
+    // 3. Draw image centered
     ctx.drawImage(
       img,
-      -drawW / 2 + panX,
-      -drawH / 2 + panY,
+      -drawW / 2,
+      -drawH / 2,
       drawW,
       drawH
     );
@@ -340,20 +347,23 @@ export default function ImageUploadWithCrop({
       ctx.imageSmoothingEnabled = true;
 
       ctx.save();
-      ctx.translate(outWidth / 2, outHeight / 2);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.scale(zoom, zoom);
-
-      const scaleMultiplier = outWidth / editorBoxWidth;
+      const actualWidth = editorContainerRef.current?.clientWidth || editorBoxWidth;
+      const scaleMultiplier = outWidth / actualWidth;
       const finalDrawW = baseDimensions.width * scaleMultiplier;
       const finalDrawH = baseDimensions.height * scaleMultiplier;
       const finalPanX = pan.x * scaleMultiplier;
       const finalPanY = pan.y * scaleMultiplier;
 
+      // 1. Move to canvas center + pan in screen coordinates (matches CSS translate before rotate/scale)
+      ctx.translate(outWidth / 2 + finalPanX, outHeight / 2 + finalPanY);
+      // 2. Rotate and Scale around the panned center
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.scale(zoom, zoom);
+      // 3. Draw image centered
       ctx.drawImage(
         img,
-        -finalDrawW / 2 + finalPanX,
-        -finalDrawH / 2 + finalPanY,
+        -finalDrawW / 2,
+        -finalDrawH / 2,
         finalDrawW,
         finalDrawH
       );
@@ -554,6 +564,7 @@ export default function ImageUploadWithCrop({
               {/* Interactive Viewport Canvas */}
               <div className="flex flex-col items-center">
                 <div
+                  ref={editorContainerRef}
                   onMouseDown={handleEditorMouseDown}
                   onMouseMove={handleEditorMouseMove}
                   onMouseUp={handleEditorMouseUp}

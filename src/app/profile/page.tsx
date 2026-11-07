@@ -1334,46 +1334,6 @@ export default function ProfilePage() {
       {activeTab === "general" && (
         <div className="space-y-8">
           <form onSubmit={handleSaveGeneral} className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6">
-            {/* ૧. પ્રોફાઇલ ફોટો અપલોડ & ક્રોપ એડિટર (Requirement Task 1) */}
-            <div className="p-4 rounded-2xl bg-ivory-50 border border-ivory-200 flex flex-col sm:flex-row items-center gap-5">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-saffron-500 shadow-sm flex-shrink-0">
-                <img
-                  src={photoUrl || effectiveMember?.photo_url || currentUser.photo_url}
-                  alt={name || "Profile"}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 w-full space-y-1 text-center sm:text-left">
-                <label className="block text-xs font-bold text-charcoal-800">
-                  પ્રોફાઇલ ફોટો (Profile Avatar - ૧:૧ ચોરસ ક્રોપ)
-                </label>
-                <p className="text-[11px] text-charcoal-500">
-                  તમારી તસવીર અપલોડ કરો, ઝૂમ કરો અને ક્રોપ એડિટર વડે ચોરસ એડજસ્ટ કરો.
-                </p>
-                <div className="pt-1.5 max-w-sm">
-                  <ImageUploadWithCrop
-                    currentImageUrl={photoUrl || effectiveMember?.photo_url || currentUser.photo_url}
-                    onImageCropped={(url) => {
-                      setPhotoUrl(url);
-                      if (effectiveMember) {
-                        updateMember(effectiveMember.id, { photo_url: url });
-                      }
-                      if (currentUser && effectiveMember?.id === currentUser.id) {
-                        updateCurrentUserProfile({ photo_url: url });
-                      }
-                      showToast("પ્રોફાઇલ ફોટો સફળતાપૂર્વક અપડેટ થયો!");
-                    }}
-                    aspectRatio={1}
-                    aspectRatioLabel="૧:૧ (અવતાર)"
-                    circleOverlay={true}
-                    category="member-photos"
-                    label="નવો પ્રોફાઇલ ફોટો પસંદ અથવા ડ્રોપ કરો"
-                    helperText="JPG, PNG, WebP • ડ્રેગ & ડ્રોપ સપોર્ટ"
-                  />
-                </div>
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-charcoal-700 mb-1">પૂરું નામ *</label>
