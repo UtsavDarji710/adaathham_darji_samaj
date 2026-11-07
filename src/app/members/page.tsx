@@ -91,13 +91,15 @@ export default function MembersDirectoryPage() {
           </p>
         </div>
 
-        <Link
-          href="/register"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>નવા સભ્ય ઉમેરો</span>
-        </Link>
+        {currentUser && (
+          <Link
+            href="/register"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>નવા સભ્ય ઉમેરો</span>
+          </Link>
+        )}
       </div>
 
       {/* Filter and Search Bar */}

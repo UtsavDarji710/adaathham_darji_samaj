@@ -26,7 +26,7 @@ import { BusinessItem } from "@/types";
 
 export default function BusinessDirectoryPage() {
   const { businesses, addBusiness, addLog } = useData();
-  const { currentUser, isAdmin, loginAs } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -146,19 +146,15 @@ export default function BusinessDirectoryPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            if (!currentUser) {
-              setShowLoginPrompt(true);
-              return;
-            }
-            setShowAddModal(true);
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
-        >
-          <Plus className="w-4 h-4" />
-          <span>આપનો વ્યવસાય ઉમેરો</span>
-        </button>
+        {currentUser && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
+          >
+            <Plus className="w-4 h-4" />
+            <span>આપનો વ્યવસાય ઉમેરો</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -439,39 +435,6 @@ export default function BusinessDirectoryPage() {
                 <UserPlus className="w-4 h-4 text-forest-700" />
                 <span>નવા સભ્યની નોંધણી કરો</span>
               </Link>
-            </div>
-
-            {/* Quick 1-click test button */}
-            <div className="mt-6 pt-4 border-t border-ivory-200">
-              <div className="text-[10px] text-charcoal-500 font-semibold mb-2 text-center">
-                ટેસ્ટિંગ માટે ઝડપી ૧-ક્લિક લૉગિન & અનલૉક:
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    loginAs("president");
-                    setShowLoginPrompt(false);
-                    setShowAddModal(true);
-                  }}
-                  className="p-2 rounded-xl bg-saffron-50 hover:bg-saffron-100 border border-saffron-200 text-left transition-colors"
-                >
-                  <div className="font-bold text-xs text-saffron-950">👑 પ્રમુખ શ્રી</div>
-                  <div className="text-[10px] text-saffron-700">દિનેશભાઈ દરજી</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    loginAs("member");
-                    setShowLoginPrompt(false);
-                    setShowAddModal(true);
-                  }}
-                  className="p-2 rounded-xl bg-forest-50 hover:bg-forest-100 border border-forest-200 text-left transition-colors"
-                >
-                  <div className="font-bold text-xs text-forest-950">👤 સામાન્ય સભ્ય</div>
-                  <div className="text-[10px] text-forest-700">ભાવિનકુમાર દરજી</div>
-                </button>
-              </div>
             </div>
           </div>
         </div>

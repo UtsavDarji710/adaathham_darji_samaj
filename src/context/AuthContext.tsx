@@ -9,6 +9,20 @@ interface AuthContextType {
   setCurrentUser: (user: Member | null) => void;
   loginAs: (role: AdminRole | "member" | "guest", memberId?: string) => void;
   loginWithPhone: (phone: string, pin: string) => Promise<{ success: boolean; message: string }>;
+  sendEmailOtp: (
+    email: string,
+    purpose: "signup" | "login",
+    extra?: { name?: string; phone?: string }
+  ) => Promise<{ success: boolean; message: string; cooldownSeconds?: number; previewOtp?: string }>;
+  verifyEmailOtp: (
+    email: string,
+    otp: string,
+    purpose?: "signup" | "login"
+  ) => Promise<{ success: boolean; message: string; user?: Member | null }>;
+  loginWithEmailOtp: (
+    email: string,
+    otp: string
+  ) => Promise<{ success: boolean; message: string; user?: Member | null }>;
   registerMember: (data: Partial<Member>) => Promise<{ success: boolean; member?: Member; message: string }>;
   logout: () => void;
   updateCurrentUserProfile: (data: Partial<Member>) => void;
@@ -28,31 +42,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUserState] = useState<Member | null>(null);
 
   useEffect(() => {
-    // Check saved session in localStorage
-    const savedUserId = typeof window !== "undefined" ? localStorage.getItem(AUTH_STORAGE_KEY) : null;
-    if (savedUserId && savedUserId !== "guest") {
-      const found = INITIAL_MEMBERS.find((m) => m.id === savedUserId);
-      if (found) {
-        setCurrentUserState(found);
-        return;
+    const initSession = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setCurrentUserState(data.user);
+            if (typeof window !== "undefined") {
+              localStorage.setItem(AUTH_STORAGE_KEY, data.user.id);
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        // Network/offline fallback to localStorage
       }
-    }
-    // Default is null (Public guest mode). Only logged-in members have active session
-    setCurrentUserState(null);
+
+      const savedUserId = typeof window !== "undefined" ? localStorage.getItem(AUTH_STORAGE_KEY) : null;
+      if (savedUserId && savedUserId !== "guest") {
+        const found = INITIAL_MEMBERS.find((m) => m.id === savedUserId);
+        if (found) {
+          setCurrentUser(found);
+          return;
+        }
+      }
+
+      // Default is null (Unauthenticated)
+      setCurrentUserState(null);
+    };
+
+    initSession();
   }, []);
 
   const setCurrentUser = (user: Member | null) => {
     setCurrentUserState(user);
-    if (user && typeof window !== "undefined") {
-      localStorage.setItem(AUTH_STORAGE_KEY, user.id);
-    } else if (typeof window !== "undefined") {
-      localStorage.setItem(AUTH_STORAGE_KEY, "guest");
+    if (typeof window !== "undefined") {
+      if (user) {
+        localStorage.setItem(AUTH_STORAGE_KEY, user.id);
+        const sessionVal = user.email || user.phone || user.id;
+        document.cookie = `ad8_session=${encodeURIComponent(sessionVal)}; path=/; max-age=604800; SameSite=Lax`;
+      } else {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        document.cookie = "ad8_session=; path=/; max-age=0; SameSite=Lax";
+      }
     }
   };
 
   const loginAs = (role: AdminRole | "member" | "guest", memberId?: string) => {
     if (role === "guest") {
-      setCurrentUser(null);
+      logout();
       return;
     }
     if (memberId) {
@@ -83,6 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       "9825256789": "mem-5",
       "9825000004": "mem-6", // ખજાનચી
       "9825867890": "mem-6",
+      "9825000007": "comm-assistant-treasurer", // સહ ખજાનચી
       "9825000005": "mem-3", // સામાન્ય સભ્ય
       "9898034567": "mem-3",
     };
@@ -103,7 +143,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return {
       success: false,
-      message: "આ મોબાઇલ નંબર સાથે કોઈ નોંધાયેલું ખાતું મળ્યું નથી. કૃપા કરીને ટેસ્ટ ઓળખપત્ર (દા.ત. 9825000001 / પિન 123456) નો ઉપયોગ કરો.",
+      message: "આ મોબાઇલ નંબર સાથે કોઈ નોંધાયેલું ખાતું મળ્યું નથી. કૃપા કરીને સાચો મોબાઇલ નંબર દાખલ કરો અથવા નવું રજીસ્ટ્રેશન કરો.",
+    };
+  };
+
+  // Requirement 14.1 & 14.2: Send OTP via Backend API with Nodemailer
+  const sendEmailOtp = async (
+    email: string,
+    purpose: "signup" | "login",
+    extra?: { name?: string; phone?: string }
+  ) => {
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, purpose, name: extra?.name, phone: extra?.phone }),
+      });
+      const data = await res.json();
+      return {
+        success: data.success,
+        message: data.message,
+        cooldownSeconds: data.cooldownSeconds,
+        previewOtp: data.previewOtp,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: "ઓટીપી મોકલવામાં સર્વર સમસ્યા આવી. કૃપા કરીને ફરી પ્રયાસ કરો.",
+      };
+    }
+  };
+
+  // Requirement 14.2: Verify OTP via Backend API
+  const verifyEmailOtp = async (
+    email: string,
+    otp: string,
+    purpose?: "signup" | "login"
+  ) => {
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp, purpose }),
+      });
+      const data = await res.json();
+      return {
+        success: data.success,
+        message: data.message,
+        user: data.user || null,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: "ઓટીપી ચકાસણીમાં ભૂલ આવી. કૃપા કરીને ફરી પ્રયાસ કરો.",
+      };
+    }
+  };
+
+  // Requirement 14.3: Complete Login with Email OTP
+  const loginWithEmailOtp = async (email: string, otp: string) => {
+    const result = await verifyEmailOtp(email, otp, "login");
+    if (result.success && result.user) {
+      setCurrentUser(result.user);
+      return {
+        success: true,
+        message: `સ્વાગત છે, ${result.user.name}!`,
+        user: result.user,
+      };
+    }
+    return {
+      success: false,
+      message: result.message || "લૉગિન નિષ્ફળ ગયું.",
     };
   };
 
@@ -115,6 +225,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data.photo_url ||
         "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
       phone: data.phone || "",
+      email: data.email || "",
+      is_email_verified: true,
+      email_verified_at: new Date().toISOString(),
       address: data.address || "",
       city: data.city || "મોડાસા",
       district: data.district || "અરવલ્લી",
@@ -130,7 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       blood_group: data.blood_group,
       role: "member",
       is_lifetime_member: false,
-      completeness: 65,
+      completeness: 75,
       created_at: new Date().toISOString(),
       privacy: {
         phone: "members",
@@ -143,14 +256,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       ...data,
     };
+    INITIAL_MEMBERS.push(newMember);
     setCurrentUser(newMember);
     return { success: true, member: newMember, message: "સભ્ય નોંધણી સફળતાપૂર્વક થઈ ગઈ છે!" };
   };
 
-  const logout = () => {
-    setCurrentUserState(null);
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      // Ignore
+    }
+    setCurrentUser(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      document.cookie = "ad8_session=; path=/; max-age=0; SameSite=Lax";
+      window.location.href = "/login";
     }
   };
 
@@ -170,11 +291,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const role = currentUser?.role;
-  const isAdmin = ["president", "secretary", "joint_secretary", "treasurer", "admin"].includes(role || "");
-  const canManageMembers = ["president", "secretary", "joint_secretary", "admin"].includes(role || "");
-  const canManageFamilies = ["president", "secretary", "joint_secretary", "admin"].includes(role || "");
-  const canManageFinances = ["president", "treasurer", "admin"].includes(role || "");
-  const canManageEvents = ["president", "secretary", "joint_secretary", "admin"].includes(role || "");
+  const isCommitteeAdmin = ["president", "secretary", "joint_secretary", "treasurer", "assistant_treasurer", "admin"].includes(role || "");
+  const isAdmin = isCommitteeAdmin;
+  const canManageMembers = isCommitteeAdmin;
+  const canManageFamilies = isCommitteeAdmin;
+  const canManageFinances = isCommitteeAdmin;
+  const canManageEvents = isCommitteeAdmin;
 
   return (
     <AuthContext.Provider
@@ -183,6 +305,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser,
         loginAs,
         loginWithPhone,
+        sendEmailOtp,
+        verifyEmailOtp,
+        loginWithEmailOtp,
         registerMember,
         logout,
         updateCurrentUserProfile,

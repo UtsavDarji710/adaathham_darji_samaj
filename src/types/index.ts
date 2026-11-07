@@ -10,7 +10,7 @@ export interface PrivacySettings {
   education: PrivacyVisibility;
 }
 
-export type AdminRole = "president" | "secretary" | "joint_secretary" | "treasurer" | "admin" | "member";
+export type AdminRole = "president" | "secretary" | "joint_secretary" | "treasurer" | "assistant_treasurer" | "admin" | "member";
 
 export interface EmploymentDetail {
   company: string;
@@ -44,12 +44,156 @@ export interface ChildEducation {
   is_public: boolean;
 }
 
+export interface MemberEducationRecord {
+  id: string;
+  member_id: string; // "self" or family member ID
+  member_name: string;
+  degree: string;
+  field_of_study?: string;
+  institution?: string;
+  passing_year?: string;
+}
+
 export interface EducationDetail {
   highest_degree: string;
   institution: string;
   field_of_study: string;
   passing_year: string;
-  children: ChildEducation[];
+  education_category?: string; // શિક્ષણ વિભાગ: Graduate, Post Graduate, etc.
+  education_details?: string; // શું અભ્યાસ કર્યો છે? દા.ત. B.Com, MBA
+  children?: ChildEducation[];
+  family_education?: MemberEducationRecord[];
+}
+
+export interface MatrimonyPrivacySettings {
+  show_name: boolean; // નામ બતાવવું
+  show_photo: boolean; // ફોટો બતાવવો
+  show_age: boolean; // ઉંમર / જન્મતારીખ બતાવવી
+  show_native_place: boolean; // મૂળ વતન બતાવવું
+  show_education: boolean; // શિક્ષણ બતાવવું
+  show_occupation: boolean; // વ્યવસાય બતાવવો
+  show_contact: boolean; // સંપર્ક / માતા-પિતાની વિગત બતાવવી
+}
+
+export interface MatrimonyProfile {
+  is_available: boolean; // મેટ્રિમોની માટે ઉપલબ્ધ? (Yes / No)
+  is_public_listing?: boolean; // પબ્લિક લિસ્ટિંગમાં બતાવવું છે? (Yes / No)
+  is_saved?: boolean; // માહિતી સાચવેલ છે? (Yes / No)
+  height?: string; // ઊંચાઈ (દા.ત. 5' 8")
+  weight?: string; // વજન
+  complexion?: string; // વાન / રંગરૂપ
+  subcaste_gotra?: string; // ગોત્ર / શાખ
+  about_me?: string; // ઉમેદવાર વિશે ટૂંકી વિગત
+  partner_expectations?: string; // અપેક્ષિત જીવનસાથી
+  hobbies?: string; // શોખ
+  privacy: MatrimonyPrivacySettings;
+  updated_at?: string;
+}
+
+/**
+ * Matrimony Public Listing Eligibility Condition:
+ * 1. Marital status MUST be Unmarried (અપરણિત). Engaged (સગાઈ થયેલ) & Married (પરણિત) are STRICTLY excluded.
+ * 2. Matrimony Checkbox must be Selected (is_available === true).
+ * 3. Public Listing Consent must be Granted (is_public_listing === true).
+ * 4. Matrimony Details must be Saved (is_saved === true).
+ */
+export function isMemberEligibleForPublicMatrimony(member: {
+  marital_status?: string;
+  is_available_for_matrimony?: boolean;
+  matrimony?: MatrimonyProfile;
+}): boolean {
+  if (!member) return false;
+
+  // Condition 1: Strictly Unmarried only (Engaged & Married rejected)
+  const status = (member.marital_status || "").trim();
+  const isUnmarried =
+    status === "અપરણિત (Unmarried)" ||
+    status === "અપરણિત" ||
+    status.toLowerCase().includes("unmarried");
+  if (!isUnmarried) return false;
+
+  // Condition 2: Matrimony Enabled
+  const isMatrimonyEnabled =
+    member.is_available_for_matrimony === true && member.matrimony?.is_available === true;
+  if (!isMatrimonyEnabled) return false;
+
+  // Condition 3: Public Listing Consent
+  const isPublicListing = member.matrimony?.is_public_listing === true;
+  if (!isPublicListing) return false;
+
+  // Condition 4: Details Saved
+  const isDetailsSaved = member.matrimony?.is_saved === true;
+  if (!isDetailsSaved) return false;
+
+  return true;
+}
+
+export const SAMITI_NATIVE_PLACES = [
+  "અડપોદરા",
+  "બાકરોલ (મહાદેવગ્રામ)",
+  "બામણવાડ",
+  "બેટાલી",
+  "બોલુન્દ્રા",
+  "દઢાલિયા",
+  "દહેગામડા",
+  "દાવલી",
+  "ગઢડા",
+  "ઈસરી",
+  "ઘોટાડી",
+  "ખંભીસર",
+  "ખોડંબા",
+  "કોકાપુર",
+  "કુડોલ",
+  "કુવોલ",
+  "કુણી",
+  "લિંભોઈ",
+  "મેઘરજ",
+  "મોડાસા",
+  "નોંદીસણ",
+  "નવાગામ",
+  "પાલ્લા",
+  "પટેલ છાપરા",
+  "પુષ્પપુર",
+  "રાયગઢ",
+  "રાજેન્દ્રનગર",
+  "રખિયાલ",
+  "રમોસ",
+  "રેટ્ટાવાડા",
+  "સરડોઈ",
+  "શામપુર",
+  "શામળાજી",
+  "શીવનગર",
+  "તરકવાડા",
+  "ટીંટોઈ",
+  "અન્ય (Other)",
+] as const;
+
+export const SAMITI_EDUCATION_CATEGORIES = [
+  "સ્નાતક (Graduate)",
+  "અનુસ્નાતક (Post Graduate)",
+  "ઉચ્ચતર માધ્યમિક (Higher Secondary / 12th)",
+  "માધ્યમિક / હાઈસ્કૂલ (Secondary / 10th)",
+  "ડિપ્લોમા (Diploma)",
+  "ડોક્ટરેટ / Ph.D.",
+  "વ્યવસાયિક / સીએ / ટેકનિકલ કોર્સ (Professional)",
+  "અશિક્ષિત / પ્રાથમિક (Primary)",
+  "અન્ય (Other)",
+] as const;
+
+export interface FamilyRelationDetail {
+  id: string;
+  relation: string; // e.g. "પિતા (Father)", "માતા (Mother)", etc.
+  name: string;
+  phone?: string;
+  city?: string;
+  native_place?: string;
+  sasri_name?: string; // સાસરીનું નામ
+  piyar_name?: string; // પિયરનું નામ
+  is_public?: boolean; // જાહેર પ્રદર્શન સંમતિ (Show publicly? default: false)
+  gender?: "male" | "female" | "other";
+  marital_status?: string;
+  is_registered?: boolean;
+  member_id?: string;
 }
 
 export interface Member {
@@ -58,6 +202,8 @@ export interface Member {
   photo_url: string;
   phone: string;
   email?: string;
+  is_email_verified?: boolean;
+  email_verified_at?: string;
   address: string;
   city: string;
   district?: string;
@@ -67,6 +213,10 @@ export interface Member {
   grandfather_name?: string; // દાદાનું પૂરું નામ
   maternal_uncle_name?: string; // મામાનું પૂરું નામ
   maternal_grandfather_name?: string; // નાનાનું પૂરું નામ
+  sasri_name?: string; // સાસરીનું નામ (Sasri Name)
+  piyar_name?: string; // પિયરનું નામ (Piyar Name)
+  is_public_in_family?: boolean; // સભ્ય માહિતી જાહેર કરવી? (Show publicly? default: false)
+  family_relations?: FamilyRelationDetail[]; // પારિવારિક સંબંધો (બહુવિધ સંબંધો, નામ અને મોબાઇલ)
   marital_status?: string; // લગ્ન સ્થિતિ (Married Status)
   gender: "male" | "female" | "other";
   dob?: string;
@@ -80,6 +230,8 @@ export interface Member {
   employment?: EmploymentDetail;
   education?: EducationDetail;
   business_id?: string;
+  is_available_for_matrimony?: boolean; // મેટ્રિમોની માટે ઉપલબ્ધ?
+  matrimony?: MatrimonyProfile; // મેટ્રિમોની પ્રોફાઇલ & સેટિંગ્સ
   created_at: string;
   completeness: number; // 0 - 100%
 }
@@ -132,6 +284,8 @@ export interface BusinessItem {
   address: string;
   phone: string;
   email?: string;
+  is_email_verified?: boolean;
+  email_verified_at?: string;
   website?: string;
   logo_url?: string;
   cover_url?: string;
@@ -141,6 +295,42 @@ export interface BusinessItem {
   valid_until?: string;
   status: "active" | "pending" | "rejected" | "expired";
   created_at: string;
+}
+
+export interface BusinessAdvertisement {
+  id: string;
+  business_name: string;
+  category: string;
+  description: string;
+  owner_name: string;
+  contact_number: string;
+  address: string;
+  image_url: string; // Business Image / Advertisement Banner
+  website_link?: string;
+  status: "pending" | "approved" | "rejected";
+  rejection_remarks?: string;
+  submitted_by?: string;
+  created_at: string;
+  approved_at?: string;
+  approved_by?: string;
+}
+
+export interface JobPosting {
+  id: string;
+  title: string;
+  company_name: string;
+  category: string;
+  job_type: "પૂર્ણ સમય (Full-time)" | "અંશકાલીન (Part-time)" | "રિમોટ (Remote)" | "ઇન્ટર્નશિપ (Internship)";
+  city: string;
+  salary_range?: string;
+  experience?: string;
+  description: string;
+  contact_person: string;
+  contact_phone: string;
+  contact_email?: string;
+  posted_by?: string;
+  created_at: string;
+  status: "active" | "closed";
 }
 
 export interface CommunityEvent {
@@ -161,17 +351,43 @@ export interface CommunityEvent {
 
 export interface Donation {
   id: string;
+  donation_id: string; // e.g. DON-2026-001
+  user_id?: string; // registered user ID
   donor_id?: string;
   donor_name: string;
+  mobile_number: string;
+  donor_photo?: string; // Donor photo uploaded
+  hasthe_names: string[]; // Multiple હસ્તે names
+  donation_purpose: string; // e.g. "સમાજના વિકાસ માટે", "શિક્ષણ સહાય", "આરોગ્ય સહાય", "સામાજિક કાર્યક્રમ", "અન્ય"
+  specific_purpose?: string; // custom purpose description
+  donation_year: string; // e.g. "2026"
   amount: number;
   date: string;
-  purpose: string; // જેમ કે ભવન નિર્માણ, વિદ્યાર્થી સહાય, ઉત્સવ
-  campaign: string;
-  payment_status: "verified" | "pending";
-  is_anonymous: boolean;
-  public_consent: boolean;
-  receipt_number: string;
+  purpose?: string; // backward compatibility
+  campaign?: string; // backward compatibility
+  payment_proof?: string; // Payment proof screenshot (Admin only, never public)
+  status: "pending" | "approved" | "rejected";
+  payment_status?: "verified" | "pending"; // backward compatibility
+  is_anonymous?: boolean;
+  public_consent?: boolean;
+  receipt_number?: string;
   payment_method?: string;
+  admin_remarks?: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SamitiBankDetails {
+  account_holder: string;
+  bank_name: string;
+  account_number: string;
+  ifsc_code: string;
+  branch_name: string;
+  upi_id?: string;
+  qr_code_url: string;
+  updated_at?: string;
 }
 
 export interface Announcement {
@@ -183,6 +399,18 @@ export interface Announcement {
   image_url?: string;
   author: string;
   is_urgent?: boolean;
+}
+
+export interface Circular {
+  id: string;
+  circular_no: string; // e.g. "પરિપત્ર ક્રમાંક: ADS/૨૦૨૬/૦૧"
+  title: string;
+  subject: string;
+  body: string;
+  date: string;
+  department: string;
+  signatory: string;
+  is_important?: boolean;
 }
 
 export interface CommitteeMember {

@@ -7,290 +7,596 @@ import {
   Sparkles,
   CheckCircle,
   Plus,
-  ShieldCheck,
-  Calendar,
-  Clock,
   Phone,
   ArrowRight,
-  Info,
-  Lock,
+  MapPin,
+  Globe,
+  Upload,
+  Image as ImageIcon,
+  Clock,
+  XCircle,
+  AlertTriangle,
+  User,
+  ShieldCheck,
   LogIn,
-  UserPlus,
-  Shield,
+  ExternalLink,
   X,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { BusinessAdvertisement } from "@/types";
+import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
+
+const CATEGORIES = [
+  "ટેલરિંગ & ફેશન ડિઝાઇનિંગ (Tailoring & Fashion)",
+  "એમ્બ્રોઇડરી & બુટિક (Embroidery & Boutique)",
+  "ટેક્સટાઇલ & કાપડ વેપાર (Textile & Fabric)",
+  "રેડીમેડ ગારમેન્ટ્સ (Readymade Garments)",
+  "જ્વેલરી & આભૂષણ (Jewelry & Accessories)",
+  "ઇલેક્ટ્રોનિક્સ & હાર્ડવેર (Electronics & Hardware)",
+  "પ્રોફેશનલ સેવાઓ (CA, Advocate, IT)",
+  "અન્ય વ્યવસાય (Other Business)",
+];
 
 export default function AdvertisementsPage() {
-  const { businesses, announcements, addBusiness, addLog } = useData();
-  const { currentUser, isAdmin, loginAs } = useAuth();
+  const { advertisements, addAdvertisement, addLog } = useData();
+  const { currentUser } = useAuth();
 
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // Form state
-  const [adTitle, setAdTitle] = useState("");
-  const [category, setCategory] = useState("ટેલરિંગ & ફેશન ડિઝાઇનિંગ");
+  const [businessName, setBusinessName] = useState("");
+  const [category, setCategory] = useState(CATEGORIES[0]);
   const [description, setDescription] = useState("");
-  const [city, setCity] = useState("મોડાસા");
-  const [phone, setPhone] = useState(currentUser?.phone || "");
-  const [planDuration, setPlanDuration] = useState("1"); // 1 month, 3 months, 12 months
-  const [coverUrl, setCoverUrl] = useState("");
+  const [ownerName, setOwnerName] = useState(currentUser?.name || "");
+  const [contactNumber, setContactNumber] = useState(currentUser?.phone || "");
+  const [address, setAddress] = useState(currentUser?.address ? `${currentUser.address}, ${currentUser.city || "મોડાસા"}` : "મોડાસા, અરવલ્લી");
+  const [bannerPreview, setBannerPreview] = useState<string>("");
+  const [websiteLink, setWebsiteLink] = useState("");
+  const [activeTab, setActiveTab] = useState<"showcase" | "my_ads">("showcase");
 
+  // Keep owner name and phone up to date if currentUser loads
+  React.useEffect(() => {
+    if (currentUser) {
+      if (!ownerName) setOwnerName(currentUser.name);
+      if (!contactNumber) setContactNumber(currentUser.phone);
+    }
+  }, [currentUser]);
 
+  // Publicly visible approved advertisements only!
+  const approvedAdvertisements = advertisements.filter((a) => a.status === "approved");
 
-  const paidBusinesses = businesses.filter((b) => b.is_featured || b.is_paid);
+  // Current user's own submitted advertisements (pending, approved, rejected)
+  const mySubmittedAds = currentUser
+    ? advertisements.filter(
+        (a) =>
+          a.submitted_by === currentUser.id ||
+          a.contact_number === currentUser.phone ||
+          a.owner_name.toLowerCase() === currentUser.name.toLowerCase()
+      )
+    : [];
 
-  const handleAdSubmit = (e: React.FormEvent) => {
+  // Handle banner image upload
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("ફોટો સાઈઝ ૫ MB કરતાં ઓછી હોવી જોઈએ.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setBannerPreview(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmitAd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       setShowSubmitModal(false);
       setShowLoginPrompt(true);
       return;
     }
-    const monthsNum = parseInt(planDuration);
-    const cost = monthsNum === 1 ? 500 : monthsNum === 3 ? 1200 : 3500;
 
-    addBusiness({
-      owner_id: currentUser.id,
-      owner_name: currentUser.name,
-      name: adTitle,
+    if (!businessName.trim() || !description.trim() || !contactNumber.trim() || !address.trim()) {
+      alert("કૃપા કરીને બધી ફરજિયાત વિગતો ભરો.");
+      return;
+    }
+
+    const defaultBanner =
+      bannerPreview ||
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop&q=80";
+
+    // Submit for approval (Status: pending)
+    addAdvertisement({
+      business_name: businessName.trim(),
       category,
-      description,
-      city,
-      address: "મોડાસા",
-      phone: phone || currentUser.phone,
-      cover_url:
-        coverUrl ||
-        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop&q=80",
-      is_featured: true,
-      is_paid: false, // Pending verification as requested: do not mark paid without confirmation
-      paid_amount: cost,
-      status: "pending", // Waiting for admin approval
+      description: description.trim(),
+      owner_name: ownerName.trim() || currentUser.name,
+      contact_number: contactNumber.trim(),
+      address: address.trim(),
+      image_url: defaultBanner,
+      website_link: websiteLink.trim() || undefined,
+      status: "pending",
+      submitted_by: currentUser.id,
     });
 
     addLog(
-      "પેઇડ જાહેરાત સબમિટ",
-      adTitle,
-      `પ્લાન: ${monthsNum} મહિનો, રકમ: ₹${cost} (ચકાસણી પેન્ડિંગ)`,
+      "વ્યવસાય જાહેરાત અરજી સબમિટ",
+      businessName.trim(),
+      `કેટેગરી: ${category}, માલિક: ${ownerName.trim() || currentUser.name} (ચકાસણી પેન્ડિંગ)`,
       currentUser.name,
       currentUser.role || "member"
     );
 
+    // Reset and close
     setShowSubmitModal(false);
-    setAdTitle("");
+    setBusinessName("");
     setDescription("");
-    setSuccessToast("જાહેરાત મંજૂરી માટે મોકલાઈ ગઈ છે. સમિતિ દ્વારા ચકાસણી થયા બાદ સક્રિય થશે.");
-    setTimeout(() => setSuccessToast(null), 5000);
+    setBannerPreview("");
+    setWebsiteLink("");
+    setSuccessToast("તમારી વ્યવસાય જાહેરાત એડમિન સમિતિને મંજૂરી માટે મોકલાઈ ગઈ છે. ચકાસણી બાદ હોમપેજ પર પ્રદર્શિત થશે.");
+    setTimeout(() => setSuccessToast(null), 6000);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Toast Notification */}
       {successToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-forest-800 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-in slide-in-from-bottom">
-          <CheckCircle className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 bg-forest-800 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in slide-in-from-bottom">
+          <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <span>{successToast}</span>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-gradient-to-r from-saffron-50 via-ivory-50 to-amber-50 p-6 sm:p-8 rounded-3xl border border-saffron-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-saffron-100 text-saffron-800">
+            <span className="p-2.5 rounded-2xl bg-saffron-600 text-white shadow-sm">
               <Megaphone className="w-6 h-6" />
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900">
-              સમાજ જાહેરાતો (Advertisements)
+              વ્યવસાય જાહેરાત પોર્ટલ (Business Advertisements)
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal-600 mt-1">
-            અડાઆઠમ દરજી સમાજના વ્યવસાયો, નવી દુકાનો અને સેવાઓનો સમાજવ્યાપી પ્રચાર.
+          <p className="text-xs sm:text-sm text-charcoal-600 mt-2 max-w-2xl leading-relaxed">
+            અડાઆઠમ દરજી સેવા સમિતિના સભ્યો માટે પોતાના વ્યવસાય, દુકાન, બુટિક કે સેવાઓનો સમગ્ર સમાજમાં પ્રચાર કરવા માટેનું સત્તાવાર પ્લેટફોર્મ.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            if (!currentUser) {
-              setShowLoginPrompt(true);
-              return;
-            }
-            setShowSubmitModal(true);
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
-        >
-          <Plus className="w-4 h-4" />
-          <span>નવી જાહેરાત આપો</span>
-        </button>
+        {currentUser && (
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all hover:scale-[1.02] flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>વ્યવસાય જાહેરાત મૂકો (Submit Ad)</span>
+          </button>
+        )}
       </div>
 
-      {/* Active Featured Advertisements Showcase */}
-      <div>
-        <h2 className="text-xl font-bold text-charcoal-900 mb-6 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-saffron-600" />
-          <span>માન્ય ફીચર્ડ જાહેરાતો (Active Showcase)</span>
-        </h2>
+      {/* Navigation Tabs (Showcase vs My Ads) */}
+      {currentUser && (
+        <div className="flex items-center gap-2 border-b border-ivory-300 pb-2">
+          <button
+            onClick={() => setActiveTab("showcase")}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
+              activeTab === "showcase"
+                ? "bg-saffron-600 text-white shadow-xs"
+                : "text-charcoal-700 hover:bg-ivory-200"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>માન્ય વ્યવસાય જાહેરાતો ({approvedAdvertisements.length})</span>
+          </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paidBusinesses.map((biz) => (
-            <div
-              key={biz.id}
-              className="bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-hover transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="relative aspect-[16/9] overflow-hidden bg-ivory-200">
-                  <img
-                    src={biz.cover_url || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800"}
-                    alt={biz.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <span className="absolute top-3 left-3 bg-gradient-to-r from-saffron-600 to-saffron-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    પ્રાયોજિત જાહેરાત
-                  </span>
+          <button
+            onClick={() => setActiveTab("my_ads")}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
+              activeTab === "my_ads"
+                ? "bg-saffron-600 text-white shadow-xs"
+                : "text-charcoal-700 hover:bg-ivory-200"
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>મારી સબમિટ કરેલી જાહેરાતો ({mySubmittedAds.length})</span>
+          </button>
+        </div>
+      )}
+
+      {/* 1. PUBLIC SHOWCASE OF APPROVED ADVERTISEMENTS */}
+      {activeTab === "showcase" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-charcoal-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-saffron-600" />
+              <span>માન્ય થયેલી વ્યવસાય જાહેરાતો (Active Advertisements)</span>
+            </h2>
+            <span className="text-xs text-charcoal-500 font-medium">
+              કમિટી દ્વારા માન્ય {approvedAdvertisements.length} જાહેરાતો
+            </span>
+          </div>
+
+          {approvedAdvertisements.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-ivory-300 p-12 text-center space-y-3">
+              <Megaphone className="w-10 h-10 text-charcoal-300 mx-auto" />
+              <h3 className="font-bold text-charcoal-800 text-sm">હાલમાં કોઈ જાહેરાત લાઇવ નથી.</h3>
+              <p className="text-xs text-charcoal-500">
+                આપ પણ આપના વ્યવસાયની જાહેરાત મૂકી શકો છો.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {approvedAdvertisements.map((ad) => (
+                <div
+                  key={ad.id}
+                  className="bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-hover transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Banner Image */}
+                    <div className="relative aspect-[16/9] overflow-hidden bg-ivory-200">
+                      <img
+                        src={ad.image_url}
+                        alt={ad.business_name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <span className="absolute top-3 left-3 bg-gradient-to-r from-saffron-600 to-saffron-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        પ્રાયોજિત જાહેરાત
+                      </span>
+                      <span className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                        {ad.category}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5 space-y-3">
+                      <div>
+                        <h3 className="font-extrabold text-base text-charcoal-900 group-hover:text-saffron-700 transition-colors">
+                          {ad.business_name}
+                        </h3>
+                        <p className="text-xs text-charcoal-600 mt-1.5 line-clamp-3 leading-relaxed">
+                          {ad.description}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-ivory-200 space-y-1.5 text-xs text-charcoal-600">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-saffron-700 flex-shrink-0" />
+                          <span>માલિક: <strong>{ad.owner_name}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-forest-700 flex-shrink-0" />
+                          <span className="truncate">{ad.address}</span>
+                        </div>
+                        {ad.website_link && (
+                          <div className="flex items-center gap-1.5">
+                            <Globe className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
+                            <a
+                              href={ad.website_link.startsWith("http") ? ad.website_link : `https://${ad.website_link}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-700 font-bold hover:underline truncate"
+                            >
+                              {ad.website_link}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer CTAs */}
+                  <div className="p-4 pt-3 border-t border-ivory-200 bg-ivory-50/50 flex items-center justify-between">
+                    <a
+                      href={`tel:${ad.contact_number}`}
+                      className="px-3.5 py-1.5 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>સંપર્ક કરો ({ad.contact_number})</span>
+                    </a>
+
+                    {ad.website_link ? (
+                      <a
+                        href={ad.website_link.startsWith("http") ? ad.website_link : `https://${ad.website_link}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-saffron-700 font-bold text-xs hover:underline flex items-center gap-1"
+                      >
+                        <span>વેબસાઇટ</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-charcoal-400 text-[11px] font-medium">સમાજ માન્ય</span>
+                    )}
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-                <div className="p-5">
-                  <span className="text-[10px] font-bold bg-ivory-200 text-charcoal-700 px-2 py-0.5 rounded-md inline-block mb-1.5">
-                    {biz.category}
-                  </span>
-                  <h3 className="font-bold text-base text-charcoal-900">{biz.name}</h3>
-                  <p className="text-xs text-charcoal-600 mt-2 line-clamp-3 leading-relaxed">
-                    {biz.description}
+      {/* 2. LOGGED IN USER'S SUBMITTED ADVERTISEMENTS */}
+      {currentUser && activeTab === "my_ads" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-charcoal-900 flex items-center gap-2">
+              <User className="w-5 h-5 text-saffron-700" />
+              <span>મારી સબમિટ કરેલી જાહેરાતો (My Ads)</span>
+            </h2>
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-saffron-600 text-white text-xs font-bold hover:bg-saffron-700 transition-colors flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>નવી જાહેરાત ઉમેરો</span>
+            </button>
+          </div>
+
+          {mySubmittedAds.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-ivory-300 p-10 text-center space-y-3">
+              <p className="text-xs text-charcoal-500">
+                તમે હજી સુધી કોઈ વ્યવસાય જાહેરાત સબમિટ કરી નથી.
+              </p>
+              <button
+                onClick={() => setShowSubmitModal(true)}
+                className="px-4 py-2 bg-saffron-600 text-white text-xs font-bold rounded-xl shadow-xs"
+              >
+                પ્રથમ જાહેરાત સબમિટ કરો
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {mySubmittedAds.map((ad) => (
+                <div
+                  key={ad.id}
+                  className="bg-white rounded-3xl border border-ivory-300 p-5 shadow-card space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={ad.image_url}
+                        alt={ad.business_name}
+                        className="w-14 h-14 rounded-xl object-cover border border-ivory-300"
+                      />
+                      <div>
+                        <h4 className="font-extrabold text-sm text-charcoal-900">{ad.business_name}</h4>
+                        <span className="text-[11px] text-charcoal-500">{ad.category}</span>
+                      </div>
+                    </div>
+
+                    {/* Status Badge */}
+                    <span
+                      className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                        ad.status === "approved"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          : ad.status === "rejected"
+                          ? "bg-red-100 text-red-800 border border-red-200"
+                          : "bg-amber-100 text-amber-800 border border-amber-200"
+                      }`}
+                    >
+                      {ad.status === "approved" && <CheckCircle className="w-3 h-3 text-emerald-600" />}
+                      {ad.status === "rejected" && <XCircle className="w-3 h-3 text-red-600" />}
+                      {ad.status === "pending" && <Clock className="w-3 h-3 text-amber-600" />}
+                      <span>
+                        {ad.status === "approved"
+                          ? "માન્ય (Approved)"
+                          : ad.status === "rejected"
+                          ? "અસ્વીકાર (Rejected)"
+                          : "પેન્ડિંગ (Pending)"}
+                      </span>
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-charcoal-600 leading-relaxed line-clamp-2">
+                    {ad.description}
+                  </p>
+
+                  {/* Rejection remarks if rejected */}
+                  {ad.status === "rejected" && ad.rejection_remarks && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold block">એડમિન કમિટી શેરો:</span>
+                        <span>{ad.rejection_remarks}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {ad.status === "approved" && (
+                    <p className="text-[11px] text-emerald-700 font-semibold">
+                      ✓ આ જાહેરાત હોમપેજ અને પબ્લિક પોર્ટલ પર લાઈવ છે.
+                    </p>
+                  )}
+
+                  {ad.status === "pending" && (
+                    <p className="text-[11px] text-amber-700 font-semibold">
+                      ⏳ સમિતિ દ્વારા ચકાસણી પ્રક્રિયામાં છે. મંજૂરી બાદ જાહેરમાં દેખાશે.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* USER BUSINESS ADVERTISEMENT SUBMISSION MODAL */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-ivory-300 overflow-hidden max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-ivory-200 flex items-center justify-between bg-gradient-to-r from-saffron-50 to-ivory-50">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-saffron-600 text-white shadow-xs">
+                  <Megaphone className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-base text-charcoal-900">
+                    વ્યવસાય જાહેરાત સબમિટ કરો (Submit Ad)
+                  </h3>
+                  <p className="text-[11px] text-charcoal-500">
+                    વિગતો ભર્યા બાદ એડમિન કમિટીને મંજૂરી માટે મોકલાશે.
                   </p>
                 </div>
               </div>
-
-              <div className="p-5 pt-0 border-t border-ivory-200 mt-4 flex items-center justify-between text-xs">
-                <a
-                  href={`tel:${biz.phone}`}
-                  className="font-bold text-forest-800 flex items-center gap-1 hover:underline"
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>{biz.phone}</span>
-                </a>
-                <Link
-                  href={`/businesses/${biz.id}`}
-                  className="text-saffron-700 font-bold hover:underline"
-                >
-                  વિગત જુઓ →
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Submit Ad Modal */}
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-ivory-300 p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-ivory-200">
-              <h3 className="font-bold text-base text-charcoal-900">
-                નવી જાહેરાત સબમિટ કરો
-              </h3>
               <button
                 onClick={() => setShowSubmitModal(false)}
-                className="text-charcoal-400 hover:text-charcoal-800"
+                className="w-8 h-8 rounded-full bg-ivory-200 hover:bg-ivory-300 text-charcoal-600 flex items-center justify-center"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAdSubmit} className="mt-4 space-y-4 text-xs">
+            {/* Modal Form Body */}
+            <form onSubmit={handleSubmitAd} className="p-5 overflow-y-auto space-y-4">
+              {/* Field 1: Business Name */}
               <div>
-                <label className="block font-bold text-charcoal-700 mb-1">
-                  જાહેરાત / વ્યવસાયનું શીર્ષક *
+                <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                  વ્યવસાયનું નામ (Business Name) *
                 </label>
                 <input
                   type="text"
-                  value={adTitle}
-                  onChange={(e) => setAdTitle(e.target.value)}
-                  placeholder="જેમ કે શ્રી ગણેશ ફેશન સ્ટુડિયો"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="દા.ત. ચામુંડા ટેલર્સ & બુટિક"
                   required
-                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500 font-medium"
                 />
               </div>
 
+              {/* Field 2: Business Category */}
               <div>
-                <label className="block font-bold text-charcoal-700 mb-1">કેટેગરી *</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                  વ્યવસાય કેટેગરી (Business Category) *
+                </label>
+                <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-charcoal-700 mb-1">શહેર *</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-charcoal-700 mb-1">સંપર્ક નંબર *</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-charcoal-700 mb-1">જાહેરાત સમયગાળો (અવધિ)</label>
-                <select
-                  value={planDuration}
-                  onChange={(e) => setPlanDuration(e.target.value)}
-                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl bg-white focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500 bg-white"
                 >
-                  <option value="1">૧ મહિનો</option>
-                  <option value="3">૩ મહિના</option>
-                  <option value="12">૧ વર્ષ</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
                 </select>
               </div>
 
+              {/* Field 3: Business Description */}
               <div>
-                <label className="block font-bold text-charcoal-700 mb-1">જાહેરાત લખાણ / સંદેશ</label>
+                <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                  વ્યવસાયની વિગત / વર્ણન (Business Description) *
+                </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  placeholder="તમારા વ્યવસાય, પ્રોડક્ટ્સ અને વિશેષ સેવાઓ વિશે જણાવો..."
+                  required
                   rows={3}
-                  placeholder="ઓફર, ડિસ્કાઉન્ટ અથવા વ્યવસાયની માહિતી"
-                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500 font-medium leading-relaxed"
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-ivory-100 text-[11px] text-charcoal-600 border border-ivory-200">
-                <Info className="w-3.5 h-3.5 inline mr-1 text-saffron-700" />
-                જાહેરાત સબમિટ થયા બાદ એડમિન દ્વારા ચુકવણીની પુષ્ટિ (Payment Verification) થશે અને ત્યારબાદ જ લાઈવ કરવામાં આવશે.
+              {/* Field 4 & 5: Owner Name and Contact Number */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                    વ્યવસાય માલિકનું નામ (Owner Name) *
+                  </label>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                    સંપર્ક નંબર (Contact Number) *
+                  </label>
+                  <input
+                    type="tel"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500 font-bold"
+                  />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              {/* Field 6: Business Address */}
+              <div>
+                <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                  વ્યવસાયનું સરનામું (Business Address) *
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="દા.ત. ૧૦, મહાવીર કોમ્પ્લેક્ષ, માલપુર રોડ, મોડાસા"
+                  required
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500"
+                />
+              </div>
+
+              {/* Field 7: Business Image / Advertisement Banner (with Drag & Drop Crop Editor) */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-charcoal-800">
+                  વ્યવસાય ફોટો / બેનર (Business Image / Banner) *
+                </label>
+                <ImageUploadWithCrop
+                  currentImageUrl={bannerPreview}
+                  onImageCropped={(url) => setBannerPreview(url)}
+                  aspectRatio={16 / 9}
+                  aspectRatioLabel="૧૬:૯ (વાઈડ બેનર)"
+                  category="advertisement-banners"
+                  label="જાહેરાત બેનર અપલોડ &amp; ક્રોપ કરો"
+                  helperText="ડ્રેગ &amp; ડ્રોપ કરો અથવા ડિવાઇસમાંથી પસંદ કરો • JPG, PNG, WebP (મહત્તમ ૫ MB)"
+                />
+              </div>
+
+              {/* Field 8: Optional Website or Social Media Link */}
+              <div>
+                <label className="block text-xs font-bold text-charcoal-800 mb-1">
+                  વેબસાઇટ અથવા સોશિયલ મીડિયા લિંક (Website / Social Link - વૈકલ્પિક)
+                </label>
+                <div className="relative">
+                  <Globe className="w-4 h-4 text-charcoal-400 absolute left-3 top-3" />
+                  <input
+                    type="url"
+                    value={websiteLink}
+                    onChange={(e) => setWebsiteLink(e.target.value)}
+                    placeholder="https://instagram.com/yourbusiness અથવા www.example.com"
+                    className="w-full pl-9 pr-3.5 py-2.5 border border-ivory-300 rounded-xl text-xs focus:outline-none focus:border-saffron-500"
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-4 border-t border-ivory-200 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowSubmitModal(false)}
-                  className="px-4 py-2 border border-ivory-300 text-charcoal-700 rounded-xl font-semibold"
+                  className="px-4 py-2.5 rounded-xl bg-white border border-ivory-300 text-charcoal-700 font-bold text-xs hover:bg-ivory-100 transition-colors"
                 >
                   રદ કરો
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded-xl font-bold shadow-sm"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs shadow-md transition-all hover:scale-[1.01]"
                 >
-                  જાહેરાત મોકલો
+                  Submit for Approval (મંજૂરી માટે મોકલો)
                 </button>
               </div>
             </form>
@@ -298,82 +604,32 @@ export default function AdvertisementsPage() {
         </div>
       )}
 
-      {/* Login Required Modal */}
+      {/* Login Prompt Modal if Guest Clicks Add Ad */}
       {showLoginPrompt && (
-        <div className="fixed inset-0 z-50 bg-charcoal-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95">
-            <button
-              onClick={() => setShowLoginPrompt(false)}
-              className="absolute top-4 right-4 p-2 text-charcoal-400 hover:text-charcoal-700 rounded-full hover:bg-ivory-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-amber-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
-                <Lock className="w-7 h-7" />
-              </div>
-              <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 inline-block mb-2">
-                સુરક્ષિત સભ્ય ઝોન • લૉગિન આવશ્યક
-              </span>
-              <h3 className="font-extrabold text-xl text-charcoal-900">
-                જાહેરાત આપવા માટે લૉગિન કરો
-              </h3>
-              <p className="text-xs text-charcoal-600 mt-2 leading-relaxed">
-                અડાઆઠમ દરજી સમાજના પોર્ટલ પર વ્યવસાયની જાહેરાત આપવા માટે સભ્ય લૉગિન આવશ્યક છે. આપના ખાતામાં લૉગિન કરો અથવા નવા સભ્ય તરીકે જોડાઓ.
-              </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-ivory-300 p-6 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
+              <LogIn className="w-6 h-6" />
             </div>
-
-            <div className="space-y-2.5">
+            <h3 className="font-extrabold text-base text-charcoal-900">
+              સભ્ય લૉગિન જરૂરી છે
+            </h3>
+            <p className="text-xs text-charcoal-600 leading-relaxed">
+              વ્યવસાય જાહેરાત સબમિટ કરવા માટે કૃપા કરીને આપના નોંધાયેલા સભ્ય એકાઉન્ટમાં લૉગિન કરો.
+            </p>
+            <div className="flex flex-col gap-2 pt-2">
               <Link
                 href="/login"
-                className="w-full py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all group"
+                className="w-full py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
               >
-                <LogIn className="w-4 h-4" />
-                <span>સભ્ય લૉગિન કરો</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                લૉગિન કરો
               </Link>
-
-              <Link
-                href="/register"
-                className="w-full py-2.5 bg-white hover:bg-ivory-100 text-charcoal-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2 border border-ivory-300 shadow-2xs transition-colors"
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="w-full py-2 bg-ivory-100 hover:bg-ivory-200 text-charcoal-700 font-bold text-xs rounded-xl transition-colors"
               >
-                <UserPlus className="w-4 h-4 text-forest-700" />
-                <span>નવા સભ્યની નોંધણી કરો</span>
-              </Link>
-            </div>
-
-            {/* Quick 1-click test buttons */}
-            <div className="mt-6 pt-4 border-t border-ivory-200">
-              <div className="text-[10px] text-charcoal-500 font-semibold mb-2 text-center">
-                ટેસ્ટિંગ માટે ઝડપી ૧-ક્લિક લૉગિન & અનલૉક:
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    loginAs("president");
-                    setShowLoginPrompt(false);
-                    setShowSubmitModal(true);
-                  }}
-                  className="p-2 rounded-xl bg-saffron-50 hover:bg-saffron-100 border border-saffron-200 text-left transition-colors"
-                >
-                  <div className="font-bold text-xs text-saffron-950">👑 પ્રમુખ શ્રી</div>
-                  <div className="text-[10px] text-saffron-700">દિનેશભાઈ દરજી</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    loginAs("member");
-                    setShowLoginPrompt(false);
-                    setShowSubmitModal(true);
-                  }}
-                  className="p-2 rounded-xl bg-forest-50 hover:bg-forest-100 border border-forest-200 text-left transition-colors"
-                >
-                  <div className="font-bold text-xs text-forest-950">👤 સામાન્ય સભ્ય</div>
-                  <div className="text-[10px] text-forest-700">ભાવિનકુમાર દરજી</div>
-                </button>
-              </div>
+                પાછા જાઓ
+              </button>
             </div>
           </div>
         </div>

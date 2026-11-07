@@ -3,6 +3,7 @@ import { Noto_Sans_Gujarati } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import MobileAppInstallBanner from "@/components/MobileAppInstallBanner";
 import { AuthProvider } from "@/context/AuthContext";
 import { DataProvider } from "@/context/DataContext";
 
@@ -17,6 +18,18 @@ export const metadata: Metadata = {
   title: "અડાઆઠમ દરજી સમાજ — શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા",
   description: "અડાઆઠમ દરજી સમાજનું આધિકારિક ડિજિટલ પોર્ટલ — પરિવાર વૃક્ષ, સભ્યો, વ્યવસાય ડિરેક્ટરી, જાહેરાતો, કાર્યક્રમો, દાતાઓ અને એડમિન ડેશબોર્ડ.",
   keywords: ["અડાઆઠમ દરજી સમાજ", "દરજી સમાજ", "મોડાસા", "પરિવાર વૃક્ષ", "ગુજરાતી સમાજ", "Darji Samaj"],
+  manifest: "/manifest.json",
+  themeColor: "#c2410c",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "અડાઆઠમ દરજી",
+  },
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -32,6 +45,7 @@ export default function RootLayout({
             <Header />
             <main className="flex-1 pb-16">{children}</main>
             <Footer />
+            <MobileAppInstallBanner />
           </DataProvider>
         </AuthProvider>
       </body>

@@ -61,3 +61,51 @@ body {
   background-size: 30px 30px;
   background-position: 0 0, 15px 15px;
 }
+
+/* Seamless Infinite Horizontal Auto-Scroll Slider (Marquee) */
+@keyframes marquee-scroll-left {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes marquee-scroll-right {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-slider-marquee-left {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-scroll-left var(--slider-speed, 35s) linear infinite;
+}
+
+.animate-slider-marquee-right {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-scroll-right var(--slider-speed, 35s) linear infinite;
+}
+
+.slider-paused,
+.group-slider:hover .animate-slider-marquee-left,
+.group-slider:hover .animate-slider-marquee-right {
+  animation-play-state: paused !important;
+}
+
+/* Hide scrollbar for clean UI while keeping manual scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

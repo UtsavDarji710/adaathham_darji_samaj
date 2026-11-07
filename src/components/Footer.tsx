@@ -35,7 +35,7 @@ export default function Footer() {
               />
               <div>
                 <h3 className="font-bold text-lg text-white leading-tight">
-                  અડાઆઠમ દરજી સમાજ
+                  અડાઆઠમ દરજી સેવા સમિતિ
                 </h3>
                 <p className="text-xs text-saffron-300">શ્રી અડાઆઠમ દરજી સેવા સમિતિ</p>
               </div>
@@ -93,9 +93,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/donors" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
+                <Link href="/donations" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
                   <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                  દાતાશ્રીઓની યાદી
+                  દાન & દાતાશ્રીઓની યાદી (Donation)
                 </Link>
               </li>
             </ul>

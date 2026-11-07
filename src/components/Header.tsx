@@ -7,9 +7,11 @@ import {
   Users,
   GitFork,
   Briefcase,
+  Building,
   Megaphone,
   Calendar,
   Heart,
+  HeartHandshake,
   ShieldCheck,
   User,
   Menu,
@@ -20,33 +22,22 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AdminRole } from "@/types";
-import { ROLE_CREDENTIALS } from "@/lib/roleCredentials";
 
 export default function Header() {
   const pathname = usePathname();
-  const { currentUser, logout, loginAs, isAdmin } = useAuth();
+  const { currentUser, logout, isAdmin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
-  // Removed "મુખ્ય પૃષ્ઠ" tab as requested: logo/brand is the default home
-  // "પરિવાર વૃક્ષ" tab is only shown for logged-in members (not shown in public mode)
-  const navLinks = [
-    ...(currentUser
-      ? [
-          {
-            href: "/family-tree",
-            label: "પરિવાર વૃક્ષ",
-            icon: GitFork,
-            badge: "વિશેષ",
-          },
-        ]
-      : []),
+  // Navigation Links: "પરિવાર વૃક્ષ" removed, "નોકરી (Jobs)" added next to "વ્યવસાય (Business)"
+  const navLinks: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
     { href: "/members", label: "સભ્યો", icon: Users },
     { href: "/businesses", label: "વ્યવસાય", icon: Briefcase },
+    { href: "/jobs", label: "નોકરી", icon: Building },
     { href: "/advertisements", label: "જાહેરાતો", icon: Megaphone },
     { href: "/events", label: "કાર્યક્રમો", icon: Calendar },
-    { href: "/donors", label: "દાતાઓ", icon: Heart },
+    { href: "/donations", label: "દાન", icon: Heart },
     { href: "/committee", label: "સમિતિ", icon: ShieldCheck },
+    { href: "/matrimony", label: "મેટ્રિમોની", icon: HeartHandshake },
   ];
 
   const adminRoles: { role: AdminRole; label: string; name: string }[] = [
@@ -54,6 +45,7 @@ export default function Header() {
     { role: "secretary", label: "મંત્રી", name: "મહેન્દ્રભાઈ દરજી" },
     { role: "joint_secretary", label: "સહમંત્રી", name: "હસમુખભાઈ દરજી" },
     { role: "treasurer", label: "ખજાનચી", name: "રમેશભાઈ દરજી" },
+    { role: "assistant_treasurer", label: "સહ ખજાનચી", name: "નરેશભાઈ દરજી" },
   ];
 
   const getGujaratiRoleLabel = (role?: AdminRole) => {
@@ -66,6 +58,8 @@ export default function Header() {
         return "સહમંત્રી શ્રી";
       case "treasurer":
         return "ખજાનચી શ્રી";
+      case "assistant_treasurer":
+        return "સહ ખજાનચી શ્રી";
       case "admin":
         return "એડમિન";
       default:
@@ -87,78 +81,46 @@ export default function Header() {
           </span>
         </div>
 
-        {/* Quick Role Switcher for demonstration & testing */}
+        {/* Production User Info & Quick Action */}
         <div className="flex items-center gap-2 ml-auto text-[11px] flex-shrink-0">
-          <span className="hidden md:inline text-ivory-300 text-[10px]">ભૂમિકા પર સ્વિચ કરો:</span>
-          <div className="relative">
-            <button
-              onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-white font-medium transition-colors border border-white/20 text-[11px]"
-              title="ડેમો માટે ભૂમિકા બદલો"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${currentUser ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`}></span>
-              <span>
-                {currentUser
-                  ? `${getGujaratiRoleLabel(currentUser.role)}: ${currentUser.name.split(" ")[0]}`
-                  : "અતિથિ (Guest)"}
-              </span>
-              <ChevronDown className="w-3 h-3 text-ivory-300" />
-            </button>
-
-            {roleDropdownOpen && (
-              <div
-                className="absolute right-0 mt-1.5 w-64 bg-white text-charcoal-900 rounded-xl shadow-hover border border-ivory-300 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
-                onClick={() => setRoleDropdownOpen(false)}
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <Link
+                href="/profile"
+                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-2.5 py-0.5 rounded-full text-white font-medium transition-colors border border-white/20 text-[11px]"
+                title="પ્રોફાઇલ જુઓ"
               >
-                <div className="px-3 py-1 text-[10px] font-bold text-charcoal-500 uppercase tracking-wider border-b border-ivory-200 flex items-center justify-between">
-                  <span>ભૂમિકા ટેસ્ટ ઓળખપત્ર</span>
-                  <span className="text-[9px] font-normal text-saffron-700">પિન: 123456</span>
-                </div>
-
-                <div className="py-1 max-h-72 overflow-y-auto">
-                  {ROLE_CREDENTIALS.map((cred) => {
-                    const isSelected = cred.role === "guest" ? !currentUser : currentUser?.role === cred.role;
-                    return (
-                      <button
-                        key={cred.role}
-                        onClick={() => loginAs(cred.role, cred.memberId)}
-                        className={`w-full text-left px-3 py-1.5 text-xs hover:bg-saffron-50 flex items-center justify-between transition-colors ${
-                          isSelected ? "bg-saffron-50/80 font-bold" : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{cred.emoji}</span>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-charcoal-900">{cred.gujaratiTitle}</span>
-                              {cred.cleanPhone && (
-                                <span className="text-[9px] text-charcoal-400 font-mono">({cred.phone.split(" ")[1] || cred.phone})</span>
-                              )}
-                            </div>
-                            <span className="text-charcoal-500 block text-[10px] truncate max-w-[140px]">{cred.name}</span>
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <span className="text-[10px] text-forest-700 font-bold bg-forest-50 px-1.5 py-0.5 rounded border border-forest-200">
-                            ✓ સક્રિય
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="border-t border-ivory-200 p-2 text-center bg-ivory-50">
-                  <Link
-                    href="/login"
-                    className="text-[11px] font-bold text-saffron-700 hover:underline block"
-                  >
-                    બધા ઓળખપત્ર & વિગત જુઓ →
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span className="truncate max-w-[140px] sm:max-w-[200px]">
+                  {currentUser.name.split(" ")[0]}
+                  {currentUser.role && currentUser.role !== "member" ? ` (${getGujaratiRoleLabel(currentUser.role)})` : ""}
+                </span>
+              </Link>
+              <button
+                onClick={logout}
+                className="text-ivory-300 hover:text-white transition-colors flex items-center gap-1 text-[11px] ml-1"
+                title="લૉગઆઉટ"
+              >
+                <LogOut className="w-3 h-3" />
+                <span className="hidden sm:inline">લૉગઆઉટ</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="bg-saffron-600 hover:bg-saffron-700 text-white font-bold px-2.5 py-0.5 rounded transition-colors shadow-2xs"
+              >
+                સભ્ય લૉગિન
+              </Link>
+              <Link
+                href="/register"
+                className="hidden sm:inline text-ivory-300 hover:text-white transition-colors"
+              >
+                નવા સભ્ય નોંધણી
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -169,7 +131,7 @@ export default function Header() {
           <Link
             href="/"
             className="flex items-center gap-2 sm:gap-2.5 group flex-shrink-0"
-            title="અડાઆઠમ દરજી સમાજ — હોમ પેજ"
+            title="અડાઆઠમ દરજી સેવા સમિતિ — હોમ પેજ"
           >
             <img
               src="/logo.png"
@@ -182,14 +144,14 @@ export default function Header() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-sm sm:text-base lg:text-lg text-charcoal-900 tracking-tight leading-none group-hover:text-saffron-700 transition-colors">
-                  અડાઆઠમ દરજી સમાજ
+                  અડાઆઠમ દરજી સેવા સમિતિ
                 </span>
                 <span className="hidden 2xl:inline text-[9px] font-semibold bg-saffron-100 text-saffron-800 px-1.5 py-0.2 rounded-full border border-saffron-200">
                   મોડાસા
                 </span>
               </div>
               <p className="text-[10px] text-charcoal-500 font-medium mt-0.5 hidden 2xl:block">
-                શ્રી અડાઆઠમ દરજી સેવા સમિતિ
+                સત્તાવાર ડિજિટલ પોર્ટલ
               </p>
             </div>
           </Link>

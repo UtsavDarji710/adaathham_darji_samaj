@@ -5,9 +5,13 @@ import {
   Member,
   FamilyRelationship,
   BusinessItem,
+  BusinessAdvertisement,
+  JobPosting,
   CommunityEvent,
   Donation,
+  SamitiBankDetails,
   Announcement,
+  Circular,
   CommitteeMember,
   ActivityLog,
 } from "@/types";
@@ -15,9 +19,13 @@ import {
   INITIAL_MEMBERS,
   INITIAL_RELATIONSHIPS,
   INITIAL_BUSINESSES,
+  INITIAL_ADVERTISEMENTS,
+  INITIAL_JOB_POSTINGS,
   INITIAL_EVENTS,
   INITIAL_DONATIONS,
+  INITIAL_BANK_DETAILS,
   INITIAL_ANNOUNCEMENTS,
+  INITIAL_CIRCULARS,
   INITIAL_COMMITTEE,
   INITIAL_LOGS,
 } from "@/lib/mockData";
@@ -26,9 +34,13 @@ interface DataContextType {
   members: Member[];
   relationships: FamilyRelationship[];
   businesses: BusinessItem[];
+  advertisements: BusinessAdvertisement[];
+  jobPostings: JobPosting[];
   events: CommunityEvent[];
   donations: Donation[];
+  bankDetails: SamitiBankDetails;
   announcements: Announcement[];
+  circulars: Circular[];
   committee: CommitteeMember[];
   logs: ActivityLog[];
   
@@ -49,14 +61,30 @@ interface DataContextType {
   approveBusiness: (id: string) => void;
   deleteBusiness: (id: string) => void;
 
+  // Business Advertisement actions (વ્યવસાય જાહેરાત અરજીઓ & મંજૂરી પ્રણાલી)
+  addAdvertisement: (adv: Omit<BusinessAdvertisement, "id" | "created_at">) => void;
+  approveAdvertisement: (id: string, approvedBy: string) => void;
+  rejectAdvertisement: (id: string, remarks: string, rejectedBy: string) => void;
+  deleteAdvertisement: (id: string) => void;
+
+  // Job Postings actions (નોકરી & રોજગાર ડિરેક્ટરી)
+  addJobPosting: (job: Omit<JobPosting, "id" | "created_at">) => void;
+  deleteJobPosting: (id: string) => void;
+
   // Events actions
   addEvent: (event: Omit<CommunityEvent, "id">) => void;
   updateEvent: (id: string, updates: Partial<CommunityEvent>) => void;
   deleteEvent: (id: string) => void;
 
-  // Donations actions
-  addDonation: (don: Omit<Donation, "id" | "receipt_number">) => Donation;
+  // Donations actions (દાન સંચાલન & ખજાનચી હિસાબ)
+  addDonation: (don: Partial<Donation> & { donor_name: string; mobile_number?: string; donation_purpose?: string; amount?: number }) => Donation;
+  approveDonation: (id: string, approvedBy: string) => void;
+  rejectDonation: (id: string, remarks: string, rejectedBy: string) => void;
+  deleteDonation: (id: string) => void;
   verifyDonation: (id: string) => void;
+
+  // Bank details & Payment QR Code configuration
+  updateBankDetails: (details: Partial<SamitiBankDetails>) => void;
 
   // Announcements actions
   addAnnouncement: (ann: Omit<Announcement, "id">) => void;
@@ -75,8 +103,11 @@ const STORAGE_KEYS = {
   members: "ad8_data_members",
   relationships: "ad8_data_relationships",
   businesses: "ad8_data_businesses",
+  advertisements: "ad8_data_advertisements",
+  jobs: "ad8_data_jobs",
   events: "ad8_data_events",
   donations: "ad8_data_donations",
+  bank_details: "ad8_data_bank_details",
   announcements: "ad8_data_announcements",
   committee: "ad8_data_committee",
   logs: "ad8_data_logs",
@@ -86,9 +117,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [relationships, setRelationships] = useState<FamilyRelationship[]>(INITIAL_RELATIONSHIPS);
   const [businesses, setBusinesses] = useState<BusinessItem[]>(INITIAL_BUSINESSES);
+  const [advertisements, setAdvertisements] = useState<BusinessAdvertisement[]>(INITIAL_ADVERTISEMENTS);
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>(INITIAL_JOB_POSTINGS);
   const [events, setEvents] = useState<CommunityEvent[]>(INITIAL_EVENTS);
   const [donations, setDonations] = useState<Donation[]>(INITIAL_DONATIONS);
+  const [bankDetails, setBankDetails] = useState<SamitiBankDetails>(INITIAL_BANK_DETAILS);
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [circulars, setCirculars] = useState<Circular[]>(INITIAL_CIRCULARS);
   const [committee, setCommittee] = useState<CommitteeMember[]>(INITIAL_COMMITTEE);
   const [logs, setLogs] = useState<ActivityLog[]>(INITIAL_LOGS);
 
@@ -105,11 +140,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedBiz = localStorage.getItem(STORAGE_KEYS.businesses);
       if (storedBiz) setBusinesses(JSON.parse(storedBiz));
 
+      const storedAds = localStorage.getItem(STORAGE_KEYS.advertisements);
+      if (storedAds) setAdvertisements(JSON.parse(storedAds));
+
+      const storedJobs = localStorage.getItem(STORAGE_KEYS.jobs);
+      if (storedJobs) setJobPostings(JSON.parse(storedJobs));
+
       const storedEvents = localStorage.getItem(STORAGE_KEYS.events);
       if (storedEvents) setEvents(JSON.parse(storedEvents));
 
       const storedDonations = localStorage.getItem(STORAGE_KEYS.donations);
       if (storedDonations) setDonations(JSON.parse(storedDonations));
+
+      const storedBank = localStorage.getItem(STORAGE_KEYS.bank_details);
+      if (storedBank) setBankDetails(JSON.parse(storedBank));
 
       const storedAnnouncements = localStorage.getItem(STORAGE_KEYS.announcements);
       if (storedAnnouncements) setAnnouncements(JSON.parse(storedAnnouncements));
@@ -219,6 +263,76 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sync(STORAGE_KEYS.businesses, updated);
   };
 
+  // Business Advertisements methods
+  const addAdvertisement = (adv: Omit<BusinessAdvertisement, "id" | "created_at">) => {
+    const newAdv: BusinessAdvertisement = {
+      ...adv,
+      id: `adv-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      status: "pending",
+    };
+    const updated = [newAdv, ...advertisements];
+    setAdvertisements(updated);
+    sync(STORAGE_KEYS.advertisements, updated);
+  };
+
+  const approveAdvertisement = (id: string, approvedBy: string) => {
+    const updated = advertisements.map((a) =>
+      a.id === id
+        ? {
+            ...a,
+            status: "approved" as const,
+            approved_by: approvedBy,
+            approved_at: new Date().toISOString(),
+            rejection_remarks: undefined,
+          }
+        : a
+    );
+    setAdvertisements(updated);
+    sync(STORAGE_KEYS.advertisements, updated);
+  };
+
+  const rejectAdvertisement = (id: string, remarks: string, rejectedBy: string) => {
+    const updated = advertisements.map((a) =>
+      a.id === id
+        ? {
+            ...a,
+            status: "rejected" as const,
+            rejection_remarks: remarks,
+            approved_by: rejectedBy,
+            approved_at: new Date().toISOString(),
+          }
+        : a
+    );
+    setAdvertisements(updated);
+    sync(STORAGE_KEYS.advertisements, updated);
+  };
+
+  const deleteAdvertisement = (id: string) => {
+    const updated = advertisements.filter((a) => a.id !== id);
+    setAdvertisements(updated);
+    sync(STORAGE_KEYS.advertisements, updated);
+  };
+
+  // Job Postings methods
+  const addJobPosting = (job: Omit<JobPosting, "id" | "created_at">) => {
+    const newJob: JobPosting = {
+      ...job,
+      id: `job-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      status: "active",
+    };
+    const updated = [newJob, ...jobPostings];
+    setJobPostings(updated);
+    sync(STORAGE_KEYS.jobs, updated);
+  };
+
+  const deleteJobPosting = (id: string) => {
+    const updated = jobPostings.filter((j) => j.id !== id);
+    setJobPostings(updated);
+    sync(STORAGE_KEYS.jobs, updated);
+  };
+
   const addEvent = (event: Omit<CommunityEvent, "id">) => {
     const newEvent: CommunityEvent = {
       ...event,
@@ -241,25 +355,97 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sync(STORAGE_KEYS.events, updated);
   };
 
-  const addDonation = (don: Omit<Donation, "id" | "receipt_number">) => {
-    const receiptNumber = `ADS-${new Date().getFullYear()}-${String(donations.length + 1).padStart(3, "0")}`;
+  const addDonation = (don: Partial<Donation> & { donor_name: string; mobile_number?: string; donation_purpose?: string; amount?: number }) => {
+    const year = don.donation_year || String(new Date().getFullYear());
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const donationId = don.donation_id || `DON-${year}-${randomSuffix}`;
+    const receiptNumber = don.receipt_number || `ADS-${year}-${String(donations.length + 1).padStart(3, "0")}`;
+
     const newDonation: Donation = {
-      ...don,
       id: `don-${Date.now()}`,
+      donation_id: donationId,
+      user_id: don.user_id,
+      donor_id: don.donor_id,
+      donor_name: don.donor_name,
+      mobile_number: don.mobile_number || "",
+      donor_photo: don.donor_photo,
+      hasthe_names: don.hasthe_names || [],
+      donation_purpose: don.donation_purpose || don.purpose || "સમાજના વિકાસ માટે",
+      specific_purpose: don.specific_purpose,
+      donation_year: year,
+      amount: Number(don.amount) || 0,
+      date: don.date || new Date().toISOString().split("T")[0],
+      purpose: don.purpose || don.donation_purpose || "સમાજના વિકાસ માટે",
+      campaign: don.campaign || "સમાજ વિકાસ ભંડોળ",
+      payment_proof: don.payment_proof,
+      status: don.status || "pending",
+      payment_status: don.payment_status || "pending",
+      is_anonymous: don.is_anonymous || false,
+      public_consent: don.public_consent !== false,
       receipt_number: receiptNumber,
+      payment_method: don.payment_method || "UPI / ઓનલાઇન",
+      created_at: new Date().toISOString(),
     };
+
     const updated = [newDonation, ...donations];
     setDonations(updated);
     sync(STORAGE_KEYS.donations, updated);
     return newDonation;
   };
 
-  const verifyDonation = (id: string) => {
+  const approveDonation = (id: string, approvedBy: string) => {
+    const today = new Date().toISOString().split("T")[0];
     const updated = donations.map((d) =>
-      d.id === id ? { ...d, payment_status: "verified" as const } : d
+      d.id === id
+        ? {
+            ...d,
+            status: "approved" as const,
+            payment_status: "verified" as const,
+            approved_by: approvedBy,
+            approved_at: today,
+            updated_at: new Date().toISOString(),
+          }
+        : d
     );
     setDonations(updated);
     sync(STORAGE_KEYS.donations, updated);
+  };
+
+  const rejectDonation = (id: string, remarks: string, rejectedBy: string) => {
+    const updated = donations.map((d) =>
+      d.id === id
+        ? {
+            ...d,
+            status: "rejected" as const,
+            payment_status: "pending" as const,
+            admin_remarks: remarks,
+            approved_by: rejectedBy,
+            updated_at: new Date().toISOString(),
+          }
+        : d
+    );
+    setDonations(updated);
+    sync(STORAGE_KEYS.donations, updated);
+  };
+
+  const deleteDonation = (id: string) => {
+    const updated = donations.filter((d) => d.id !== id);
+    setDonations(updated);
+    sync(STORAGE_KEYS.donations, updated);
+  };
+
+  const verifyDonation = (id: string) => {
+    approveDonation(id, "ખજાનચી શ્રી");
+  };
+
+  const updateBankDetails = (details: Partial<SamitiBankDetails>) => {
+    const updated: SamitiBankDetails = {
+      ...bankDetails,
+      ...details,
+      updated_at: new Date().toISOString().split("T")[0],
+    };
+    setBankDetails(updated);
+    sync(STORAGE_KEYS.bank_details, updated);
   };
 
   const addAnnouncement = (ann: Omit<Announcement, "id">) => {
@@ -303,8 +489,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMembers(INITIAL_MEMBERS);
     setRelationships(INITIAL_RELATIONSHIPS);
     setBusinesses(INITIAL_BUSINESSES);
+    setAdvertisements(INITIAL_ADVERTISEMENTS);
+    setJobPostings(INITIAL_JOB_POSTINGS);
     setEvents(INITIAL_EVENTS);
     setDonations(INITIAL_DONATIONS);
+    setBankDetails(INITIAL_BANK_DETAILS);
     setAnnouncements(INITIAL_ANNOUNCEMENTS);
     setCommittee(INITIAL_COMMITTEE);
     setLogs(INITIAL_LOGS);
@@ -318,9 +507,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         members,
         relationships,
         businesses,
+        advertisements,
+        jobPostings,
         events,
         donations,
+        bankDetails,
         announcements,
+        circulars,
         committee,
         logs,
         addMember,
@@ -334,11 +527,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateBusiness,
         approveBusiness,
         deleteBusiness,
+        addAdvertisement,
+        approveAdvertisement,
+        rejectAdvertisement,
+        deleteAdvertisement,
+        addJobPosting,
+        deleteJobPosting,
         addEvent,
         updateEvent,
         deleteEvent,
         addDonation,
+        approveDonation,
+        rejectDonation,
+        deleteDonation,
         verifyDonation,
+        updateBankDetails,
         addAnnouncement,
         deleteAnnouncement,
         addLog,

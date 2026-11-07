@@ -10,6 +10,7 @@ import {
   Megaphone,
   Calendar,
   Heart,
+  HeartHandshake,
   Award,
   Clock,
   Search,
@@ -35,7 +36,7 @@ import {
 } from "recharts";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
-import { AdminRole } from "@/types";
+import { AdminRole, isMemberEligibleForPublicMatrimony } from "@/types";
 
 export default function AdminDashboardPage() {
   const {
@@ -47,9 +48,9 @@ export default function AdminDashboardPage() {
     announcements,
     committee,
     logs,
-    resetDemoData,
+    advertisements,
   } = useData();
-  const { currentUser, loginAs, isAdmin } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"overview" | "logs">("overview");
 
@@ -57,6 +58,8 @@ export default function AdminDashboardPage() {
   const pendingRelationships = relationships.filter((r) => r.status === "pending");
   const pendingBusinesses = businesses.filter((b) => b.status === "pending");
   const pendingDonations = donations.filter((d) => d.payment_status === "pending");
+  const pendingAds = advertisements.filter((a) => a.status === "pending");
+  const matrimonyPublicCount = members.filter((m) => isMemberEligibleForPublicMatrimony(m)).length;
 
   const totalFunds = donations
     .filter((d) => d.payment_status === "verified")
@@ -81,13 +84,6 @@ export default function AdminDashboardPage() {
 
   const COLORS = ["#c2410c", "#166534", "#d97706", "#2563eb", "#7c3aed"];
 
-  const adminRolesList: { role: AdminRole; label: string; name: string; desc: string }[] = [
-    { role: "president", label: "પ્રમુખ", name: "દિનેશભાઈ બાબુલાલ દરજી", desc: "સર્વોચ્ચ સંચાલન, પરિવાર સંબંધ અને નીતિગત મંજૂરી" },
-    { role: "secretary", label: "મંત્રી", name: "મહેન્દ્રભાઈ કાનજીભાઈ દરજી", desc: "સભ્યો, સૂચનાઓ, પરિપત્રો અને કાર્યક્રમો" },
-    { role: "joint_secretary", label: "સહમંત્રી", name: "હસમુખભાઈ રણછોડભાઈ દરજી", desc: "સહાયક વ્યવસ્થા અને દસ્તાવેજ સંચાલન" },
-    { role: "treasurer", label: "ખજાનચી", name: "રમેશભાઈ મગનલાલ દરજી", desc: "દાન, બેંક ખાતા, પાવતી અને નાણાકીય હિસાબ" },
-  ];
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Admin Top Banner */}
@@ -105,24 +101,15 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        {/* Quick Role Switcher */}
-        <div className="bg-charcoal-800/90 rounded-2xl p-3 border border-charcoal-700 flex flex-col gap-1 text-xs">
-          <span className="text-[11px] text-charcoal-400 font-bold">હોદ્દેદાર ભૂમિકા બદલો:</span>
-          <div className="grid grid-cols-2 gap-1.5">
-            {adminRolesList.map((item) => (
-              <button
-                key={item.role}
-                onClick={() => loginAs(item.role)}
-                className={`px-3 py-1.5 rounded-lg text-left transition-colors font-bold ${
-                  currentUser?.role === item.role
-                    ? "bg-saffron-600 text-white shadow-xs"
-                    : "bg-charcoal-700/60 hover:bg-charcoal-700 text-charcoal-200"
-                }`}
-              >
-                <span>{item.label}</span>
-              </button>
-            ))}
+        {/* Security & Access Info Badge */}
+        <div className="bg-charcoal-800/90 rounded-2xl p-4 border border-charcoal-700 flex flex-col gap-1.5 text-xs sm:max-w-xs">
+          <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>સુરક્ષિત પ્રમાણિત સત્ર</span>
           </div>
+          <p className="text-[11px] text-charcoal-300 leading-relaxed">
+            આપના અધિકૃત હોદ્દા હેઠળ તમામ સામાજિક વિગતો અને રેકોર્ડ્સ સુરક્ષિત રીતે મેનેજ કરો.
+          </p>
         </div>
       </div>
 
@@ -245,14 +232,14 @@ export default function AdminDashboardPage() {
                 <Megaphone className="w-6 h-6" />
               </div>
               <h3 className="font-bold text-base text-charcoal-900 group-hover:text-amber-800 transition-colors">
-                જાહેરાતો & સ્પોન્સરશિપ (Ads Management)
+                વ્યવસાય જાહેરાત અરજીઓ (Ad Requests)
               </h3>
               <p className="text-xs text-charcoal-600 mt-1 leading-relaxed">
-                પેઇડ એડવર્ટાઇઝમેન્ટની ચુકવણી ચકાસણી, પ્રમોશન અવધિ અને સ્ટેટસ.
+                સભ્યોની વ્યવસાય જાહેરાતોની ચકાસણી, બેનર પ્રિવ્યૂ અને મંજૂરી / અસ્વીકાર સંચાલન.
               </p>
             </div>
             <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-amber-800">
-              <span>{businesses.length} વ્યવસાયો</span>
+              <span>{pendingAds.length > 0 ? `${pendingAds.length} પેન્ડિંગ અરજીઓ` : `${advertisements.length} જાહેરાતો`}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -289,14 +276,14 @@ export default function AdminDashboardPage() {
                 <Heart className="w-6 h-6" />
               </div>
               <h3 className="font-bold text-base text-charcoal-900 group-hover:text-emerald-800 transition-colors">
-                દાન & પાવતી હિસાબ (Treasurer / Donations)
+                દાન વ્યવસ્થાપન (Donation Management)
               </h3>
               <p className="text-xs text-charcoal-600 mt-1 leading-relaxed">
-                ખજાનચી સંચાલન, પાવતી જનરેશન, બેંક જમા ચકાસણી અને દાન યાદી.
+                દાન અરજીઓની ચકાસણી, ચુકવણી પ્રૂફ ખરાઈ, બેંક વિગતો & QR કોડ સેટિંગ્સ.
               </p>
             </div>
             <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-emerald-800">
-              <span>₹{totalFunds.toLocaleString("en-IN")} જમા</span>
+              <span>{pendingDonations.length > 0 ? `${pendingDonations.length} ચકાસણી પેન્ડિંગ` : `₹${totalFunds.toLocaleString("en-IN")} જમા`}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -319,6 +306,28 @@ export default function AdminDashboardPage() {
             </div>
             <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-purple-800">
               <span>{committee.length} હોદ્દેદારો</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Module 7: Matrimony Management */}
+          <Link
+            href="/admin/matrimony"
+            className="bg-white rounded-3xl border border-ivory-300 p-6 shadow-card hover:shadow-hover transition-all flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <HeartHandshake className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-base text-charcoal-900 group-hover:text-rose-800 transition-colors">
+                મેટ્રિમોની સંચાલન (Matrimony Management)
+              </h3>
+              <p className="text-xs text-charcoal-600 mt-1 leading-relaxed">
+                મેટ્રિમોની ઉમેદવારોની ચકાસણી, પબ્લિક લિસ્ટિંગ મંજૂરી, પ્રાઇવેસી ફિલ્ટર અને પ્રોફાઇલ રિવ્યૂ.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-rose-800">
+              <span>{matrimonyPublicCount} પબ્લિક લિસ્ટિંગમાં સક્રિય</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -389,16 +398,11 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              if (confirm("શું તમે ડેમો ડેટા રીસેટ કરવા માંગો છો?")) {
-                resetDemoData();
-              }
-            }}
-            className="px-3 py-1.5 border border-ivory-300 hover:bg-ivory-100 rounded-xl text-xs font-semibold text-charcoal-600"
-          >
-            ડેમો ડેટા રીસેટ કરો
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-forest-800 bg-forest-50 border border-forest-200 px-3 py-1 rounded-xl">
+              ✓ લાઇવ ઓડિટ લૉગ
+            </span>
+          </div>
         </div>
 
         <div className="divide-y divide-ivory-200">

@@ -24,7 +24,7 @@ import { ROLE_CREDENTIALS } from "@/lib/roleCredentials";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { currentUser, loginAs, isAdmin } = useAuth();
+  const { currentUser, logout, isAdmin } = useAuth();
 
   const adminNav = [
     { href: "/admin", label: "વહીવટી સમરી", icon: ShieldCheck, exact: true },
@@ -53,30 +53,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               કારોબારી એડમિન લૉગિન જરૂરી છે
             </h1>
             <p className="text-xs text-charcoal-600 max-w-md mx-auto mt-2 leading-relaxed">
-              આ પાનું માત્ર શ્રી અડાઆઠમ દરજી સેવા સમિતિના અધિકૃત હોદ્દેદારો (પ્રમુખ, મંત્રી, સહમંત્રી, ખજાનચી) માટે આરક્ષિત છે.
+              આ પાનું માત્ર શ્રી અડાઆઠમ દરજી સેવા સમિતિના અધિકૃત હોદ્દેદારો (પ્રમુખ, મંત્રી, સહમંત્રી, ખજાનચી) માટે આરક્ષિત છે. કૃપા કરીને આપના અધિકૃત ખાતા દ્વારા લૉગિન કરો.
             </p>
-          </div>
-
-          {/* Quick 1-Click Role Switcher for Testing */}
-          <div className="bg-ivory-50 border border-ivory-200 rounded-2xl p-4 text-left">
-            <span className="text-xs font-bold text-charcoal-700 block mb-2">
-              ડેમો ટેસ્ટિંગ માટે એડમિન ભૂમિકા પસંદ કરો:
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {ROLE_CREDENTIALS.filter((c) => c.role !== "member" && c.role !== "guest").map((cred) => (
-                <button
-                  key={cred.role}
-                  onClick={() => loginAs(cred.role, cred.memberId)}
-                  className="p-3 rounded-xl bg-white hover:bg-saffron-50 border border-ivory-300 hover:border-saffron-400 font-bold text-left flex items-center gap-2.5 transition-all shadow-2xs"
-                >
-                  <span className="text-xl">{cred.emoji}</span>
-                  <div>
-                    <span className="block text-charcoal-900">{cred.gujaratiTitle}</span>
-                    <span className="text-[10px] text-charcoal-500 font-normal">{cred.name.split(" ")[0]} ({cred.phone})</span>
-                  </div>
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="flex items-center justify-center gap-3 pt-2 text-xs">
@@ -84,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               href="/login"
               className="px-5 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold shadow-xs transition-colors"
             >
-              લૉગિન પેજ પર જાઓ
+              અધિકૃત લૉગિન કરો
             </Link>
             <Link
               href="/"
@@ -117,28 +95,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p className="text-xs text-charcoal-600 max-w-md mx-auto mt-2 leading-relaxed">
               નમસ્તે <strong className="text-charcoal-900">{currentUser.name}</strong>, તમે હાલ <strong>સામાન્ય સભ્ય</strong> તરીકે લૉગિન છો. એડમિન ડેશબોર્ડ માત્ર સમિતિના અધિકૃત હોદ્દેદારો માટે છે.
             </p>
-          </div>
-
-          {/* Quick Switch to Admin for testing */}
-          <div className="bg-ivory-50 border border-ivory-200 rounded-2xl p-4 text-left">
-            <span className="text-xs font-bold text-charcoal-700 block mb-2">
-              ટેસ્ટિંગ માટે નીચેનામાંથી કોઈ પણ એડમિન ભૂમિકામાં સ્વિચ કરો:
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {ROLE_CREDENTIALS.filter((c) => c.role !== "member" && c.role !== "guest").map((cred) => (
-                <button
-                  key={cred.role}
-                  onClick={() => loginAs(cred.role, cred.memberId)}
-                  className="p-3 rounded-xl bg-white hover:bg-saffron-50 border border-ivory-300 hover:border-saffron-400 font-bold text-left flex items-center gap-2.5 transition-all shadow-2xs"
-                >
-                  <span className="text-xl">{cred.emoji}</span>
-                  <div>
-                    <span className="block text-charcoal-900">{cred.gujaratiTitle}</span>
-                    <span className="text-[10px] text-charcoal-500 font-normal">{cred.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="flex items-center justify-center gap-3 pt-2 text-xs">
@@ -209,28 +165,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
 
-            {/* Right: Quick Switcher Bar */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-charcoal-500 font-bold hidden xl:inline">
-                હોદ્દો બદલો:
+            {/* Right: Authenticated Officer Status & Logout */}
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] text-forest-700 bg-forest-50 border border-forest-200 px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-forest-600" />
+                <span>સત્તાવાર હોદ્દેદાર સત્ર</span>
               </span>
-              {ROLE_CREDENTIALS.filter((c) => c.role !== "guest").map((c) => {
-                const isSelected = currentUser.role === c.role;
-                return (
-                  <button
-                    key={c.role}
-                    onClick={() => loginAs(c.role, c.memberId)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1 ${
-                      isSelected
-                        ? "bg-charcoal-900 text-white border-charcoal-900 shadow-2xs"
-                        : "bg-white text-charcoal-700 border-ivory-300 hover:border-saffron-400 hover:bg-ivory-100"
-                    }`}
-                  >
-                    <span>{c.emoji}</span>
-                    <span>{c.gujaratiTitle.split(" ")[0]}</span>
-                  </button>
-                );
-              })}
+              <button
+                onClick={logout}
+                className="px-3 py-1 rounded-lg text-xs font-semibold text-charcoal-700 border border-ivory-300 hover:bg-ivory-100 transition-colors"
+              >
+                લૉગઆઉટ
+              </button>
             </div>
           </div>
 
