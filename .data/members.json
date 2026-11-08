@@ -1,1 +1,49 @@
-[]
+[
+  {
+    "id": "549391b9-64bc-4e80-9ff1-a718d25bd47d",
+    "auth_user_id": "549391b9-64bc-4e80-9ff1-a718d25bd47d",
+    "username": "dharmik31",
+    "name": "ધાર્મિક પરમાર",
+    "phone": "98250 31031",
+    "email": "dharmikparmar31@gmail.com",
+    "password_hash": "34a3cef033fa597ad08e7dcdbebce5ac082f4f33ef71dcf3c25e34a2204bc50d2918b542438c991015bf06f326747eca3f233fa39621bd60368a5da689e20bdb",
+    "salt": "9603fc4bd244cd100e8feb52ff2fcad8",
+    "is_email_verified": true,
+    "email_verified_at": "2026-11-08T21:24:41.518Z",
+    "photo_url": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+    "address": "મોડાસા",
+    "city": "મોડાસા",
+    "district": "અરવલ્લી",
+    "native_place": "મોડાસા",
+    "pincode": "383315",
+    "marital_status": "પરણિત (Married)",
+    "gender": "male",
+    "role": "admin",
+    "is_lifetime_member": true,
+    "committee_role": "સિસ્ટમ એડમિનિસ્ટ્રેટર",
+    "committee_order": 1,
+    "completeness": 100,
+    "privacy_phone": "members",
+    "privacy_address": "members",
+    "privacy_photo": "public",
+    "privacy_family": "members",
+    "privacy_business": "public",
+    "privacy_employment": "members",
+    "privacy_education": "members",
+    "family_relations": [],
+    "employment": {
+      "occupation": "Business / IT Administration",
+      "employer": "શ્રી અડાઆઠમ દરજી સેવા સમિતિ",
+      "work_address": "મોડાસા",
+      "experience_years": 5
+    },
+    "education": {
+      "degree": "Graduate / Professional",
+      "institute": "ગુજરાત યુનિવર્સિટી",
+      "field_of_study": "Management & Tech",
+      "passing_year": 2020
+    },
+    "created_at": "2026-11-08T21:24:41.519Z",
+    "updated_at": "2026-11-08T21:24:41.519Z"
+  }
+]
