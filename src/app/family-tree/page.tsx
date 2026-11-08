@@ -53,6 +53,18 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   other: "સંબંધી (Relative)",
 };
 
+interface DisplayFamilyRelation {
+  id: string;
+  name: string;
+  relationLabel: string;
+  phone?: string;
+  photo_url: string;
+  isRegisteredMember: boolean;
+  member?: Member;
+  native_place?: string;
+  city?: string;
+}
+
 export default function FamilyTreePage() {
   const { members, relationships, businesses } = useData();
   const { currentUser, isAdmin } = useAuth();
@@ -97,20 +109,78 @@ export default function FamilyTreePage() {
     });
   }, [members, searchQuery, selectedVillage, isSearchActive, isAdmin, currentUser]);
 
-  // Helper to get connected family members for a member
-  const getFamilyMembers = (memberId: string) => {
+  // Helper to get connected family members for a member (from profile relations & approved links)
+  const getFamilyMembers = (memberId: string): DisplayFamilyRelation[] => {
+    const targetMember =
+      members.find((m) => m.id === memberId) ||
+      (currentUser?.id === memberId ? currentUser : null);
+
+    const result: DisplayFamilyRelation[] = [];
+    const seenNames = new Set<string>();
+
+    // 1. Direct family relations saved in member profile (family_relations JSONB array)
+    if (targetMember && Array.isArray(targetMember.family_relations)) {
+      targetMember.family_relations.forEach((rel, idx) => {
+        if (rel && rel.name && rel.name.trim()) {
+          const cleanName = rel.name.trim();
+          seenNames.add(cleanName.toLowerCase());
+
+          const matchedMember = members.find(
+            (m) =>
+              m.id !== memberId &&
+              (m.name.toLowerCase() === cleanName.toLowerCase() ||
+                (rel.phone && m.phone && m.phone.replace(/\D/g, "") === rel.phone.replace(/\D/g, "")))
+          );
+
+          result.push({
+            id: rel.id || `profile-rel-${idx}`,
+            name: cleanName,
+            relationLabel: rel.relation || "સંબંધી (Relative)",
+            phone: rel.phone || (matchedMember ? matchedMember.phone : undefined),
+            photo_url: matchedMember?.photo_url || "/default-avatar.svg",
+            isRegisteredMember: !!matchedMember,
+            member: matchedMember,
+            native_place: rel.native_place || matchedMember?.native_place,
+            city: rel.city || matchedMember?.city,
+          });
+        }
+      });
+    }
+
+    // 2. Direct father_name / grandfather_name from registration/profile
+    if (targetMember?.father_name && targetMember.father_name.trim()) {
+      const fName = targetMember.father_name.trim();
+      if (!seenNames.has(fName.toLowerCase())) {
+        seenNames.add(fName.toLowerCase());
+        const matched = members.find((m) => m.name.toLowerCase() === fName.toLowerCase());
+        result.push({
+          id: `father-${targetMember.id}`,
+          name: fName,
+          relationLabel: "પિતા (Father)",
+          phone: matched?.phone,
+          photo_url: matched?.photo_url || "/default-avatar.svg",
+          isRegisteredMember: !!matched,
+          member: matched,
+          native_place: matched?.native_place || targetMember.native_place,
+          city: matched?.city || targetMember.city,
+        });
+      }
+    }
+
+    // 3. Approved peer-to-peer relationships (family_relationships)
     const relatedLinks = relationships.filter(
       (r) => (r.from_member_id === memberId || r.to_member_id === memberId) && r.status === "approved"
     );
 
-    return relatedLinks
-      .map((rel) => {
-        const isFrom = rel.from_member_id === memberId;
-        const otherId = isFrom ? rel.to_member_id : rel.from_member_id;
-        const otherMember = members.find((m) => m.id === otherId);
+    relatedLinks.forEach((rel) => {
+      const isFrom = rel.from_member_id === memberId;
+      const otherId = isFrom ? rel.to_member_id : rel.from_member_id;
+      const otherMember = members.find((m) => m.id === otherId);
+
+      if (otherMember && otherMember.name && !seenNames.has(otherMember.name.trim().toLowerCase())) {
+        seenNames.add(otherMember.name.trim().toLowerCase());
 
         let relationLabel = rel.relationship_label || RELATIONSHIP_LABELS[rel.relationship] || rel.relationship;
-        // Invert relation perspective if needed
         if (!isFrom) {
           if (rel.relationship === "father") relationLabel = "સંતાન (Child)";
           else if (rel.relationship === "son") relationLabel = "પિતા/માતા (Parent)";
@@ -118,14 +188,21 @@ export default function FamilyTreePage() {
           else if (rel.relationship === "wife") relationLabel = "પતિ (Husband)";
         }
 
-        return {
-          linkId: rel.id,
-          member: otherMember,
+        result.push({
+          id: rel.id,
+          name: otherMember.name.trim(),
           relationLabel,
-          otherId,
-        };
-      })
-      .filter((item) => item.member !== undefined);
+          phone: otherMember.phone,
+          photo_url: otherMember.photo_url || "/default-avatar.svg",
+          isRegisteredMember: true,
+          member: otherMember,
+          native_place: otherMember.native_place,
+          city: otherMember.city,
+        });
+      }
+    });
+
+    return result;
   };
 
   // Helper to determine if a member's contact/address is visible
@@ -287,8 +364,11 @@ export default function FamilyTreePage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <img
-                      src={currentUser.photo_url || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300"}
+                      src={currentUser.photo_url || "/default-avatar.svg"}
                       alt={currentUser.name}
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-avatar.svg";
+                      }}
                       className="w-16 h-16 rounded-2xl object-cover border-2 border-saffron-400 shadow-sm"
                     />
                     <div>
@@ -318,31 +398,63 @@ export default function FamilyTreePage() {
                 {/* Expanded Family Details for currentUser */}
                 {expandedMemberId === currentUser.id && (
                   <div className="pt-4 border-t border-ivory-200 space-y-3">
-                    <h5 className="font-bold text-xs text-charcoal-800">
-                      પરિવારના સંબંધીઓની યાદી (Family Relations):
-                    </h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {getFamilyMembers(currentUser.id).map((rel) => (
-                        <div
-                          key={rel.linkId}
-                          className="p-3 rounded-2xl bg-ivory-50 border border-ivory-200 flex items-center gap-3 text-xs"
-                        >
-                          <img
-                            src={rel.member?.photo_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200"}
-                            alt={rel.member?.name}
-                            className="w-10 h-10 rounded-xl object-cover border border-ivory-300"
-                          />
-                          <div>
-                            <span className="font-bold text-charcoal-900 block truncate">
-                              {rel.member?.name}
-                            </span>
-                            <span className="text-[11px] font-semibold text-saffron-800 bg-saffron-50 px-1.5 py-0.2 rounded">
-                              {rel.relationLabel}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-bold text-xs text-charcoal-800">
+                        પરિવારના સંબંધીઓની યાદી (Family Relations):
+                      </h5>
+                      <span className="text-[11px] text-charcoal-500 font-medium">
+                        કુલ: {getFamilyMembers(currentUser.id).length} સભ્યો
+                      </span>
                     </div>
+
+                    {getFamilyMembers(currentUser.id).length === 0 ? (
+                      <div className="p-4 rounded-2xl bg-ivory-50 border border-ivory-200 text-center text-xs text-charcoal-600">
+                        <p>હજુ સુધી કોઈ પારિવારિક સંબંધીઓ ઉમેરેલ નથી.</p>
+                        <Link
+                          href="/profile"
+                          className="inline-flex items-center gap-1 mt-2 text-saffron-700 font-bold hover:underline"
+                        >
+                          <span>પ્રોફાઇલમાં પરિવારના સભ્યો ઉમેરો →</span>
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {getFamilyMembers(currentUser.id).map((rel) => (
+                          <div
+                            key={rel.id}
+                            className="p-3.5 rounded-2xl bg-ivory-50 border border-ivory-200 flex items-center gap-3 text-xs shadow-2xs hover:border-saffron-300 transition-colors"
+                          >
+                            <img
+                              src={rel.photo_url || "/default-avatar.svg"}
+                              alt={rel.name}
+                              onError={(e) => {
+                                e.currentTarget.src = "/default-avatar.svg";
+                              }}
+                              className="w-11 h-11 rounded-xl object-cover border border-ivory-300 flex-shrink-0"
+                            />
+                            <div className="overflow-hidden min-w-0 flex-1">
+                              <span className="font-extrabold text-charcoal-900 block truncate">
+                                {rel.name}
+                              </span>
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span className="text-[10px] font-bold text-saffron-800 bg-saffron-50 px-2 py-0.5 rounded border border-saffron-200">
+                                  {rel.relationLabel}
+                                </span>
+                                {rel.phone && (
+                                  <a
+                                    href={`tel:${rel.phone}`}
+                                    className="text-[11px] font-mono text-charcoal-600 hover:text-forest-700 flex items-center gap-1"
+                                  >
+                                    <Phone className="w-3 h-3 text-forest-600" />
+                                    <span>{rel.phone}</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -392,8 +504,11 @@ export default function FamilyTreePage() {
                       <div className="flex items-start sm:items-center gap-4">
                         <div className="relative">
                           <img
-                            src={member.photo_url || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300"}
+                            src={member.photo_url || "/default-avatar.svg"}
                             alt={member.name}
+                            onError={(e) => {
+                              e.currentTarget.src = "/default-avatar.svg";
+                            }}
                             className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-ivory-300 shadow-2xs flex-shrink-0"
                           />
                           {member.is_lifetime_member && (
@@ -495,40 +610,41 @@ export default function FamilyTreePage() {
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {familyList.map((rel) => {
-                              const relMember = rel.member!;
-                              const isRelPublic = relMember.is_public_in_family !== false || currentUser !== null || isAdmin;
+                              const canSeeRelPhone =
+                                isAdmin ||
+                                currentUser !== null ||
+                                (rel.member ? canViewPersonalDetails(rel.member) : false);
 
                               return (
                                 <div
-                                  key={rel.linkId}
+                                  key={rel.id}
                                   className="bg-white p-3.5 rounded-2xl border border-ivory-200 shadow-2xs flex items-center gap-3 text-xs"
                                 >
                                   <img
-                                    src={
-                                      isRelPublic
-                                        ? relMember.photo_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200"
-                                        : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200"
-                                    }
-                                    alt={relMember.name}
+                                    src={rel.photo_url || "/default-avatar.svg"}
+                                    alt={rel.name}
+                                    onError={(e) => {
+                                      e.currentTarget.src = "/default-avatar.svg";
+                                    }}
                                     className="w-12 h-12 rounded-xl object-cover border border-ivory-300 flex-shrink-0"
                                   />
-                                  <div className="overflow-hidden space-y-0.5">
+                                  <div className="overflow-hidden space-y-0.5 min-w-0 flex-1">
                                     <span className="font-extrabold text-charcoal-900 block truncate">
-                                      {relMember.name}
+                                      {rel.name}
                                     </span>
                                     <span className="inline-block text-[10px] font-bold text-saffron-800 bg-saffron-50 px-2 py-0.5 rounded border border-saffron-200">
                                       {rel.relationLabel}
                                     </span>
-                                    {isRelPublic && canViewPersonalDetails(relMember) ? (
+                                    {rel.phone && canSeeRelPhone ? (
                                       <span className="block text-[11px] text-charcoal-500 font-mono">
-                                        {relMember.phone}
+                                        {rel.phone}
                                       </span>
-                                    ) : (
+                                    ) : rel.phone ? (
                                       <span className="block text-[10px] text-charcoal-400 flex items-center gap-1">
                                         <Lock className="w-2.5 h-2.5" />
                                         <span>અંગત સુરક્ષા</span>
                                       </span>
-                                    )}
+                                    ) : null}
                                   </div>
                                 </div>
                               );
