@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
-import { Member } from "@/types";
+import { Member, SAMITI_NATIVE_PLACES } from "@/types";
 
 export default function MembersDirectoryPage() {
   const { members } = useData();
@@ -33,8 +33,15 @@ export default function MembersDirectoryPage() {
     return Array.from(new Set(members.map((m) => m.city))).filter(Boolean);
   }, [members]);
 
+  // Use all official Samiti native places (used in profile) plus any custom registered places
   const nativePlaces = useMemo(() => {
-    return Array.from(new Set(members.map((m) => m.native_place))).filter(Boolean);
+    const list = new Set<string>(SAMITI_NATIVE_PLACES);
+    members.forEach((m) => {
+      if (m.native_place && m.native_place.trim()) {
+        list.add(m.native_place.trim());
+      }
+    });
+    return Array.from(list);
   }, [members]);
 
   // Filter members based on query and dropdowns

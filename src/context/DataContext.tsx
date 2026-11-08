@@ -127,42 +127,98 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [committee, setCommittee] = useState<CommitteeMember[]>(INITIAL_COMMITTEE);
   const [logs, setLogs] = useState<ActivityLog[]>(INITIAL_LOGS);
 
-  // Load from localStorage on mount
+  // Load dynamic data on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
+      // 1. Fetch live dynamic members from API / Supabase
+      fetch("/api/members")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.members) && data.members.length > 0) {
+            setMembers(data.members);
+            sync(STORAGE_KEYS.members, data.members);
+          }
+        })
+        .catch((err) => {
+          console.warn("[DataContext] Live members fetch warning:", err);
+        });
+
+      // 2. Load stored dynamic data while purging legacy mock/dummy items
       const storedMembers = localStorage.getItem(STORAGE_KEYS.members);
-      if (storedMembers) setMembers(JSON.parse(storedMembers));
+      if (storedMembers) {
+        const parsed = JSON.parse(storedMembers);
+        const clean = Array.isArray(parsed) ? parsed.filter((m: any) => !/^mem-\d+$/.test(m.id)) : [];
+        if (clean.length > 0) setMembers(clean);
+      }
 
       const storedRels = localStorage.getItem(STORAGE_KEYS.relationships);
-      if (storedRels) setRelationships(JSON.parse(storedRels));
+      if (storedRels) {
+        const parsed = JSON.parse(storedRels);
+        const clean = Array.isArray(parsed)
+          ? parsed.filter((r: any) => r && (!r.id?.startsWith("rel-") || r.id?.startsWith("rel-sub-") || r.id?.startsWith("rel-head-")))
+          : [];
+        setRelationships(clean);
+      }
 
       const storedBiz = localStorage.getItem(STORAGE_KEYS.businesses);
-      if (storedBiz) setBusinesses(JSON.parse(storedBiz));
+      if (storedBiz) {
+        const parsed = JSON.parse(storedBiz);
+        const clean = Array.isArray(parsed) ? parsed.filter((b: any) => !/^biz-\d+$/.test(b.id)) : [];
+        setBusinesses(clean);
+      }
 
       const storedAds = localStorage.getItem(STORAGE_KEYS.advertisements);
-      if (storedAds) setAdvertisements(JSON.parse(storedAds));
+      if (storedAds) {
+        const parsed = JSON.parse(storedAds);
+        const clean = Array.isArray(parsed) ? parsed.filter((a: any) => !/^adv-\d+$/.test(a.id)) : [];
+        setAdvertisements(clean);
+      }
 
       const storedJobs = localStorage.getItem(STORAGE_KEYS.jobs);
-      if (storedJobs) setJobPostings(JSON.parse(storedJobs));
+      if (storedJobs) {
+        const parsed = JSON.parse(storedJobs);
+        const clean = Array.isArray(parsed) ? parsed.filter((j: any) => !/^job-\d+$/.test(j.id)) : [];
+        setJobPostings(clean);
+      }
 
       const storedEvents = localStorage.getItem(STORAGE_KEYS.events);
-      if (storedEvents) setEvents(JSON.parse(storedEvents));
+      if (storedEvents) {
+        const parsed = JSON.parse(storedEvents);
+        const clean = Array.isArray(parsed) ? parsed.filter((e: any) => !/^event-\d+$/.test(e.id)) : [];
+        setEvents(clean);
+      }
 
       const storedDonations = localStorage.getItem(STORAGE_KEYS.donations);
-      if (storedDonations) setDonations(JSON.parse(storedDonations));
+      if (storedDonations) {
+        const parsed = JSON.parse(storedDonations);
+        const clean = Array.isArray(parsed) ? parsed.filter((d: any) => !/^donation-\d+$/.test(d.id)) : [];
+        setDonations(clean);
+      }
 
       const storedBank = localStorage.getItem(STORAGE_KEYS.bank_details);
       if (storedBank) setBankDetails(JSON.parse(storedBank));
 
       const storedAnnouncements = localStorage.getItem(STORAGE_KEYS.announcements);
-      if (storedAnnouncements) setAnnouncements(JSON.parse(storedAnnouncements));
+      if (storedAnnouncements) {
+        const parsed = JSON.parse(storedAnnouncements);
+        const clean = Array.isArray(parsed) ? parsed.filter((a: any) => !/^ann-\d+$/.test(a.id)) : [];
+        setAnnouncements(clean);
+      }
 
       const storedCommittee = localStorage.getItem(STORAGE_KEYS.committee);
-      if (storedCommittee) setCommittee(JSON.parse(storedCommittee));
+      if (storedCommittee) {
+        const parsed = JSON.parse(storedCommittee);
+        const clean = Array.isArray(parsed) ? parsed.filter((c: any) => !/^comm-\d+$/.test(c.id)) : [];
+        if (clean.length > 0) setCommittee(clean);
+      }
 
       const storedLogs = localStorage.getItem(STORAGE_KEYS.logs);
-      if (storedLogs) setLogs(JSON.parse(storedLogs));
+      if (storedLogs) {
+        const parsed = JSON.parse(storedLogs);
+        const clean = Array.isArray(parsed) ? parsed.filter((l: any) => !/^log-\d+$/.test(l.id)) : [];
+        setLogs(clean);
+      }
     } catch (e) {
       console.error("Failed to load data from localStorage", e);
     }

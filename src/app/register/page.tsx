@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
+import { SAMITI_NATIVE_PLACES } from "@/types";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -403,14 +404,18 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block font-bold text-charcoal-700 mb-1">મૂળ વતન (Native Place) *</label>
-                <input
-                  type="text"
+                <select
                   value={nativePlace}
                   onChange={(e) => setNativePlace(e.target.value)}
-                  placeholder="અડાઆઠમ, ધનસુરા વગેરે"
                   required
-                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                />
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none bg-white font-medium"
+                >
+                  {SAMITI_NATIVE_PLACES.map((place) => (
+                    <option key={place} value={place}>
+                      {place}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

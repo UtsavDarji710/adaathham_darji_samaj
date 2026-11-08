@@ -66,7 +66,9 @@ declare global {
 function getStore(): Map<string, Member> {
   if (!globalThis.__SERVER_MEMBERS_MAP__) {
     const map = new Map<string, Member>();
-    const saved = loadPersistentStore();
+    const rawSaved = loadPersistentStore();
+    // Exclude legacy dummy mock member IDs (mem-1 to mem-99)
+    const saved = rawSaved ? rawSaved.filter((m) => !/^mem-\d+$/.test(m.id)) : null;
 
     // Merge saved members with INITIAL_MEMBERS to ensure newly defined seed fields (e.g. username) are always retained
     let sourceMembers: Member[];
@@ -93,10 +95,6 @@ function getStore(): Map<string, Member> {
       map.set(member.id, { ...member });
       if (member.username) {
         map.set(`username:${member.username.toLowerCase().trim()}`, { ...member });
-      }
-      if (member.id === "mem-utsav") {
-        map.set("username:utsav", { ...member });
-        map.set("username:utsavdarji", { ...member });
       }
       if (member.email) {
         map.set(`email:${member.email.toLowerCase().trim()}`, { ...member });
@@ -427,4 +425,31 @@ export function resetMemberPassword(
     member: updated || undefined,
   };
 }
+
+/**
+ * Delete a member record from in-memory map and persistent storage (.data/members.json)
+ */
+export function deleteMemberRecord(identifier: string): boolean {
+  const member = getMemberByIdOrSession(identifier);
+  if (!member) return false;
+
+  const store = getStore();
+  store.delete(member.id);
+  if (member.auth_user_id) {
+    store.delete(member.auth_user_id);
+  }
+  if (member.username) {
+    store.delete(`username:${member.username.toLowerCase().trim()}`);
+  }
+  if (member.email) {
+    store.delete(`email:${member.email.toLowerCase().trim()}`);
+  }
+  if (member.phone) {
+    store.delete(`phone:${member.phone.replace(/\D/g, "")}`);
+  }
+
+  savePersistentStore(store);
+  return true;
+}
+
 

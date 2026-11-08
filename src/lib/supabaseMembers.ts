@@ -1,6 +1,7 @@
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { Member, PrivacySettings } from "@/types";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
+import { deleteMemberRecord } from "@/lib/memberStore";
 
 const DEFAULT_PRIVACY: PrivacySettings = {
   phone: "members",
@@ -637,4 +638,200 @@ export async function resetSupabasePassword(
     };
   }
 }
+
+/**
+ * Remove a member from Supabase (auth.users and public.members table)
+ * and delete their profile photo from Supabase Storage if present.
+ */
+export async function deleteSupabaseMember(
+  identifier: string,
+  options?: { deleteStoragePhoto?: boolean }
+): Promise<{
+  success: boolean;
+  message: string;
+  deletedAuthUserId?: string;
+  deletedMemberId?: string;
+  deletedStorageFiles?: string[];
+}> {
+  if (!isSupabaseConfigured()) {
+    const localDeleted = deleteMemberRecord(identifier);
+    return {
+      success: localDeleted,
+      message: localDeleted
+        ? "સ્થાનિક સ્ટોરમાંથી સભ્ય સફળતાપૂર્વક દૂર કરવામાં આવ્યા."
+        : "સભ્ય મળ્યા નથી.",
+    };
+  }
+
+  const clean = identifier.trim().toLowerCase();
+  const deletedFiles: string[] = [];
+  let authUserId: string | null = null;
+  let memberId: string | null = null;
+  let memberEmail: string | null = null;
+  let photoUrl: string | null = null;
+
+  try {
+    // 1. Find the member row in public.members
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+    let query = supabaseAdmin.from("members").select("id, auth_user_id, email, username, photo_url");
+
+    if (isUUID) {
+      query = query.or(`id.eq.${clean},auth_user_id.eq.${clean}`);
+    } else if (clean.includes("@")) {
+      query = query.ilike("email", clean);
+    } else {
+      query = query.or(`username.ilike.${clean},phone.eq.${clean}`);
+    }
+
+    const { data: memberRows, error: findErr } = await query;
+    if (!findErr && memberRows && memberRows.length > 0) {
+      const row = memberRows[0];
+      memberId = row.id;
+      authUserId = row.auth_user_id || (isUUID ? clean : null);
+      memberEmail = row.email;
+      photoUrl = row.photo_url;
+    }
+
+    // 2. Also check auth.users if authUserId is not yet found
+    if (!authUserId) {
+      const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+      if (usersData?.users) {
+        const found = usersData.users.find(
+          (u) =>
+            u.id === clean ||
+            u.email?.toLowerCase() === clean ||
+            u.user_metadata?.username?.toLowerCase() === clean
+        );
+        if (found) {
+          authUserId = found.id;
+          if (!memberEmail) memberEmail = found.email || null;
+        }
+      }
+    }
+
+    // 3. Delete user's profile photo from Supabase Storage if requested or present
+    if (options?.deleteStoragePhoto !== false && photoUrl && photoUrl.includes("/storage/v1/object/public/")) {
+      try {
+        const parts = photoUrl.split("/storage/v1/object/public/")[1];
+        if (parts) {
+          const slashIdx = parts.indexOf("/");
+          if (slashIdx !== -1) {
+            const bucket = parts.substring(0, slashIdx);
+            const path = parts.substring(slashIdx + 1);
+            const { error: removeErr } = await supabaseAdmin.storage.from(bucket).remove([path]);
+            if (!removeErr) {
+              deletedFiles.push(`${bucket}/${path}`);
+            }
+          }
+        }
+      } catch (err: any) {
+        console.warn("[deleteSupabaseMember storage warning]", err.message);
+      }
+    }
+
+    // 4. Delete row from public.members table
+    if (memberId || authUserId || clean.includes("@")) {
+      let deleteQuery = supabaseAdmin.from("members").delete();
+      if (memberId) {
+        deleteQuery = deleteQuery.eq("id", memberId);
+      } else if (authUserId) {
+        deleteQuery = deleteQuery.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId}`);
+      } else {
+        deleteQuery = deleteQuery.ilike("email", clean);
+      }
+      const { error: deleteRowErr } = await deleteQuery;
+      if (deleteRowErr) {
+        console.warn("[deleteSupabaseMember deleteRowErr]", deleteRowErr.message);
+      }
+    }
+
+    // 5. Delete user from auth.users (Supabase Auth)
+    if (authUserId) {
+      const { error: deleteAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      if (deleteAuthErr) {
+        console.warn("[deleteSupabaseMember deleteAuthErr]", deleteAuthErr.message);
+      }
+    }
+
+    // 6. Delete from local memberStore
+    deleteMemberRecord(identifier);
+    if (memberEmail) deleteMemberRecord(memberEmail);
+    if (authUserId) deleteMemberRecord(authUserId);
+
+    return {
+      success: true,
+      message: `સભ્ય (${identifier}) અને સંબંધિત વિગતો Supabase માંથી સફળતાપૂર્વક કાઢી નાખવામાં આવ્યા.`,
+      deletedAuthUserId: authUserId || undefined,
+      deletedMemberId: memberId || undefined,
+      deletedStorageFiles: deletedFiles.length > 0 ? deletedFiles : undefined,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: `સભ્ય દૂર કરવામાં ક્ષતિ: ${err.message}`,
+    };
+  }
+}
+
+/**
+ * Remove all uploaded images from Supabase Storage buckets.
+ * Defaults to all image buckets: member-photos, business-photos, advertisement-banners, donor-photos, payment-proofs
+ */
+export async function clearSupabaseStorageBuckets(
+  bucketNames: string[] = [
+    "member-photos",
+    "business-photos",
+    "advertisement-banners",
+    "donor-photos",
+    "payment-proofs",
+  ]
+): Promise<{
+  success: boolean;
+  totalDeleted: number;
+  details: Record<string, string[]>;
+  message: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return {
+      success: false,
+      totalDeleted: 0,
+      details: {},
+      message: "Supabase રૂપરેખાંકિત નથી.",
+    };
+  }
+
+  let totalDeleted = 0;
+  const details: Record<string, string[]> = {};
+
+  for (const bucket of bucketNames) {
+    try {
+      const { data: fileList, error: listErr } = await supabaseAdmin.storage.from(bucket).list("", {
+        limit: 1000,
+      });
+
+      if (!listErr && fileList && fileList.length > 0) {
+        const paths = fileList.map((f) => f.name).filter(Boolean);
+        if (paths.length > 0) {
+          const { error: delErr } = await supabaseAdmin.storage.from(bucket).remove(paths);
+          if (!delErr) {
+            details[bucket] = paths;
+            totalDeleted += paths.length;
+          } else {
+            console.warn(`[clearSupabaseStorageBuckets] Error clearing bucket ${bucket}:`, delErr.message);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[clearSupabaseStorageBuckets exception for ${bucket}]`, err.message);
+    }
+  }
+
+  return {
+    success: true,
+    totalDeleted,
+    details,
+    message: `${totalDeleted} તસવીરો Supabase સ્ટોરેજમાંથી સફળતાપૂર્વક દૂર કરવામાં આવી.`,
+  };
+}
+
 

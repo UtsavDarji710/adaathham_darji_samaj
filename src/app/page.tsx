@@ -41,9 +41,11 @@ export default function HomePage() {
   } = useData();
   const { currentUser } = useAuth();
 
-  // Statistics calculated dynamically from state
+  // Statistics calculated dynamically from live state
   const totalMembers = members.length;
-  const totalFamilies = Math.max(12, Math.floor(members.length * 1.5));
+  const totalFamilies = relationships.length > 0 
+    ? new Set(relationships.map((r) => r.from_member_id)).size 
+    : totalMembers;
   const totalBusinesses = businesses.filter((b) => b.status === "active").length;
   const totalEvents = events.length;
 

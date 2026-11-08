@@ -82,8 +82,13 @@ export default function CommitteePage() {
 
       {/* TAB 1: COMMITTEE MEMBERS DIRECTORY */}
       {activeTab === "committee" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {committee.map((member) => (
+        committee.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-ivory-300">
+            <p className="text-sm font-bold text-charcoal-700">હોદ્દેદારોની વિગતો ટૂંક સમયમાં અપડેટ કરવામાં આવશે.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {committee.map((member) => (
             <div
               key={member.id}
               className="bg-white rounded-3xl border border-ivory-300 p-6 shadow-card hover:shadow-hover transition-all flex flex-col justify-between group"
@@ -156,7 +161,8 @@ export default function CommitteePage() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )
       )}
 
       {/* TAB 2: LIFETIME MEMBERS */}
