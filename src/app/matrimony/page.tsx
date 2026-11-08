@@ -332,25 +332,52 @@ export default function PublicMatrimonyPage() {
 
         {/* CANDIDATE CARDS GRID */}
         {filteredCandidates.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-dashed border-rose-300 p-12 text-center max-w-xl mx-auto space-y-4 shadow-card">
+          <div className="bg-white rounded-3xl border border-dashed border-rose-300 p-8 sm:p-12 text-center max-w-xl mx-auto space-y-4 shadow-card">
             <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-400 flex items-center justify-center mx-auto">
               <Heart className="w-8 h-8" />
             </div>
             <div>
               <h3 className="font-extrabold text-lg text-charcoal-900">
-                કોઈ મેળ ખાતા ઉમેદવાર મળ્યા નથી
+                {eligibleCandidates.length === 0
+                  ? "હાલમાં કોઈ મેટ્રિમોની ઉમેદવાર નોંધાયેલ નથી"
+                  : "કોઈ મેળ ખાતા ઉમેદવાર મળ્યા નથી"}
               </h3>
-              <p className="text-xs text-charcoal-500 mt-1">
-                આપના ફિલ્ટર્સ મુજબ હાલમાં કોઈ પ્રોફાઇલ ઉપલબ્ધ નથી. કૃપા કરીને ફિલ્ટર્સ સાફ કરો અથવા અન્ય ગામ પસંદ કરો.
+              <p className="text-xs text-charcoal-500 mt-1 max-w-md mx-auto leading-relaxed">
+                {eligibleCandidates.length === 0
+                  ? "મેટ્રિમોની મંચ માત્ર અપરણિત (Unmarried) સભ્યો માટે છે જેમણે સ્વેચ્છાએ પબ્લિક લિસ્ટિંગ માટે સંમતિ આપી હોય. જો આપ અપરણિત સભ્ય છો, તો આપની પ્રોફાઇલમાંથી મેટ્રિમોની વિગતો ભરીને લિસ્ટિંગ સક્રિય કરી શકો છો."
+                  : "આપના ફિલ્ટર્સ મુજબ હાલમાં કોઈ પ્રોફાઇલ ઉપલબ્ધ નથી. કૃપા કરીને ફિલ્ટર્સ સાફ કરો અથવા અન્ય ગામ પસંદ કરો."}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
-            >
-              તમામ ઉમેદવારો દર્શાવો
-            </button>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              {eligibleCandidates.length === 0 ? (
+                currentUser ? (
+                  <Link
+                    href="/profile"
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <HeartHandshake className="w-4 h-4" />
+                    <span>પ્રોફાઇલમાં મેટ્રિમોની વિગત ઉમેરો</span>
+                  </Link>
+                ) : (
+                  <Link
+                    href="/login?redirect=/matrimony"
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>લૉગિન કરીને ઉમેદવારી નોંધાવો</span>
+                  </Link>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                >
+                  તમામ ઉમેદવારો દર્શાવો
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

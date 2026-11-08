@@ -8,13 +8,23 @@ export async function GET() {
   try {
     // 1. Supabase-First Live Query
     if (isSupabaseConfigured() && supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from("members")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [membersRes, matrimonyRes] = await Promise.all([
+        supabaseAdmin.from("members").select("*").order("created_at", { ascending: false }),
+        supabaseAdmin.from("member_matrimony").select("*"),
+      ]);
 
-      if (!error && Array.isArray(data)) {
-        const dynamicMembers: Member[] = data.map(dbRowToMember);
+      if (!membersRes.error && Array.isArray(membersRes.data)) {
+        const matMap = new Map<string, any>();
+        if (!matrimonyRes.error && Array.isArray(matrimonyRes.data)) {
+          matrimonyRes.data.forEach((m) => {
+            if (m.member_id) matMap.set(m.member_id, m);
+          });
+        }
+
+        const dynamicMembers: Member[] = membersRes.data.map((row) =>
+          dbRowToMember(row, matMap.get(row.id))
+        );
+
         return NextResponse.json({
           success: true,
           members: dynamicMembers,

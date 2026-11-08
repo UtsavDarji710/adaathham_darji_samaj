@@ -1,5 +1,5 @@
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
-import { Member, PrivacySettings } from "@/types";
+import { Member, PrivacySettings, MatrimonyProfile, MatrimonyPrivacySettings } from "@/types";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
 import { deleteMemberRecord } from "@/lib/memberStore";
 
@@ -14,9 +14,68 @@ const DEFAULT_PRIVACY: PrivacySettings = {
 };
 
 /**
+ * Convert a Supabase `member_matrimony` row to application `MatrimonyProfile`
+ */
+export function matrimonyDbRowToProfile(matRow: any): MatrimonyProfile {
+  const matPriv =
+    matRow && matRow.privacy_settings && typeof matRow.privacy_settings === "object"
+      ? matRow.privacy_settings
+      : {};
+
+  return {
+    is_available: !!matRow?.is_available,
+    is_public_listing: matPriv.is_public_listing !== false,
+    is_saved: matPriv.is_saved !== false,
+    height: matRow?.height || "",
+    weight: matRow?.weight || "",
+    complexion: matRow?.complexion || "",
+    subcaste_gotra: matRow?.subcaste_gotra || "",
+    about_me: matRow?.about_me || "",
+    partner_expectations: matRow?.partner_expectations || "",
+    hobbies: matRow?.hobbies || "",
+    privacy: {
+      show_name: matPriv.show_name !== false,
+      show_photo: matPriv.show_photo !== false,
+      show_age: matPriv.show_age !== false,
+      show_native_place: matPriv.show_native_place !== false,
+      show_education: matPriv.show_education !== false,
+      show_occupation: matPriv.show_occupation !== false,
+      show_contact: !!matPriv.show_contact,
+    },
+    updated_at: matRow?.updated_at || new Date().toISOString(),
+  };
+}
+
+/**
  * Convert a Supabase `members` table row to application `Member` type
  */
-export function dbRowToMember(row: any): Member {
+export function dbRowToMember(row: any, matRow?: any): Member {
+  const marital = row.marital_status || "પરણિત (Married)";
+  const statusClean = String(marital).trim();
+  const isUnmarried =
+    statusClean === "અપરણિત (Unmarried)" ||
+    statusClean === "અપરણિત" ||
+    statusClean.toLowerCase().includes("unmarried");
+
+  let matrimony: MatrimonyProfile | undefined = undefined;
+  let isAvailableForMatrimony = false;
+
+  if (matRow) {
+    const prof = matrimonyDbRowToProfile(matRow);
+    matrimony = {
+      ...prof,
+      is_available: isUnmarried ? prof.is_available : false,
+    };
+    isAvailableForMatrimony = isUnmarried && prof.is_available;
+  } else if (row.matrimony) {
+    matrimony = {
+      ...row.matrimony,
+      is_available: isUnmarried ? !!row.matrimony.is_available : false,
+    };
+    isAvailableForMatrimony =
+      isUnmarried && (row.is_available_for_matrimony ?? row.matrimony?.is_available ?? false);
+  }
+
   return {
     id: row.id || row.local_member_id || "",
     auth_user_id: row.auth_user_id || undefined,
@@ -41,7 +100,9 @@ export function dbRowToMember(row: any): Member {
     sasri_name: row.sasri_name || "",
     piyar_name: row.piyar_name || "",
     is_public_in_family: !!row.is_public_in_family,
-    marital_status: row.marital_status || "પરણિત (Married)",
+    marital_status: marital,
+    is_available_for_matrimony: isAvailableForMatrimony,
+    matrimony: matrimony,
     gender: row.gender || "male",
     dob: row.dob || undefined,
     blood_group: row.blood_group || undefined,
@@ -159,7 +220,12 @@ export async function getSupabaseMember(identifier: string): Promise<Member | nu
     }
 
     if (data) {
-      return dbRowToMember(data);
+      const { data: matData } = await supabaseAdmin
+        .from("member_matrimony")
+        .select("*")
+        .eq("member_id", data.id)
+        .maybeSingle();
+      return dbRowToMember(data, matData);
     }
 
     // Secondary check: look up in auth.users by email or user_metadata.username
@@ -181,7 +247,12 @@ export async function getSupabaseMember(identifier: string): Promise<Member | nu
           .maybeSingle();
 
         if (memberByAuth) {
-          return dbRowToMember(memberByAuth);
+          const { data: matData } = await supabaseAdmin
+            .from("member_matrimony")
+            .select("*")
+            .eq("member_id", memberByAuth.id)
+            .maybeSingle();
+          return dbRowToMember(memberByAuth, matData);
         }
       }
     }
@@ -324,9 +395,15 @@ export async function authenticateSupabase(
     }
 
     if (memberRow) {
+      const { data: matData } = await supabaseAdmin
+        .from("member_matrimony")
+        .select("*")
+        .eq("member_id", memberRow.id)
+        .maybeSingle();
+
       return {
         success: true,
-        member: dbRowToMember(memberRow),
+        member: dbRowToMember(memberRow, matData),
       };
     }
 
@@ -529,7 +606,74 @@ export async function updateSupabaseMember(
       return null;
     }
 
-    return data ? dbRowToMember(data) : null;
+    if (!data) return null;
+
+    // Handle member_matrimony table updates
+    const targetMemberId = data.id;
+    if (updates.matrimony || updates.is_available_for_matrimony !== undefined) {
+      const mat: Partial<MatrimonyProfile> = updates.matrimony || {};
+      const status = (updates.marital_status || data.marital_status || "").trim();
+      const isUnmarried =
+        status === "અપરણિત (Unmarried)" ||
+        status === "અપરણિત" ||
+        status.toLowerCase().includes("unmarried");
+
+      const isAvail = isUnmarried && (updates.is_available_for_matrimony ?? mat.is_available ?? false);
+
+      const matPrivacy = mat.privacy || {
+        show_name: true,
+        show_photo: true,
+        show_age: true,
+        show_native_place: true,
+        show_education: true,
+        show_occupation: true,
+        show_contact: false,
+      };
+
+      await supabaseAdmin.from("member_matrimony").upsert(
+        {
+          member_id: targetMemberId,
+          is_available: isAvail,
+          height: mat.height || null,
+          weight: mat.weight || null,
+          complexion: mat.complexion || null,
+          subcaste_gotra: mat.subcaste_gotra || null,
+          about_me: mat.about_me || null,
+          partner_expectations: mat.partner_expectations || null,
+          hobbies: mat.hobbies || null,
+          privacy_settings: {
+            ...matPrivacy,
+            is_public_listing: mat.is_public_listing !== false,
+            is_saved: mat.is_saved !== false,
+          },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "member_id" }
+      );
+    } else if (updates.marital_status) {
+      // If marital status changed to married, automatically disable matrimony
+      const status = updates.marital_status.trim();
+      const isUnmarried =
+        status === "અપરણિત (Unmarried)" ||
+        status === "અપરણિત" ||
+        status.toLowerCase().includes("unmarried");
+
+      if (!isUnmarried) {
+        await supabaseAdmin
+          .from("member_matrimony")
+          .update({ is_available: false, updated_at: new Date().toISOString() })
+          .eq("member_id", targetMemberId);
+      }
+    }
+
+    // Fetch fresh matrimony row
+    const { data: matData } = await supabaseAdmin
+      .from("member_matrimony")
+      .select("*")
+      .eq("member_id", targetMemberId)
+      .maybeSingle();
+
+    return dbRowToMember(data, matData);
   } catch (err: any) {
     console.warn("[updateSupabaseMember exception]", err.message);
     return null;
