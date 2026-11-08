@@ -193,7 +193,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     purgeLegacyMockData();
 
     // 1. Fetch live dynamic members from API / Supabase
-    fetch("/api/members")
+    fetch("/api/members", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.members)) {
@@ -206,7 +206,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
     // 2. Fetch live businesses from Supabase API
-    fetch("/api/businesses")
+    fetch("/api/businesses", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.businesses)) {
@@ -217,7 +217,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.warn("[DataContext] Live businesses fetch warning:", err));
 
     // 3. Fetch live jobs from Supabase API
-    fetch("/api/jobs")
+    fetch("/api/jobs", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.jobs)) {
@@ -228,7 +228,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.warn("[DataContext] Live jobs fetch warning:", err));
 
     // 4. Fetch live advertisements from Supabase API
-    fetch("/api/advertisements")
+    fetch("/api/advertisements", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.advertisements)) {
@@ -239,7 +239,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.warn("[DataContext] Live advertisements fetch warning:", err));
 
     // 5. Fetch live events from Supabase API
-    fetch("/api/events")
+    fetch("/api/events", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.events)) {
@@ -250,7 +250,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.warn("[DataContext] Live events fetch warning:", err));
 
     // 6. Fetch live donations from Supabase API
-    fetch("/api/donations")
+    fetch("/api/donations", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.donations)) {
@@ -261,7 +261,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.warn("[DataContext] Live donations fetch warning:", err));
 
     // 7. Fetch live announcements from Supabase API
-    fetch("/api/announcements")
+    fetch("/api/announcements", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.announcements)) {

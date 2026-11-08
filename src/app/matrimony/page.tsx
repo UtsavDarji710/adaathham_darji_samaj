@@ -663,6 +663,16 @@ export default function PublicMatrimonyPage() {
               {/* Bio Specs Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 bg-ivory-50 rounded-xl">
+                  <span className="text-[11px] text-charcoal-500 block">ઉંમર (Age)</span>
+                  <span className="font-bold text-charcoal-900">
+                    {selectedCandidate.matrimony?.privacy?.show_age !== false
+                      ? calculateAge(selectedCandidate.dob)
+                        ? `${calculateAge(selectedCandidate.dob)} વર્ષ`
+                        : "માહિતી નથી"
+                      : "ગોપનીય"}
+                  </span>
+                </div>
+                <div className="p-3 bg-ivory-50 rounded-xl">
                   <span className="text-[11px] text-charcoal-500 block">ઊંચાઈ</span>
                   <span className="font-bold text-charcoal-900">
                     {selectedCandidate.matrimony?.height || "માહિતી નથી"}
@@ -684,7 +694,7 @@ export default function PublicMatrimonyPage() {
                       : "ગોપનીય"}
                   </span>
                 </div>
-                <div className="p-3 bg-ivory-50 rounded-xl">
+                <div className="p-3 bg-ivory-50 rounded-xl col-span-2">
                   <span className="text-[11px] text-charcoal-500 block">નોકરી / વ્યવસાય</span>
                   <span className="font-bold text-charcoal-900">
                     {selectedCandidate.matrimony?.privacy?.show_occupation !== false

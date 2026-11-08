@@ -4,6 +4,9 @@ import { dbRowToMember } from "@/lib/supabaseMembers";
 import { getAllMembers } from "@/lib/memberStore";
 import { Member } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     // 1. Supabase-First Live Query
@@ -25,21 +28,35 @@ export async function GET() {
           dbRowToMember(row, matMap.get(row.id))
         );
 
-        return NextResponse.json({
-          success: true,
-          members: dynamicMembers,
-          source: "supabase",
-        });
+        return NextResponse.json(
+          {
+            success: true,
+            members: dynamicMembers,
+            source: "supabase",
+          },
+          {
+            headers: {
+              "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+            },
+          }
+        );
       }
     }
 
     // 2. Server Member Store Fallback
     const localMembers = getAllMembers();
-    return NextResponse.json({
-      success: true,
-      members: localMembers,
-      source: "local",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        members: localMembers,
+        source: "local",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("[/api/members error]", error);
     return NextResponse.json(
