@@ -16,7 +16,6 @@ import {
   ActivityLog,
 } from "@/types";
 import {
-  INITIAL_MEMBERS,
   INITIAL_RELATIONSHIPS,
   INITIAL_BUSINESSES,
   INITIAL_ADVERTISEMENTS,
@@ -114,7 +113,7 @@ const STORAGE_KEYS = {
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
+  const [members, setMembers] = useState<Member[]>([]);
   const [relationships, setRelationships] = useState<FamilyRelationship[]>(INITIAL_RELATIONSHIPS);
   const [businesses, setBusinesses] = useState<BusinessItem[]>(INITIAL_BUSINESSES);
   const [advertisements, setAdvertisements] = useState<BusinessAdvertisement[]>(INITIAL_ADVERTISEMENTS);
@@ -602,7 +601,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetDemoData = () => {
-    setMembers(INITIAL_MEMBERS);
+    setMembers([]);
     setRelationships(INITIAL_RELATIONSHIPS);
     setBusinesses(INITIAL_BUSINESSES);
     setAdvertisements(INITIAL_ADVERTISEMENTS);

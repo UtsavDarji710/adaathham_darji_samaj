@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Member, AdminRole, PrivacySettings } from "@/types";
-import { INITIAL_MEMBERS } from "@/lib/mockData";
 
 interface AuthContextType {
   currentUser: Member | null;
@@ -125,11 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch (e) {}
           }
         }
-        const found = INITIAL_MEMBERS.find((m) => m.id === savedUserId);
-        if (found) {
-          setCurrentUser(found);
-          return;
-        }
       }
 
       // Default is null (Unauthenticated)
@@ -144,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (typeof window !== "undefined") {
       if (user) {
         localStorage.setItem(AUTH_STORAGE_KEY, user.id);
-        const sessionVal = user.email || user.phone || user.id;
+        const sessionVal = user.username || user.email || user.phone || user.id;
         document.cookie = `ad8_session=${encodeURIComponent(sessionVal)}; path=/; max-age=604800; SameSite=Lax`;
       } else {
         localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -158,18 +152,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout();
       return;
     }
-    if (memberId) {
-      const target = INITIAL_MEMBERS.find((m) => m.id === memberId);
-      if (target) {
-        setCurrentUser(target);
-        return;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("ad8_data_members");
+      if (stored) {
+        try {
+          const list = JSON.parse(stored);
+          if (Array.isArray(list)) {
+            const match = memberId
+              ? list.find((m: any) => m.id === memberId)
+              : list.find((m: any) => m.role === role);
+            if (match) {
+              setCurrentUser(match);
+              return;
+            }
+          }
+        } catch {}
       }
-    }
-    const matching = INITIAL_MEMBERS.find((m) => m.role === role);
-    if (matching) {
-      setCurrentUser(matching);
-    } else {
-      setCurrentUser(INITIAL_MEMBERS[0]);
     }
   };
 
@@ -412,7 +410,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       ...data,
     };
-    INITIAL_MEMBERS.push(newMember);
     setCurrentUser(newMember);
     return { success: true, member: newMember, message: "સભ્ય નોંધણી સફળતાપૂર્વક થઈ ગઈ છે!" };
   };

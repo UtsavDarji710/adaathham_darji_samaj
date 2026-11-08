@@ -315,9 +315,23 @@ export default function MembersDirectoryPage() {
       </div>
 
       {filteredMembers.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-ivory-300">
+        <div className="text-center py-16 px-4 bg-white rounded-3xl border border-dashed border-ivory-300">
+          <Users className="w-12 h-12 text-charcoal-300 mx-auto mb-3" />
           <p className="text-sm font-bold text-charcoal-700">કોઈ સભ્ય મળ્યો નથી.</p>
-          <p className="text-xs text-charcoal-500 mt-1">કૃપા કરીને અન્ય નામ અથવા ફિલ્ટર પસંદ કરો.</p>
+          <p className="text-xs text-charcoal-500 mt-1 mb-4">
+            {members.length === 0
+              ? "હજુ સુધી કોઈ સભ્ય નોંધાયેલ નથી. પ્રથમ સભ્ય તરીકે જોડાવા માટે નવી નોંધણી કરો."
+              : "કૃપા કરીને અન્ય નામ અથવા ફિલ્ટર પસંદ કરો."}
+          </p>
+          {members.length === 0 && (
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-xs transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>નવા સભ્ય બનો (Register Now)</span>
+            </Link>
+          )}
         </div>
       )}
 

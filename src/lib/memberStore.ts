@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { Member, AdminRole } from "@/types";
-import { INITIAL_MEMBERS } from "@/lib/mockData";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -67,43 +66,26 @@ declare global {
 function getStore(): Map<string, Member> {
   if (!globalThis.__SERVER_MEMBERS_MAP__) {
     const map = new Map<string, Member>();
-    const rawSaved = loadPersistentStore();
-    const saved = rawSaved;
+    const saved = loadPersistentStore() || [];
 
-    // Merge saved members with INITIAL_MEMBERS to ensure newly defined seed fields (e.g. username) are always retained
-    let sourceMembers: Member[];
-    if (saved && saved.length > 0) {
-      sourceMembers = saved.map((s) => {
-        const init = INITIAL_MEMBERS.find((m) => m.id === s.id);
-        return {
-          ...(init || {}),
-          ...s,
-          username: s.username || init?.username,
-        };
-      });
-      for (const init of INITIAL_MEMBERS) {
-        if (!sourceMembers.some((s) => s.id === init.id)) {
-          sourceMembers.push(init);
+    // Seed server cache with saved dynamic members
+    for (const member of saved) {
+      if (member && member.id) {
+        map.set(member.id, { ...member });
+        if (member.auth_user_id) {
+          map.set(member.auth_user_id, { ...member });
+        }
+        if (member.username) {
+          map.set(`username:${member.username.toLowerCase().trim()}`, { ...member });
+        }
+        if (member.email) {
+          map.set(`email:${member.email.toLowerCase().trim()}`, { ...member });
+        }
+        if (member.phone) {
+          map.set(`phone:${member.phone.replace(/\D/g, "")}`, { ...member });
         }
       }
-    } else {
-      sourceMembers = INITIAL_MEMBERS;
     }
-
-    // Seed with members
-    for (const member of sourceMembers) {
-      map.set(member.id, { ...member });
-      if (member.username) {
-        map.set(`username:${member.username.toLowerCase().trim()}`, { ...member });
-      }
-      if (member.email) {
-        map.set(`email:${member.email.toLowerCase().trim()}`, { ...member });
-      }
-      if (member.phone) {
-        map.set(`phone:${member.phone.replace(/\D/g, "")}`, { ...member });
-      }
-    }
-    savePersistentStore(map);
     globalThis.__SERVER_MEMBERS_MAP__ = map;
   }
   return globalThis.__SERVER_MEMBERS_MAP__;
@@ -169,21 +151,6 @@ export function getMemberByIdOrSession(sessionVal: string): Member | null {
     if (byPhone) return byPhone;
   }
 
-  // 5. Fallback search through INITIAL_MEMBERS
-  const inInitial = INITIAL_MEMBERS.find((m) => {
-    if (m.id && m.id.toLowerCase() === clean) return true;
-    if (m.username && m.username.toLowerCase() === clean) return true;
-    if (m.email && m.email.toLowerCase() === clean) return true;
-    if (m.phone && m.phone.replace(/\D/g, "") === cleanPhone) return true;
-    return false;
-  });
-
-  if (inInitial) {
-    // Cache in store for subsequent lookups
-    registerMember(inInitial);
-    return inInitial;
-  }
-
   return null;
 }
 
@@ -201,10 +168,7 @@ export function isUsernameTaken(username: string, excludeMemberId?: string): boo
   if (existing && (!excludeMemberId || existing.id !== excludeMemberId)) {
     return true;
   }
-  const inInitial = INITIAL_MEMBERS.find(
-    (m) => m.username?.toLowerCase().trim() === clean && (!excludeMemberId || m.id !== excludeMemberId)
-  );
-  return !!inInitial;
+  return false;
 }
 
 /**
@@ -217,7 +181,7 @@ export function getMemberByUsername(username: string): Member | null {
   if (store.has(`username:${clean}`)) {
     return store.get(`username:${clean}`) || null;
   }
-  return INITIAL_MEMBERS.find((m) => m.username?.toLowerCase().trim() === clean) || null;
+  return null;
 }
 
 /**
@@ -226,6 +190,9 @@ export function getMemberByUsername(username: string): Member | null {
 export function registerMember(member: Member): Member {
   const store = getStore();
   store.set(member.id, member);
+  if (member.auth_user_id) {
+    store.set(member.auth_user_id, member);
+  }
   if (member.username) {
     store.set(`username:${member.username.toLowerCase().trim()}`, member);
   }
@@ -234,14 +201,6 @@ export function registerMember(member: Member): Member {
   }
   if (member.phone) {
     store.set(`phone:${member.phone.replace(/\D/g, "")}`, member);
-  }
-
-  // Also update INITIAL_MEMBERS in-place if exists or add
-  const idx = INITIAL_MEMBERS.findIndex((m) => m.id === member.id);
-  if (idx >= 0) {
-    INITIAL_MEMBERS[idx] = member;
-  } else {
-    INITIAL_MEMBERS.push(member);
   }
 
   // Persist to disk so server recompilations/reboots preserve all details & photos
@@ -370,9 +329,6 @@ export function verifyMemberPassword(
 
   // 1. Strict username lookup
   let member = store.get(`username:${clean}`) || null;
-  if (!member) {
-    member = INITIAL_MEMBERS.find((m) => m.username?.toLowerCase().trim() === clean) || null;
-  }
 
   // 2. Fallback check by direct ID
   if (!member && store.has(clean)) {
