@@ -1,17 +1,42 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Public paths that do not require authentication
-const PUBLIC_PATHS = [
-  "/login",
-  "/register",
-  "/api/auth/login",
-  "/api/auth/register",
-  "/api/auth/send-otp",
-  "/api/auth/verify-otp",
-  "/api/auth/logout",
-  "/api/auth/me",
+// Public navigation routes accessible without login on desktop & web
+const PUBLIC_NAV_ROUTES = [
+  "/",
+  "/members",
+  "/businesses",
+  "/jobs",
+  "/advertisements",
+  "/events",
+  "/donations",
+  "/committee",
+  "/matrimony",
+  "/circulars",
+  "/announcements",
 ];
+
+// Helper to determine if a route is a public browsing tab or subpage
+const isPublicNavRoute = (pathname: string) => {
+  if (PUBLIC_NAV_ROUTES.includes(pathname)) return true;
+  if (pathname.startsWith("/events/")) return true;
+  if (pathname.startsWith("/businesses/")) return true;
+  if (pathname.startsWith("/circulars/")) return true;
+  if (pathname.startsWith("/announcements/")) return true;
+  return false;
+};
+
+// Routes that strictly require user login
+const isStrictlyProtectedPage = (pathname: string) => {
+  return (
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/family-tree" ||
+    pathname.startsWith("/family-tree/")
+  );
+};
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -35,16 +60,28 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Determine auth page
+  // 2. Allow public GET APIs (e.g. dynamic members directory for navbar tabs)
+  if (pathname === "/api/members" && request.method === "GET") {
+    return NextResponse.next();
+  }
+
+  // 3. Determine auth page
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  // Check authentication cookie (Task 2: Mobile Application Authentication)
+  // Check authentication cookie
   const sessionCookie = request.cookies.get("ad8_session")?.value;
-  const isAuthenticated = Boolean(sessionCookie && sessionCookie.trim().length > 0 && sessionCookie !== "guest");
+  const isAuthenticated = Boolean(
+    sessionCookie && sessionCookie.trim().length > 0 && sessionCookie !== "guest"
+  );
 
-  // 3. If unauthenticated, block direct navigation to protected application screens
+  // 4. If unauthenticated, allow all navbar tabs on desktop so visitors can see all lists
   if (!isAuthenticated && !isAuthPage) {
-    // If it's a backend API request (e.g. /api/upload)
+    // If user is accessing a public navigation tab, allow direct access
+    if (isPublicNavRoute(pathname)) {
+      return NextResponse.next();
+    }
+
+    // If it's a backend protected API request (e.g. /api/upload, /api/profile)
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         {
@@ -55,7 +92,7 @@ export function middleware(request: NextRequest) {
       );
     }
 
-    // Direct page navigation: preserve deep link callback
+    // Direct page navigation for strictly protected pages (/profile, /admin, etc.)
     const loginUrl = new URL("/login", request.url);
     const destination = pathname + search;
     if (destination && destination !== "/") {
@@ -64,7 +101,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 4. If already authenticated user visits /login or /register, redirect to destination
+  // 5. If already authenticated user visits /login or /register, redirect to destination or home
   if (isAuthenticated && isAuthPage) {
     const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
     if (callbackUrl && !callbackUrl.startsWith("/login") && !callbackUrl.startsWith("/register")) {
@@ -87,4 +124,3 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|logo.png|logo_cropped.png|manifest.json).*)",
   ],
 };
-

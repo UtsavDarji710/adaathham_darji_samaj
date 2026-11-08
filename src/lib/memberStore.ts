@@ -3,6 +3,7 @@ import path from "path";
 import { Member, AdminRole } from "@/types";
 import { INITIAL_MEMBERS } from "@/lib/mockData";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const ADMIN_ROLES: AdminRole[] = [
   "president",
@@ -67,8 +68,7 @@ function getStore(): Map<string, Member> {
   if (!globalThis.__SERVER_MEMBERS_MAP__) {
     const map = new Map<string, Member>();
     const rawSaved = loadPersistentStore();
-    // Exclude legacy dummy mock member IDs (mem-1 to mem-99)
-    const saved = rawSaved ? rawSaved.filter((m) => !/^mem-\d+$/.test(m.id)) : null;
+    const saved = rawSaved;
 
     // Merge saved members with INITIAL_MEMBERS to ensure newly defined seed fields (e.g. username) are always retained
     let sourceMembers: Member[];
@@ -192,6 +192,9 @@ export function getMemberByIdOrSession(sessionVal: string): Member | null {
  */
 export function isUsernameTaken(username: string, excludeMemberId?: string): boolean {
   if (!username) return false;
+  if (isSupabaseConfigured()) {
+    return false; // Delegated to live Supabase check
+  }
   const clean = username.toLowerCase().trim();
   const store = getStore();
   const existing = store.get(`username:${clean}`);

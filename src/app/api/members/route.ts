@@ -23,8 +23,8 @@ export async function GET() {
       }
     }
 
-    // 2. Server Member Store Fallback (real verified active members only)
-    const localMembers = getAllMembers().filter((m) => !/^mem-\d+$/.test(m.id));
+    // 2. Server Member Store Fallback
+    const localMembers = getAllMembers();
     return NextResponse.json({
       success: true,
       members: localMembers,
@@ -35,7 +35,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        members: getAllMembers().filter((m) => !/^mem-\d+$/.test(m.id)),
+        members: getAllMembers(),
         message: "Failed to fetch live members, returned fallback store.",
       },
       { status: 500 }

@@ -144,80 +144,113 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.warn("[DataContext] Live members fetch warning:", err);
         });
 
-      // 2. Load stored dynamic data while purging legacy mock/dummy items
+      // 2. Load stored dynamic data or fallback to initial lists
       const storedMembers = localStorage.getItem(STORAGE_KEYS.members);
       if (storedMembers) {
-        const parsed = JSON.parse(storedMembers);
-        const clean = Array.isArray(parsed) ? parsed.filter((m: any) => !/^mem-\d+$/.test(m.id)) : [];
-        if (clean.length > 0) setMembers(clean);
+        try {
+          const parsed = JSON.parse(storedMembers);
+          if (Array.isArray(parsed) && parsed.length > 0) setMembers(parsed);
+        } catch {}
       }
 
       const storedRels = localStorage.getItem(STORAGE_KEYS.relationships);
       if (storedRels) {
-        const parsed = JSON.parse(storedRels);
-        const clean = Array.isArray(parsed)
-          ? parsed.filter((r: any) => r && (!r.id?.startsWith("rel-") || r.id?.startsWith("rel-sub-") || r.id?.startsWith("rel-head-")))
-          : [];
-        setRelationships(clean);
+        try {
+          const parsed = JSON.parse(storedRels);
+          if (Array.isArray(parsed) && parsed.length > 0) setRelationships(parsed);
+        } catch {}
       }
 
       const storedBiz = localStorage.getItem(STORAGE_KEYS.businesses);
       if (storedBiz) {
-        const parsed = JSON.parse(storedBiz);
-        const clean = Array.isArray(parsed) ? parsed.filter((b: any) => !/^biz-\d+$/.test(b.id)) : [];
-        setBusinesses(clean);
+        try {
+          const parsed = JSON.parse(storedBiz);
+          if (Array.isArray(parsed) && parsed.length > 0) setBusinesses(parsed);
+          else if (INITIAL_BUSINESSES.length > 0) setBusinesses(INITIAL_BUSINESSES);
+        } catch {}
+      } else if (INITIAL_BUSINESSES.length > 0) {
+        setBusinesses(INITIAL_BUSINESSES);
       }
 
       const storedAds = localStorage.getItem(STORAGE_KEYS.advertisements);
       if (storedAds) {
-        const parsed = JSON.parse(storedAds);
-        const clean = Array.isArray(parsed) ? parsed.filter((a: any) => !/^adv-\d+$/.test(a.id)) : [];
-        setAdvertisements(clean);
+        try {
+          const parsed = JSON.parse(storedAds);
+          if (Array.isArray(parsed) && parsed.length > 0) setAdvertisements(parsed);
+          else if (INITIAL_ADVERTISEMENTS.length > 0) setAdvertisements(INITIAL_ADVERTISEMENTS);
+        } catch {}
+      } else if (INITIAL_ADVERTISEMENTS.length > 0) {
+        setAdvertisements(INITIAL_ADVERTISEMENTS);
       }
 
       const storedJobs = localStorage.getItem(STORAGE_KEYS.jobs);
       if (storedJobs) {
-        const parsed = JSON.parse(storedJobs);
-        const clean = Array.isArray(parsed) ? parsed.filter((j: any) => !/^job-\d+$/.test(j.id)) : [];
-        setJobPostings(clean);
+        try {
+          const parsed = JSON.parse(storedJobs);
+          if (Array.isArray(parsed) && parsed.length > 0) setJobPostings(parsed);
+          else if (INITIAL_JOB_POSTINGS.length > 0) setJobPostings(INITIAL_JOB_POSTINGS);
+        } catch {}
+      } else if (INITIAL_JOB_POSTINGS.length > 0) {
+        setJobPostings(INITIAL_JOB_POSTINGS);
       }
 
       const storedEvents = localStorage.getItem(STORAGE_KEYS.events);
       if (storedEvents) {
-        const parsed = JSON.parse(storedEvents);
-        const clean = Array.isArray(parsed) ? parsed.filter((e: any) => !/^event-\d+$/.test(e.id)) : [];
-        setEvents(clean);
+        try {
+          const parsed = JSON.parse(storedEvents);
+          if (Array.isArray(parsed) && parsed.length > 0) setEvents(parsed);
+          else if (INITIAL_EVENTS.length > 0) setEvents(INITIAL_EVENTS);
+        } catch {}
+      } else if (INITIAL_EVENTS.length > 0) {
+        setEvents(INITIAL_EVENTS);
       }
 
       const storedDonations = localStorage.getItem(STORAGE_KEYS.donations);
       if (storedDonations) {
-        const parsed = JSON.parse(storedDonations);
-        const clean = Array.isArray(parsed) ? parsed.filter((d: any) => !/^donation-\d+$/.test(d.id)) : [];
-        setDonations(clean);
+        try {
+          const parsed = JSON.parse(storedDonations);
+          if (Array.isArray(parsed) && parsed.length > 0) setDonations(parsed);
+          else if (INITIAL_DONATIONS.length > 0) setDonations(INITIAL_DONATIONS);
+        } catch {}
+      } else if (INITIAL_DONATIONS.length > 0) {
+        setDonations(INITIAL_DONATIONS);
       }
 
       const storedBank = localStorage.getItem(STORAGE_KEYS.bank_details);
-      if (storedBank) setBankDetails(JSON.parse(storedBank));
+      if (storedBank) {
+        try {
+          setBankDetails(JSON.parse(storedBank));
+        } catch {}
+      }
 
       const storedAnnouncements = localStorage.getItem(STORAGE_KEYS.announcements);
       if (storedAnnouncements) {
-        const parsed = JSON.parse(storedAnnouncements);
-        const clean = Array.isArray(parsed) ? parsed.filter((a: any) => !/^ann-\d+$/.test(a.id)) : [];
-        setAnnouncements(clean);
+        try {
+          const parsed = JSON.parse(storedAnnouncements);
+          if (Array.isArray(parsed) && parsed.length > 0) setAnnouncements(parsed);
+          else if (INITIAL_ANNOUNCEMENTS.length > 0) setAnnouncements(INITIAL_ANNOUNCEMENTS);
+        } catch {}
+      } else if (INITIAL_ANNOUNCEMENTS.length > 0) {
+        setAnnouncements(INITIAL_ANNOUNCEMENTS);
       }
 
       const storedCommittee = localStorage.getItem(STORAGE_KEYS.committee);
       if (storedCommittee) {
-        const parsed = JSON.parse(storedCommittee);
-        const clean = Array.isArray(parsed) ? parsed.filter((c: any) => !/^comm-\d+$/.test(c.id)) : [];
-        if (clean.length > 0) setCommittee(clean);
+        try {
+          const parsed = JSON.parse(storedCommittee);
+          if (Array.isArray(parsed) && parsed.length > 0) setCommittee(parsed);
+          else if (INITIAL_COMMITTEE.length > 0) setCommittee(INITIAL_COMMITTEE);
+        } catch {}
+      } else if (INITIAL_COMMITTEE.length > 0) {
+        setCommittee(INITIAL_COMMITTEE);
       }
 
       const storedLogs = localStorage.getItem(STORAGE_KEYS.logs);
       if (storedLogs) {
-        const parsed = JSON.parse(storedLogs);
-        const clean = Array.isArray(parsed) ? parsed.filter((l: any) => !/^log-\d+$/.test(l.id)) : [];
-        setLogs(clean);
+        try {
+          const parsed = JSON.parse(storedLogs);
+          if (Array.isArray(parsed) && parsed.length > 0) setLogs(parsed);
+        } catch {}
       }
     } catch (e) {
       console.error("Failed to load data from localStorage", e);

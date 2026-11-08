@@ -163,7 +163,12 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-saffron-400 flex-shrink-0" />
-                <span>contact@adaadhamsamaj.org</span>
+                <a
+                  href="mailto:adaathamdarjisevasamitimodasa@gmail.com"
+                  className="hover:text-white transition-colors"
+                >
+                  adaathamdarjisevasamitimodasa@gmail.com
+                </a>
               </div>
               <div className="pt-2">
                 <p className="text-[11px] text-charcoal-400">

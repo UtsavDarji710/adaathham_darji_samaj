@@ -13,6 +13,22 @@ console.log("TEST 1: Middleware Route Protection & Deep Link Callback Preservati
   });
 
   const checkMiddlewareSimulation = (pathname, sessionCookie) => {
+    const isPublicNavRoute = [
+      "/",
+      "/members",
+      "/businesses",
+      "/jobs",
+      "/advertisements",
+      "/events",
+      "/donations",
+      "/committee",
+      "/matrimony",
+      "/circulars",
+      "/announcements",
+    ].includes(pathname) ||
+    pathname.startsWith("/events/") ||
+    pathname.startsWith("/businesses/");
+
     const isPublic = [
       "/login",
       "/register",
@@ -22,6 +38,7 @@ console.log("TEST 1: Middleware Route Protection & Deep Link Callback Preservati
       "/api/auth/verify-otp",
       "/api/auth/logout",
       "/api/auth/me",
+      "/api/members",
     ].includes(pathname) ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
@@ -33,28 +50,43 @@ console.log("TEST 1: Middleware Route Protection & Deep Link Callback Preservati
     const isAuthPage = pathname === "/login" || pathname === "/register";
     const isAuthenticated = Boolean(sessionCookie && sessionCookie.trim().length > 0 && sessionCookie !== "guest");
 
-    if (!isAuthenticated && !isAuthPage && !isPublic) {
+    // Authenticated users visiting login/register get redirected to /
+    if (isAuthenticated && isAuthPage) {
+      return { status: 307, redirect: "/" };
+    }
+
+    // Public assets, auth APIs, public manifest, and public navbar tabs are allowed
+    if (isPublic || isPublicNavRoute) {
+      return { status: 200, action: "allow" };
+    }
+
+    // Unauthenticated access to protected APIs or pages
+    if (!isAuthenticated && !isAuthPage) {
       if (pathname.startsWith("/api/")) {
         return { status: 401, body: "Unauthorized" };
       }
       return { status: 307, redirect: `/login?callbackUrl=${encodeURIComponent(pathname)}` };
     }
 
-    if (isAuthenticated && isAuthPage) {
-      return { status: 307, redirect: "/" };
-    }
-
     return { status: 200, action: "allow" };
   };
 
-  // 1a: Unauthenticated direct navigation to protected routes
-  assert.strictEqual(checkMiddlewareSimulation("/", null).status, 307);
-  assert.strictEqual(checkMiddlewareSimulation("/members", null).redirect, "/login?callbackUrl=%2Fmembers");
+  // 1a: Unauthenticated direct navigation to navbar tabs allowed on desktop (all lists working)
+  assert.strictEqual(checkMiddlewareSimulation("/", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/members", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/businesses", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/jobs", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/advertisements", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/events", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/donations", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/committee", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/matrimony", null).status, 200);
+  assert.strictEqual(checkMiddlewareSimulation("/events/evt-1", null).status, 200);
+
+  // 1b: Strictly protected pages require login
   assert.strictEqual(checkMiddlewareSimulation("/profile", null).redirect, "/login?callbackUrl=%2Fprofile");
   assert.strictEqual(checkMiddlewareSimulation("/admin", null).redirect, "/login?callbackUrl=%2Fadmin");
-  assert.strictEqual(checkMiddlewareSimulation("/donations", null).redirect, "/login?callbackUrl=%2Fdonations");
-  assert.strictEqual(checkMiddlewareSimulation("/events/evt-1", null).redirect, "/login?callbackUrl=%2Fevents%2Fevt-1");
-  console.log("  ✓ Unauthenticated users are redirected to /login with preserved deep links");
+  console.log("  ✓ Unauthenticated desktop users access all navbar tabs freely; private profile/admin redirect to /login");
 
   // 1b: Unauthenticated API request blocked
   const apiCheck = checkMiddlewareSimulation("/api/upload", null);
