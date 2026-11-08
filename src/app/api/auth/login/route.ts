@@ -1,91 +1,110 @@
 import { NextResponse } from "next/server";
-import { checkCooldown, generateNumericOtp, storeOtp } from "@/lib/otpStore";
-import { sendOtpEmail } from "@/lib/email";
-import { INITIAL_MEMBERS } from "@/lib/mockData";
-import { getMemberByIdOrSession } from "@/lib/memberStore";
+import { verifyMemberPassword, registerMember } from "@/lib/memberStore";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { authenticateSupabase } from "@/lib/supabaseMembers";
 
+/**
+ * Login Handler: Strict Username + Password Authentication
+ * Single unified login flow using Username & Password.
+ * Supabase-first authentication with secure local fallback.
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { username, password } = body;
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
+    const cleanUsername = typeof username === "string" ? username.trim() : "";
+    const cleanPassword = typeof password === "string" ? password.trim() : "";
+
+    if (!cleanUsername) {
       return NextResponse.json(
-        { success: false, message: "કૃપા કરીને માન્ય ઈમેઈલ સરનામું દાખલ કરો." },
+        {
+          success: false,
+          message: "કૃપા કરીને આપનું યુઝરનેમ (Username) દાખલ કરો.",
+        },
         { status: 400 }
       );
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Check if account exists
-    const member = getMemberByIdOrSession(normalizedEmail);
-
-    const testAdminEmails = [
-      "president@adaadhamsamaj.org",
-      "secretary@adaadhamsamaj.org",
-      "joint_secretary@adaadhamsamaj.org",
-      "treasurer@adaadhamsamaj.org",
-      "assistant_treasurer@adaadhamsamaj.org",
-      "member@adaadhamsamaj.org",
-    ];
-
-    if (!member && !testAdminEmails.includes(normalizedEmail)) {
+    if (!cleanPassword) {
       return NextResponse.json(
         {
           success: false,
-          message: "આ ઈમેઈલ સાથે કોઈ નોંધાયેલું ખાતું મળ્યું નથી. કૃપા કરીને પ્રથમ સભ્ય નોંધણી (Signup) કરો.",
+          message: "કૃપા કરીને આપનો પાસવર્ડ (Password) દાખલ કરો.",
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
-    // Cooldown check (Requirement 14.2)
-    const cooldown = checkCooldown(normalizedEmail);
-    if (!cooldown.allowed) {
+    // 1. Supabase-First Authentication
+    if (isSupabaseConfigured()) {
+      const supaAuth = await authenticateSupabase(cleanUsername, cleanPassword);
+
+      if (supaAuth.success && supaAuth.member) {
+        const member = supaAuth.member;
+        const sessionVal = member.username || member.email || member.id;
+
+        // Cache in memory for fast local queries
+        registerMember(member);
+
+        const response = NextResponse.json({
+          success: true,
+          message: `સ્વાગત છે, ${member.name}!`,
+          user: member,
+        });
+
+        // Set secure session cookie (7 days)
+        response.cookies.set("ad8_session", sessionVal.toLowerCase().trim(), {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 7,
+          path: "/",
+        });
+
+        return response;
+      }
+    }
+
+    // 2. Fallback to server memberStore
+    const verification = verifyMemberPassword(cleanUsername, cleanPassword);
+
+    if (!verification.success || !verification.member) {
       return NextResponse.json(
         {
           success: false,
-          message: `કૃપા કરીને ફરીથી ઓટીપી માટે ${cooldown.remainingSeconds} સેકન્ડ રાહ જુઓ.`,
-          cooldownSeconds: cooldown.remainingSeconds,
+          message:
+            verification.message ||
+            "અમાન્ય યુઝરનેમ અથવા પાસવર્ડ. કૃપા કરીને ફરી ચકાસો અથવા પાસવર્ડ રીસેટ કરો.",
         },
-        { status: 429 }
+        { status: 401 }
       );
     }
 
-    // Generate 6-digit OTP
-    const rawOtp = generateNumericOtp();
+    const member = verification.member;
+    const sessionVal = member.username || member.email || member.id;
 
-    // Store hashed OTP (5 minutes expiry)
-    const { expiresAt } = storeOtp(normalizedEmail, rawOtp, "login");
-
-    // Send email using Nodemailer
-    const emailResult = await sendOtpEmail(
-      normalizedEmail,
-      rawOtp,
-      member ? member.name : undefined
-    );
-
-    if (!emailResult.success) {
-      return NextResponse.json(
-        { success: false, message: emailResult.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
-      message: "લૉગિન ઓટીપી આપના નોંધાયેલા ઈમેઈલ પર મોકલવામાં આવ્યો છે.",
-      expiresAt,
-      cooldownSeconds: 60,
-      previewOtp: emailResult.previewMode ? rawOtp : undefined,
+      message: `સ્વાગત છે, ${member.name}!`,
+      user: member,
     });
+
+    // Set secure session cookie (7 days)
+    response.cookies.set("ad8_session", sessionVal.toLowerCase().trim(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+
+    return response;
   } catch (error: any) {
-    console.error("[login error]", error);
+    console.error("[Login error]", error);
     return NextResponse.json(
-      { success: false, message: "સર્વર ભૂલ. કૃપા કરીને થોડીવાર પછી પ્રયાસ કરો." },
+      { success: false, message: "સર્વર ભૂલ. કૃપા કરીને થોડીવાર પછી ફરી પ્રયાસ કરો." },
       { status: 500 }
     );
   }
 }
-

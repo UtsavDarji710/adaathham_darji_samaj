@@ -32,9 +32,12 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 CREATE TABLE IF NOT EXISTS members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    username TEXT UNIQUE, -- યુઝરનેમ (Unique Alphanumeric Login Identifier)
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
     email TEXT UNIQUE,
+    password_hash TEXT,
+    salt TEXT,
     is_email_verified BOOLEAN DEFAULT FALSE,
     email_verified_at TIMESTAMPTZ,
     photo_url TEXT,
@@ -76,6 +79,7 @@ CREATE TABLE IF NOT EXISTS members (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_members_username ON members (LOWER(username));
 
 -- 3. Email OTP Verification Table (Requirement 14.2)
 CREATE TABLE IF NOT EXISTS otp_codes (

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   getMemberByIdOrSession,
   ensureSessionUser,
   canUserEditTarget,
   updateMemberRecord,
 } from "@/lib/memberStore";
+import { getSupabaseMember, updateSupabaseMember } from "@/lib/supabaseMembers";
 import { Member } from "@/types";
 
 export async function POST(request: Request) {
@@ -24,7 +26,12 @@ export async function POST(request: Request) {
     }
 
     const cleanSession = decodeURIComponent(sessionVal).trim().toLowerCase();
-    const currentUser = getMemberByIdOrSession(cleanSession) || ensureSessionUser(cleanSession);
+
+    // 1. Resolve Current User
+    let currentUser = await getSupabaseMember(cleanSession);
+    if (!currentUser) {
+      currentUser = getMemberByIdOrSession(cleanSession) || ensureSessionUser(cleanSession);
+    }
 
     const body = await request.json();
     const { memberId, updates } = body as {
@@ -53,13 +60,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Apply updates in the server member store
+    // 2. Update permanently in Supabase
+    let supaUpdated: Member | null = null;
+    if (isSupabaseConfigured()) {
+      supaUpdated = await updateSupabaseMember(targetId, updates);
+    }
+
+    // 3. Update server cache
     const updated = updateMemberRecord(targetId, updates);
 
     return NextResponse.json({
       success: true,
       message: "વિગતો સફળતાપૂર્વક સાચવાઈ ગઈ છે.",
-      member: updated,
+      member: supaUpdated || updated,
     });
   } catch (error: any) {
     console.error("[Profile Update API Error]", error);
@@ -77,4 +90,3 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   return POST(request);
 }
-

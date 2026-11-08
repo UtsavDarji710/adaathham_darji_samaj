@@ -6,7 +6,9 @@ import {
   ensureSessionUser,
   isAdminRole,
   ADMIN_ROLES,
+  updateMemberRecord,
 } from "@/lib/memberStore";
+import { getSupabaseMember, updateSupabaseMemberPhoto } from "@/lib/supabaseMembers";
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -44,7 +46,10 @@ export async function POST(request: Request) {
     }
 
     const cleanSession = decodeURIComponent(sessionVal).trim().toLowerCase();
-    const user = getMemberByIdOrSession(cleanSession) || ensureSessionUser(cleanSession);
+    let user = await getSupabaseMember(cleanSession);
+    if (!user) {
+      user = getMemberByIdOrSession(cleanSession) || ensureSessionUser(cleanSession);
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -175,6 +180,15 @@ export async function POST(request: Request) {
         fileUrl = signedData?.signedUrl || filename;
       }
 
+      // Automatically sync photo_url to member record for member-photos category
+      if (category === "member-photos" && user) {
+        const targetMemberId = (formData.get("memberId") as string) || user.id;
+        updateMemberRecord(targetMemberId, { photo_url: fileUrl });
+        if (isSupabaseConfigured()) {
+          await updateSupabaseMemberPhoto(targetMemberId, fileUrl);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         url: fileUrl,
@@ -189,6 +203,12 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const base64Data = buffer.toString("base64");
     const dataUrl = `data:${file.type};base64,${base64Data}`;
+
+    // Automatically sync photo_url to member record for member-photos category
+    if (category === "member-photos" && user) {
+      const targetMemberId = (formData.get("memberId") as string) || user.id;
+      updateMemberRecord(targetMemberId, { photo_url: dataUrl });
+    }
 
     return NextResponse.json({
       success: true,

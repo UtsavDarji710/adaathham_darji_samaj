@@ -1,5 +1,8 @@
+import fs from "fs";
+import path from "path";
 import { Member, AdminRole } from "@/types";
 import { INITIAL_MEMBERS } from "@/lib/mockData";
+import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
 
 export const ADMIN_ROLES: AdminRole[] = [
   "president",
@@ -10,8 +13,51 @@ export const ADMIN_ROLES: AdminRole[] = [
   "admin",
 ];
 
+// Server-side persistent file storage path (.data/members.json)
+const PERSISTENT_DIR = path.join(process.cwd(), ".data");
+const PERSISTENT_FILE = path.join(PERSISTENT_DIR, "members.json");
+
+function savePersistentStore(map: Map<string, Member>) {
+  try {
+    if (!fs.existsSync(PERSISTENT_DIR)) {
+      fs.mkdirSync(PERSISTENT_DIR, { recursive: true });
+    }
+    const uniqueMap = new Map<string, Member>();
+    map.forEach((member, key) => {
+      if (
+        !key.startsWith("email:") &&
+        !key.startsWith("phone:") &&
+        !key.startsWith("username:")
+      ) {
+        uniqueMap.set(member.id, member);
+      }
+    });
+    const arr: Member[] = [];
+    uniqueMap.forEach((m) => arr.push(m));
+    fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(arr, null, 2), "utf-8");
+  } catch (err) {
+    // Fail gracefully in read-only environments
+  }
+}
+
+function loadPersistentStore(): Member[] | null {
+  try {
+    if (fs.existsSync(PERSISTENT_FILE)) {
+      const content = fs.readFileSync(PERSISTENT_FILE, "utf-8");
+      if (content && content.trim()) {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed as Member[];
+        }
+      }
+    }
+  } catch (err) {
+    // Fail gracefully
+  }
+  return null;
+}
+
 // Server-side global member registry (survives requests in runtime memory)
-// In serverless/Vercel or production with database, can also sync to Supabase/Postgres
 declare global {
   // eslint-disable-next-line no-var
   var __SERVER_MEMBERS_MAP__: Map<string, Member> | undefined;
@@ -20,9 +66,38 @@ declare global {
 function getStore(): Map<string, Member> {
   if (!globalThis.__SERVER_MEMBERS_MAP__) {
     const map = new Map<string, Member>();
-    // Seed with initial members
-    for (const member of INITIAL_MEMBERS) {
+    const saved = loadPersistentStore();
+
+    // Merge saved members with INITIAL_MEMBERS to ensure newly defined seed fields (e.g. username) are always retained
+    let sourceMembers: Member[];
+    if (saved && saved.length > 0) {
+      sourceMembers = saved.map((s) => {
+        const init = INITIAL_MEMBERS.find((m) => m.id === s.id);
+        return {
+          ...(init || {}),
+          ...s,
+          username: s.username || init?.username,
+        };
+      });
+      for (const init of INITIAL_MEMBERS) {
+        if (!sourceMembers.some((s) => s.id === init.id)) {
+          sourceMembers.push(init);
+        }
+      }
+    } else {
+      sourceMembers = INITIAL_MEMBERS;
+    }
+
+    // Seed with members
+    for (const member of sourceMembers) {
       map.set(member.id, { ...member });
+      if (member.username) {
+        map.set(`username:${member.username.toLowerCase().trim()}`, { ...member });
+      }
+      if (member.id === "mem-utsav") {
+        map.set("username:utsav", { ...member });
+        map.set("username:utsavdarji", { ...member });
+      }
       if (member.email) {
         map.set(`email:${member.email.toLowerCase().trim()}`, { ...member });
       }
@@ -30,6 +105,7 @@ function getStore(): Map<string, Member> {
         map.set(`phone:${member.phone.replace(/\D/g, "")}`, { ...member });
       }
     }
+    savePersistentStore(map);
     globalThis.__SERVER_MEMBERS_MAP__ = map;
   }
   return globalThis.__SERVER_MEMBERS_MAP__;
@@ -50,7 +126,11 @@ export function getAllMembers(): Member[] {
   const store = getStore();
   const uniqueMap = new Map<string, Member>();
   store.forEach((member, key) => {
-    if (!key.startsWith("email:") && !key.startsWith("phone:")) {
+    if (
+      !key.startsWith("email:") &&
+      !key.startsWith("phone:") &&
+      !key.startsWith("username:")
+    ) {
       uniqueMap.set(member.id, member);
     }
   });
@@ -60,7 +140,7 @@ export function getAllMembers(): Member[] {
 }
 
 /**
- * Find member by session cookie, email, phone, or id
+ * Find member by session cookie, username, email, phone, or id
  */
 export function getMemberByIdOrSession(sessionVal: string): Member | null {
   if (!sessionVal || sessionVal === "guest") return null;
@@ -73,22 +153,28 @@ export function getMemberByIdOrSession(sessionVal: string): Member | null {
     return store.get(clean) || null;
   }
 
-  // 2. Email lookup
+  // 2. Direct Username lookup
+  if (store.has(`username:${clean}`)) {
+    return store.get(`username:${clean}`) || null;
+  }
+
+  // 3. Email lookup
   if (clean.includes("@")) {
     const byEmail = store.get(`email:${clean}`);
     if (byEmail) return byEmail;
   }
 
-  // 3. Clean phone lookup
+  // 4. Clean phone lookup
   const cleanPhone = clean.replace(/\D/g, "");
   if (cleanPhone.length >= 10) {
     const byPhone = store.get(`phone:${cleanPhone}`);
     if (byPhone) return byPhone;
   }
 
-  // 4. Fallback search through INITIAL_MEMBERS
+  // 5. Fallback search through INITIAL_MEMBERS
   const inInitial = INITIAL_MEMBERS.find((m) => {
     if (m.id && m.id.toLowerCase() === clean) return true;
+    if (m.username && m.username.toLowerCase() === clean) return true;
     if (m.email && m.email.toLowerCase() === clean) return true;
     if (m.phone && m.phone.replace(/\D/g, "") === cleanPhone) return true;
     return false;
@@ -104,11 +190,44 @@ export function getMemberByIdOrSession(sessionVal: string): Member | null {
 }
 
 /**
+ * Check if a username is already taken by another member
+ */
+export function isUsernameTaken(username: string, excludeMemberId?: string): boolean {
+  if (!username) return false;
+  const clean = username.toLowerCase().trim();
+  const store = getStore();
+  const existing = store.get(`username:${clean}`);
+  if (existing && (!excludeMemberId || existing.id !== excludeMemberId)) {
+    return true;
+  }
+  const inInitial = INITIAL_MEMBERS.find(
+    (m) => m.username?.toLowerCase().trim() === clean && (!excludeMemberId || m.id !== excludeMemberId)
+  );
+  return !!inInitial;
+}
+
+/**
+ * Find a member strictly by username
+ */
+export function getMemberByUsername(username: string): Member | null {
+  if (!username) return null;
+  const clean = username.toLowerCase().trim();
+  const store = getStore();
+  if (store.has(`username:${clean}`)) {
+    return store.get(`username:${clean}`) || null;
+  }
+  return INITIAL_MEMBERS.find((m) => m.username?.toLowerCase().trim() === clean) || null;
+}
+
+/**
  * Register or update member in the server store
  */
 export function registerMember(member: Member): Member {
   const store = getStore();
   store.set(member.id, member);
+  if (member.username) {
+    store.set(`username:${member.username.toLowerCase().trim()}`, member);
+  }
   if (member.email) {
     store.set(`email:${member.email.toLowerCase().trim()}`, member);
   }
@@ -123,6 +242,9 @@ export function registerMember(member: Member): Member {
   } else {
     INITIAL_MEMBERS.push(member);
   }
+
+  // Persist to disk so server recompilations/reboots preserve all details & photos
+  savePersistentStore(store);
 
   return member;
 }
@@ -227,3 +349,82 @@ export function canUserEditTarget(user: Member, targetMemberId: string): boolean
 
   return false;
 }
+
+/**
+ * Verify member password strictly by username (or member ID for session validation)
+ */
+export function verifyMemberPassword(
+  identifierOrUsername: string,
+  plainPassword: string
+): { success: boolean; member?: Member; message: string } {
+  const clean = (identifierOrUsername || "").trim().toLowerCase();
+  if (!clean) {
+    return {
+      success: false,
+      message: "કૃપા કરીને યુઝરનેમ (Username) દાખલ કરો.",
+    };
+  }
+
+  const store = getStore();
+
+  // 1. Strict username lookup
+  let member = store.get(`username:${clean}`) || null;
+  if (!member) {
+    member = INITIAL_MEMBERS.find((m) => m.username?.toLowerCase().trim() === clean) || null;
+  }
+
+  // 2. Fallback check by direct ID
+  if (!member && store.has(clean)) {
+    member = store.get(clean) || null;
+  }
+
+  if (!member) {
+    return {
+      success: false,
+      message: "આ યુઝરનેમ (Username) સાથે કોઈ નોંધાયેલું ખાતું મળ્યું નથી. કૃપા કરીને સાચું યુઝરનેમ દાખલ કરો અથવા નવી નોંધણી કરો.",
+    };
+  }
+
+  const isValid = verifyPassword(plainPassword, member.password_hash, member.salt);
+  if (!isValid) {
+    return {
+      success: false,
+      message: "અમાન્ય પાસવર્ડ. કૃપા કરીને સાચો પાસવર્ડ દાખલ કરો અથવા પાસવર્ડ રીસેટ કરો.",
+    };
+  }
+
+  return {
+    success: true,
+    member,
+    message: `સ્વાગત છે, ${member.name}!`,
+  };
+}
+
+/**
+ * Reset member password by email
+ */
+export function resetMemberPassword(
+  email: string,
+  newPassword: string
+): { success: boolean; message: string; member?: Member } {
+  const member = getMemberByIdOrSession(email);
+  if (!member) {
+    return {
+      success: false,
+      message: "આ ઈમેઈલ સાથે કોઈ નોંધાયેલું ખાતું મળ્યું નથી.",
+    };
+  }
+
+  const { hash, salt } = hashPassword(newPassword);
+  const updated = updateMemberRecord(member.id, {
+    password_hash: hash,
+    salt,
+  });
+
+  return {
+    success: true,
+    message: "આપનો પાસવર્ડ સફળતાપૂર્વક બદલાઈ ગયો છે. હવે નવા પાસવર્ડ અને યુઝરનેમ વડે લૉગિન કરો.",
+    member: updated || undefined,
+  };
+}
+

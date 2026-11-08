@@ -150,15 +150,16 @@ export default function Footer() {
             <div className="space-y-3 text-xs text-charcoal-300">
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-saffron-400 flex-shrink-0 mt-0.5" />
-                <span>
-                  શ્રી અડાઆઠમ દરજી સેવા સમિતિ કાર્યાલય,<br />
-                  સમાજ વાડી પરિસર, અડાઆઠમ રોડ,<br />
-                  મોડાસા - ૩૮૩૩૧૫, જિ. અરવલ્લી, ગુજરાત.
+                <span className="leading-relaxed">
+                  Shop No 10, Meghdut Apartment, Near Swaminarayan Temple,<br />
+                  Rampark, Modasa, Arvalli, Gujarat – 383315
                 </span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-saffron-400 flex-shrink-0" />
-                <span>+૯૧ ૯૮૨૫૦ ૧૨૩૪૫ / ૯૮૨૫૪ ૪૫૬૭૮</span>
+                <a href="tel:7383755226" className="hover:text-white transition-colors font-mono font-bold">
+                  7383755226
+                </a>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-saffron-400 flex-shrink-0" />

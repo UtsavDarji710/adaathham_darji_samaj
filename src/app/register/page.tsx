@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  User,
   UserPlus,
   ArrowRight,
   ShieldCheck,
@@ -14,6 +15,8 @@ import {
   RefreshCw,
   Edit2,
   Lock,
+  Eye,
+  EyeOff,
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -28,19 +31,17 @@ export default function RegisterPage() {
   const [step, setStep] = useState<1 | 2>(1);
 
   // Form fields
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [nativePlace, setNativePlace] = useState("અડાઆઠમ");
   const [city, setCity] = useState("મોડાસા");
-  const [fatherName, setFatherName] = useState("");
-  const [grandfatherName, setGrandfatherName] = useState("");
-  const [maternalUncleName, setMaternalUncleName] = useState("");
-  const [maternalGrandfatherName, setMaternalGrandfatherName] = useState("");
-  const [maritalStatus, setMaritalStatus] = useState("પરણિત (Married)");
   const [address, setAddress] = useState("");
-  const [gender, setGender] = useState<"male" | "female" | "other">("male");
-  const [profession, setProfession] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(true);
 
   // OTP Verification state
@@ -71,6 +72,16 @@ export default function RegisterPage() {
       return;
     }
 
+    const cleanUser = username.trim().toLowerCase();
+    if (!cleanUser || cleanUser.length < 3) {
+      setErrorMsg("કૃપા કરીને લઘુત્તમ ૩ અક્ષરનું યુઝરનેમ (Username) દાખલ કરો.");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(cleanUser)) {
+      setErrorMsg("યુઝરનેમમાં માત્ર અંગ્રેજી અક્ષરો, અંકો અથવા અંડરસ્કોર (_) જ માન્ય છે (૩ થી ૩૦ અક્ષર).");
+      return;
+    }
+
     if (!email || !email.includes("@")) {
       setErrorMsg("કૃપા કરીને માન્ય ઈમેઈલ સરનામું દાખલ કરો.");
       return;
@@ -84,6 +95,17 @@ export default function RegisterPage() {
     }
     if (digits.length !== 10 || !/^[6-9]\d{9}$/.test(digits)) {
       setErrorMsg("કૃપા કરીને માન્ય ૧૦-આંકડાનો ભારતીય મોબાઇલ નંબર દાખલ કરો (દા.ત. 98250 12345).");
+      return;
+    }
+
+    // Password validation
+    if (!password || password.trim().length < 6) {
+      setErrorMsg("પાસવર્ડ લઘુત્તમ ૬ અક્ષરનો હોવો આવશ્યક છે.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg("પાસવર્ડ અને કન્ફર્મ પાસવર્ડ બંને એકસમાન હોવા જોઈએ.");
       return;
     }
 
@@ -147,24 +169,20 @@ export default function RegisterPage() {
     // Now call register API to create verified member record
     try {
       const cleanPhone = phone.replace(/\D/g, "");
+      const cleanUser = username.trim().toLowerCase();
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          username: cleanUser,
           name,
           email,
           phone: cleanPhone,
+          password: password.trim(),
           isEmailVerified: true,
           native_place: nativePlace,
           city,
-          father_name: fatherName,
-          grandfather_name: grandfatherName,
-          maternal_uncle_name: maternalUncleName,
-          maternal_grandfather_name: maternalGrandfatherName,
-          marital_status: maritalStatus,
           address,
-          gender,
-          profession,
         }),
       });
 
@@ -275,6 +293,29 @@ export default function RegisterPage() {
               </div>
 
               <div>
+                <label className="block font-bold text-charcoal-700 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-saffron-600" />
+                    <span>યુઝરનેમ (Username) *</span>
+                  </span>
+                  <span className="text-[10px] text-charcoal-400 font-normal">૩-૩૦ અક્ષર</span>
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ""))}
+                  placeholder="દા.ત. utsav અથવા utsav_darji"
+                  required
+                  minLength={3}
+                  maxLength={30}
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-mono font-medium"
+                />
+                <p className="text-[10px] text-charcoal-400 mt-0.5">
+                  (લૉગિન કરવા માટે આ જ યુઝરનેમનો ઉપયોગ કરવાનો રહેશે)
+                </p>
+              </div>
+
+              <div>
                 <label className="block font-bold text-charcoal-700 mb-1 flex items-center gap-1">
                   <Mail className="w-3.5 h-3.5 text-saffron-600" />
                   <span>ઈમેઈલ એડ્રેસ (Email Address) *</span>
@@ -308,6 +349,59 @@ export default function RegisterPage() {
               </div>
 
               <div>
+                <label className="block font-bold text-charcoal-700 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-saffron-600" />
+                    <span>પાસવર્ડ (Password) *</span>
+                  </span>
+                  <span className="text-[10px] text-charcoal-400 font-normal">લઘુત્તમ ૬ અક્ષર</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    className="w-full px-3.5 py-2.5 pr-10 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-charcoal-400 hover:text-charcoal-600 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-700 mb-1 flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-saffron-600" />
+                  <span>કન્ફર્મ પાસવર્ડ (Confirm Password) *</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    className="w-full px-3.5 py-2.5 pr-10 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3 text-charcoal-400 hover:text-charcoal-600 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block font-bold text-charcoal-700 mb-1">મૂળ વતન (Native Place) *</label>
                 <input
                   type="text"
@@ -330,75 +424,6 @@ export default function RegisterPage() {
                   className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
-
-              <div>
-                <label className="block font-bold text-charcoal-700 mb-1">લગ્ન સ્થિતિ (Marital Status)</label>
-                <select
-                  value={maritalStatus}
-                  onChange={(e) => setMaritalStatus(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none bg-white"
-                >
-                  <option value="પરણિત (Married)">પરણિત (Married)</option>
-                  <option value="અપરણિત (Unmarried)">અપરણિત (Unmarried)</option>
-                  <option value="વિધુર / વિધવા (Widowed)">વિધુર / વિધવા (Widowed)</option>
-                  <option value="અન્ય (Other)">અન્ય (Other)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-charcoal-700 mb-1">પિતાનું પૂરું નામ</label>
-                <input
-                  type="text"
-                  value={fatherName}
-                  onChange={(e) => setFatherName(e.target.value)}
-                  placeholder="પિતાનું પૂરું નામ"
-                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-charcoal-700 mb-1">દાદાનું પૂરું નામ</label>
-                <input
-                  type="text"
-                  value={grandfatherName}
-                  onChange={(e) => setGrandfatherName(e.target.value)}
-                  placeholder="દાદાનું પૂરું નામ"
-                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-charcoal-700 mb-1">મામાનું પૂરું નામ</label>
-                <input
-                  type="text"
-                  value={maternalUncleName}
-                  onChange={(e) => setMaternalUncleName(e.target.value)}
-                  placeholder="મામાનું પૂરું નામ"
-                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-charcoal-700 mb-1">નાનાનું પૂરું નામ</label>
-                <input
-                  type="text"
-                  value={maternalGrandfatherName}
-                  onChange={(e) => setMaternalGrandfatherName(e.target.value)}
-                  placeholder="નાનાનું પૂરું નામ"
-                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-charcoal-700 mb-1">વ્યવસાય / નોકરી (Profession / Business)</label>
-              <input
-                type="text"
-                value={profession}
-                onChange={(e) => setProfession(e.target.value)}
-                placeholder="દા.ત. ટેક્સટાઇલ વેપારી, સોફ્ટવેર એન્જિનિયર, સરકારી કર્મચારી"
-                className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
             </div>
 
             <div>

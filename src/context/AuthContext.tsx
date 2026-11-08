@@ -9,6 +9,22 @@ interface AuthContextType {
   setCurrentUser: (user: Member | null) => void;
   loginAs: (role: AdminRole | "member" | "guest", memberId?: string) => void;
   loginWithPhone: (phone: string, pin: string) => Promise<{ success: boolean; message: string }>;
+  loginWithPassword: (
+    username: string,
+    password: string
+  ) => Promise<{ success: boolean; user?: Member | null; message: string }>;
+  loginWithUsername: (
+    username: string,
+    password: string
+  ) => Promise<{ success: boolean; user?: Member | null; message: string }>;
+  forgotPassword: (
+    email: string
+  ) => Promise<{ success: boolean; message: string; username?: string; cooldownSeconds?: number; previewOtp?: string }>;
+  resetPassword: (
+    email: string,
+    otp: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; message: string; username?: string }>;
   sendEmailOtp: (
     email: string,
     purpose: "signup" | "login",
@@ -50,7 +66,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (data.authenticated && data.user) {
             let effectiveUser = data.user;
             if (typeof window !== "undefined") {
-              const localMembers = localStorage.getItem("ad8_members_data");
+              // 1. Check if user profile has locally updated fields (such as updated photo_url)
+              const savedUserStr = localStorage.getItem("ad8_current_user");
+              if (savedUserStr) {
+                try {
+                  const savedUser = JSON.parse(savedUserStr);
+                  if (
+                    savedUser &&
+                    (savedUser.id === data.user.id ||
+                      savedUser.email?.toLowerCase() === data.user.email?.toLowerCase())
+                  ) {
+                    effectiveUser = { ...data.user, ...savedUser };
+                  }
+                } catch (e) {}
+              }
+
+              // 2. Check ad8_data_members storage key (synced by DataContext)
+              const localMembers =
+                localStorage.getItem("ad8_data_members") ||
+                localStorage.getItem("ad8_members_data");
               if (localMembers) {
                 try {
                   const parsed = JSON.parse(localMembers);
@@ -61,11 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                       (m.phone && m.phone.replace(/\D/g, "") === data.user.phone?.replace(/\D/g, ""))
                   );
                   if (found) {
-                    effectiveUser = { ...data.user, ...found };
+                    effectiveUser = { ...effectiveUser, ...found };
                   }
                 } catch (e) {}
               }
               localStorage.setItem(AUTH_STORAGE_KEY, effectiveUser.id);
+              localStorage.setItem("ad8_current_user", JSON.stringify(effectiveUser));
             }
             setCurrentUserState(effectiveUser);
             return;
@@ -138,42 +173,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithPhone = async (phone: string, _pin: string) => {
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    // Quick direct mapping for test credentials
-    const testRolePhoneMap: Record<string, string> = {
-      "9825000001": "mem-1", // પ્રમુખ
-      "9825012345": "mem-1",
-      "9825000002": "mem-4", // મંત્રી
-      "9825445678": "mem-4",
-      "9825000003": "mem-5", // સહમંત્રી
-      "9825256789": "mem-5",
-      "9825000004": "mem-6", // ખજાનચી
-      "9825867890": "mem-6",
-      "9825000007": "comm-assistant-treasurer", // સહ ખજાનચી
-      "9825000005": "mem-3", // સામાન્ય સભ્ય
-      "9898034567": "mem-3",
-    };
-
-    const targetId = testRolePhoneMap[cleanPhone];
-    if (targetId) {
-      const found = INITIAL_MEMBERS.find((m) => m.id === targetId);
-      if (found) {
-        setCurrentUser(found);
-        return { success: true, message: `સ્વાગત છે, ${found.name} (${found.committee_role || "સભ્ય"})!` };
+  const loginWithPassword = async (username: string, password: string) => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        let effectiveUser = data.user;
+        if (typeof window !== "undefined") {
+          const localMembers = localStorage.getItem("ad8_data_members");
+          if (localMembers) {
+            try {
+              const parsed = JSON.parse(localMembers);
+              const found = parsed.find(
+                (m: any) =>
+                  m.id === data.user.id ||
+                  (m.username && m.username.toLowerCase() === data.user.username?.toLowerCase()) ||
+                  (m.email && m.email.toLowerCase() === data.user.email?.toLowerCase())
+              );
+              if (found) {
+                // If local member store has an updated photo_url, preserve it
+                if (found.photo_url && found.photo_url !== data.user.photo_url) {
+                  effectiveUser = { ...data.user, ...found, photo_url: found.photo_url };
+                  // Background sync to server store
+                  fetch("/api/profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ memberId: effectiveUser.id, updates: { photo_url: found.photo_url } }),
+                  }).catch(() => {});
+                } else {
+                  effectiveUser = { ...data.user, ...found };
+                }
+              }
+            } catch (e) {}
+          }
+          localStorage.setItem(AUTH_STORAGE_KEY, effectiveUser.id);
+          localStorage.setItem("ad8_current_user", JSON.stringify(effectiveUser));
+        }
+        setCurrentUser(effectiveUser);
+        return { success: true, user: effectiveUser, message: data.message };
       }
+      return { success: false, message: data.message || "લૉગિન નિષ્ફળ ગયું." };
+    } catch {
+      return { success: false, message: "સર્વર સમસ્યા આવી. કૃપા કરીને થોડીવાર પછી પ્રયાસ કરો." };
     }
+  };
 
-    const found = INITIAL_MEMBERS.find((m) => m.phone.replace(/\D/g, "") === cleanPhone);
-    if (found) {
-      setCurrentUser(found);
-      return { success: true, message: `સ્વાગત છે, ${found.name}!` };
+  const loginWithUsername = async (username: string, password: string) => {
+    return loginWithPassword(username, password);
+  };
+
+  const loginWithPhone = async (phone: string, pin: string) => {
+    return loginWithPassword(phone, pin);
+  };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      return {
+        success: data.success,
+        message: data.message,
+        username: data.username,
+        cooldownSeconds: data.cooldownSeconds,
+        previewOtp: data.previewOtp,
+      };
+    } catch {
+      return { success: false, message: "ઓટીપી મોકલવામાં સર્વર ક્ષતિ આવી." };
     }
-    return {
-      success: false,
-      message: "આ મોબાઇલ નંબર સાથે કોઈ નોંધાયેલું ખાતું મળ્યું નથી. કૃપા કરીને સાચો મોબાઇલ નંબર દાખલ કરો અથવા નવું રજીસ્ટ્રેશન કરો.",
-    };
+  };
+
+  const resetPassword = async (email: string, otp: string, newPassword: string) => {
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: otp.trim(),
+          newPassword: newPassword.trim(),
+        }),
+      });
+      const data = await res.json();
+      return {
+        success: data.success,
+        message: data.message,
+        username: data.username,
+      };
+    } catch {
+      return { success: false, message: "પાસવર્ડ રીસેટ કરવામાં સર્વર ક્ષતિ આવી." };
+    }
   };
 
   // Requirement 14.1 & 14.2: Send OTP via Backend API with Nodemailer
@@ -233,11 +332,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithEmailOtp = async (email: string, otp: string) => {
     const result = await verifyEmailOtp(email, otp, "login");
     if (result.success && result.user) {
-      setCurrentUser(result.user);
+      let effectiveUser = result.user;
+      if (typeof window !== "undefined") {
+        const localMembers = localStorage.getItem("ad8_data_members");
+        if (localMembers) {
+          try {
+            const parsed = JSON.parse(localMembers);
+            const found = parsed.find(
+              (m: any) =>
+                m.id === result.user.id ||
+                (m.email && m.email.toLowerCase() === result.user.email?.toLowerCase())
+            );
+            if (found) {
+              if (found.photo_url && found.photo_url !== result.user.photo_url) {
+                effectiveUser = { ...result.user, ...found, photo_url: found.photo_url };
+                fetch("/api/profile", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ memberId: effectiveUser.id, updates: { photo_url: found.photo_url } }),
+                }).catch(() => {});
+              } else {
+                effectiveUser = { ...result.user, ...found };
+              }
+            }
+          } catch (e) {}
+        }
+        localStorage.setItem(AUTH_STORAGE_KEY, effectiveUser.id);
+        localStorage.setItem("ad8_current_user", JSON.stringify(effectiveUser));
+      }
+      setCurrentUser(effectiveUser);
       return {
         success: true,
-        message: `સ્વાગત છે, ${result.user.name}!`,
-        user: result.user,
+        message: `સ્વાગત છે, ${effectiveUser.name}!`,
+        user: effectiveUser,
       };
     }
     return {
@@ -310,6 +437,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(updated);
 
     if (typeof window !== "undefined") {
+      localStorage.setItem("ad8_current_user", JSON.stringify(updated));
+
+      // Also persist to members lists in localStorage
+      ["ad8_data_members", "ad8_members_data"].forEach((storageKey) => {
+        try {
+          const raw = localStorage.getItem(storageKey);
+          if (raw) {
+            const list = JSON.parse(raw);
+            const nextList = list.map((m: any) =>
+              m.id === currentUser.id ||
+              (m.email && m.email.toLowerCase() === currentUser.email?.toLowerCase()) ||
+              (m.phone && m.phone.replace(/\D/g, "") === currentUser.phone?.replace(/\D/g, ""))
+                ? { ...m, ...data }
+                : m
+            );
+            localStorage.setItem(storageKey, JSON.stringify(nextList));
+          }
+        } catch (e) {}
+      });
+
       fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -344,6 +491,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser,
         loginAs,
         loginWithPhone,
+        loginWithPassword,
+        loginWithUsername,
+        forgotPassword,
+        resetPassword,
         sendEmailOtp,
         verifyEmailOtp,
         loginWithEmailOtp,

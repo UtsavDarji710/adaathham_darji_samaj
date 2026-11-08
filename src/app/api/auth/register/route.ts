@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { Member } from "@/types";
-import { INITIAL_MEMBERS } from "@/lib/mockData";
-import { registerMember } from "@/lib/memberStore";
+import { registerMember, isUsernameTaken } from "@/lib/memberStore";
+import { hashPassword } from "@/lib/passwordUtils";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import {
+  registerSupabaseMember,
+  isSupabaseUsernameTaken,
+} from "@/lib/supabaseMembers";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
+      username,
       name,
       email,
       phone,
+      password,
       isEmailVerified,
       native_place = "અડાઆઠમ",
       city = "મોડાસા",
@@ -22,6 +29,41 @@ export async function POST(request: Request) {
       address = "",
       profession = "",
     } = body;
+
+    // 1. Username validation (Required, Unique, Alphanumeric + Underscore, 3-30 chars)
+    const cleanUsername = typeof username === "string" ? username.trim().toLowerCase() : "";
+    if (!cleanUsername || cleanUsername.length < 3) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "કૃપા કરીને લઘુત્તમ ૩ અક્ષરનું યુઝરનેમ (Username) દાખલ કરો.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(cleanUsername)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "યુઝરનેમમાં માત્ર અંગ્રેજી અક્ષરો, અંકો અથવા અંડરસ્કોર (_) જ માન્ય છે (૩ થી ૩૦ અક્ષર).",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check uniqueness locally and in Supabase
+    if (isUsernameTaken(cleanUsername) || (await isSupabaseUsernameTaken(cleanUsername))) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "આ યુઝરનેમ (Username) પહેલેથી જ નોંધાયેલું છે. કૃપા કરીને અન્ય યુઝરનેમ પસંદ કરો.",
+        },
+        { status: 400 }
+      );
+    }
 
     // Required field validation (Requirement 14.1)
     if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -77,12 +119,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // Password validation (Requirement: Username & Password login)
+    if (!password || typeof password !== "string" || password.trim().length < 6) {
+      return NextResponse.json(
+        { success: false, message: "પાસવર્ડ લઘુત્તમ ૬ અક્ષરનો હોવો આવશ્યક છે." },
+        { status: 400 }
+      );
+    }
+
+    const { hash: passwordHash, salt: passwordSalt } = hashPassword(password.trim());
+
     // Construct new verified Member
     const newMember: Member = {
       id: `mem-${Date.now()}`,
+      username: cleanUsername.toLowerCase(),
       name: name.trim(),
       email: normalizedEmail,
       phone: internationalPhone,
+      password_hash: passwordHash,
+      salt: passwordSalt,
       is_email_verified: true,
       email_verified_at: new Date().toISOString(),
       photo_url:
@@ -121,16 +176,36 @@ export async function POST(request: Request) {
       },
     };
 
-    // Store in mock/memory list for immediate runtime access
-    registerMember(newMember);
+    let finalMember = newMember;
+
+    // 2. Persist permanently to Supabase Backend
+    if (isSupabaseConfigured()) {
+      const supaResult = await registerSupabaseMember(newMember, password.trim());
+      if (!supaResult.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: supaResult.message || "Supabase ડેટાબેઝમાં નોંધણી નિષ્ફળ રહી.",
+          },
+          { status: 500 }
+        );
+      }
+      if (supaResult.member) {
+        finalMember = supaResult.member;
+      }
+    }
+
+    // 3. Store in server cache for instant runtime access
+    registerMember(finalMember);
 
     const response = NextResponse.json({
       success: true,
-      message: "અડાઆઠમ દરજી સેવા સમિતિમાં આપનું સ્વાગત છે! આપનું ખાતું સફળતાપૂર્વક ચકાસાયું અને સક્રિય થયું છે.",
-      member: newMember,
+      message:
+        "અડાઆઠમ દરજી સેવા સમિતિમાં આપનું સ્વાગત છે! આપનું ખાતું સફળતાપૂર્વક ચકાસાયું અને સક્રિય થયું છે.",
+      member: finalMember,
     });
 
-    response.cookies.set("ad8_session", normalizedEmail, {
+    response.cookies.set("ad8_session", finalMember.username || normalizedEmail, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -147,4 +222,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

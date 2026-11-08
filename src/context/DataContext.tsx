@@ -189,8 +189,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMembers(updated);
     sync(STORAGE_KEYS.members, updated);
 
-    // Asynchronously sync with the backend /api/profile endpoint
+    // Sync ad8_current_user in localStorage if updating the current user
     if (typeof window !== "undefined") {
+      try {
+        const rawUser = localStorage.getItem("ad8_current_user");
+        if (rawUser) {
+          const user = JSON.parse(rawUser);
+          if (
+            user &&
+            (user.id === id ||
+              (user.email && user.email.toLowerCase() === id.toLowerCase()) ||
+              (user.phone && user.phone.replace(/\D/g, "") === id.replace(/\D/g, "")))
+          ) {
+            localStorage.setItem("ad8_current_user", JSON.stringify({ ...user, ...updates }));
+          }
+        }
+      } catch (e) {}
+
+      // Asynchronously sync with the backend /api/profile endpoint
       fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

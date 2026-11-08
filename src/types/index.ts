@@ -132,36 +132,36 @@ export const SAMITI_NATIVE_PLACES = [
   "અડપોદરા",
   "બાકરોલ (મહાદેવગ્રામ)",
   "બામણવાડ",
-  "બેટાલી",
+  "ભેટાલી",
   "બોલુન્દ્રા",
-  "દઢાલિયા",
+  "દધાલિયા",
   "દહેગામડા",
   "દાવલી",
   "ગઢડા",
   "ઈસરી",
-  "ઘોટાડી",
+  "ઈટાડી",
   "ખંભીસર",
   "ખોડંબા",
   "કોકાપુર",
   "કુડોલ",
-  "કુવોલ",
-  "કુણી",
+  "કુણોલ",
+  "કુશ્કી",
   "લિંભોઈ",
-  "મેઘરજ",
+  "મેઢાસણ",
   "મોડાસા",
-  "નોંદીસણ",
+  "નાંદીસણ",
   "નવાગામ",
   "પાલ્લા",
   "પટેલ છાપરા",
-  "પુષ્પપુર",
+  "પુજાપુર",
   "રાયગઢ",
   "રાજેન્દ્રનગર",
   "રખિયાલ",
   "રમોસ",
-  "રેટ્ટાવાડા",
+  "રેલ્લાવાડા",
   "સરડોઈ",
   "શામપુર",
-  "શામળાજી",
+  "શણગાલ",
   "શીવનગર",
   "તરકવાડા",
   "ટીંટોઈ",
@@ -198,6 +198,8 @@ export interface FamilyRelationDetail {
 
 export interface Member {
   id: string;
+  auth_user_id?: string; // Supabase auth.users UUID reference
+  username?: string; // યુઝરનેમ (Unique Alphanumeric Login Identifier)
   name: string;
   photo_url: string;
   phone: string;
@@ -232,6 +234,8 @@ export interface Member {
   business_id?: string;
   is_available_for_matrimony?: boolean; // મેટ્રિમોની માટે ઉપલબ્ધ?
   matrimony?: MatrimonyProfile; // મેટ્રિમોની પ્રોફાઇલ & સેટિંગ્સ
+  password_hash?: string;
+  salt?: string;
   created_at: string;
   completeness: number; // 0 - 100%
 }

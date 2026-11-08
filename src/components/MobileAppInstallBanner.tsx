@@ -113,12 +113,12 @@ export default function MobileAppInstallBanner() {
           {/* App Logo */}
           <div className="relative flex-shrink-0">
             <img
-              src="/logo.png"
-              alt="Adaatham Darji Samaj App"
+              src="/icon-192x192.png"
+              alt="ADSS App"
               width={48}
               height={48}
               style={{ width: "48px", height: "48px", minWidth: "48px" }}
-              className="w-12 h-12 object-contain rounded-2xl bg-white p-1 shadow-md border border-saffron-400"
+              className="w-12 h-12 object-contain rounded-2xl bg-white p-0.5 shadow-md border border-saffron-400"
             />
             <span className="absolute -top-1 -right-1 bg-saffron-500 text-white p-0.5 rounded-full shadow-sm">
               <Sparkles className="w-2.5 h-2.5" />
@@ -129,14 +129,14 @@ export default function MobileAppInstallBanner() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h4 className="font-extrabold text-xs sm:text-sm text-white truncate leading-tight">
-                અડાઆઠમ દરજી સમાજ ઍપ
+                ADSS ઍપ
               </h4>
               <span className="text-[9px] font-bold bg-saffron-500/30 text-saffron-300 px-1.5 py-0.2 rounded-full border border-saffron-400/40">
                 PWA
               </span>
             </div>
             <p className="text-[11px] text-charcoal-300 leading-tight mt-0.5 truncate">
-              સરળ ઍક્સેસ માટે ઍપ્લિકેશન તરીકે ડાઉનલોડ કરો
+              ADSS પોર્ટલ તમારા મોબાઇલમાં ઇન્સ્ટોલ કરો
             </p>
           </div>
 

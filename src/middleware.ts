@@ -21,10 +21,16 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
     pathname === "/favicon.ico" ||
-    pathname === "/logo.png" ||
-    pathname === "/logo_cropped.png" ||
     pathname === "/manifest.json" ||
-    pathname.startsWith("/icons")
+    pathname.startsWith("/icon") ||
+    pathname.startsWith("/logo") ||
+    pathname.startsWith("/apple-touch-icon") ||
+    pathname.endsWith(".png") ||
+    pathname.endsWith(".ico") ||
+    pathname.endsWith(".jpg") ||
+    pathname.endsWith(".jpeg") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".webp")
   ) {
     return NextResponse.next();
   }

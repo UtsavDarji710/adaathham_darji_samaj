@@ -87,24 +87,16 @@ const RELATION_OPTIONS = [
 ];
 
 function getInitialFamilyRelations(user: any): FamilyRelationDetail[] {
-  if (!user) return [];
-  if (user.family_relations && user.family_relations.length > 0) {
-    return user.family_relations;
-  }
-  const list: FamilyRelationDetail[] = [];
-  if (user.father_name) {
-    list.push({ id: "init-father", relation: "પિતા (Father)", name: user.father_name, phone: "" });
-  }
-  if (user.grandfather_name) {
-    list.push({ id: "init-grandfather", relation: "દાદા (Grandfather)", name: user.grandfather_name, phone: "" });
-  }
-  if (user.maternal_uncle_name) {
-    list.push({ id: "init-muncle", relation: "મામા (Maternal Uncle)", name: user.maternal_uncle_name, phone: "" });
-  }
-  if (user.maternal_grandfather_name) {
-    list.push({ id: "init-mgrandfather", relation: "નાના (Maternal Grandfather)", name: user.maternal_grandfather_name, phone: "" });
-  }
-  return list;
+  if (!user || !Array.isArray(user.family_relations)) return [];
+  // User adds relations themselves; do not add default or auto-synthesized relations
+  return user.family_relations.filter(
+    (r: FamilyRelationDetail) =>
+      r &&
+      !r.id?.startsWith("init-") &&
+      !r.id?.startsWith("rel-d") &&
+      !r.id?.startsWith("rel-b") &&
+      Boolean(r.name && r.name.trim() !== "દરજી" && r.name.trim() !== "")
+  );
 }
 
 export default function ProfilePage() {
@@ -139,6 +131,17 @@ export default function ProfilePage() {
     if (isAdmin && selectedMemberId) {
       return members.find((m) => m.id === selectedMemberId) || currentUser;
     }
+    if (currentUser) {
+      const fromStore = members.find(
+        (m) =>
+          m.id === currentUser.id ||
+          (m.email && m.email.toLowerCase() === currentUser.email?.toLowerCase()) ||
+          (m.phone && m.phone.replace(/\D/g, "") === currentUser.phone?.replace(/\D/g, ""))
+      );
+      if (fromStore) {
+        return { ...currentUser, ...fromStore };
+      }
+    }
     return currentUser;
   }, [isAdmin, selectedMemberId, members, currentUser]);
 
@@ -159,6 +162,8 @@ export default function ProfilePage() {
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // Form states initialized with currentUser data
+  const [username, setUsername] = useState(currentUser?.username || "");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [name, setName] = useState(currentUser?.name || "");
   const [email, setEmail] = useState(currentUser?.email || "");
   const [phone, setPhone] = useState(currentUser?.phone || "");
@@ -196,10 +201,19 @@ export default function ProfilePage() {
   );
 
   // Eligibility: strictly Unmarried (અપરણિત). Married & Engaged are NOT eligible.
-  const isUnmarried =
-    maritalStatus === "અપરણિત (Unmarried)" ||
-    maritalStatus === "અપરણિત" ||
-    maritalStatus.toLowerCase().includes("unmarried");
+  const isUnmarried = Boolean(
+    maritalStatus &&
+      (maritalStatus.startsWith("અપરણિત") ||
+        maritalStatus.toLowerCase().includes("unmarried") ||
+        maritalStatus.toLowerCase().includes("single"))
+  );
+
+  // If user is married (પરણિત) and currently on matrimony tab, auto-switch to general
+  React.useEffect(() => {
+    if (!isUnmarried && activeTab === "matrimony") {
+      setActiveTab("general");
+    }
+  }, [isUnmarried, activeTab]);
 
   // Matrimony Directory Filters & Modal
   const [matrimonyFilterGender, setMatrimonyFilterGender] = useState<"all" | "male" | "female">("all");
@@ -645,12 +659,27 @@ export default function ProfilePage() {
 
   const handleSaveGeneral = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanUsername = username.trim().toLowerCase();
+    if (!cleanUsername || cleanUsername.length < 3) {
+      setUsernameError("કૃપા કરીને લઘુત્તમ ૩ અક્ષરનું યુઝરનેમ (Username) દાખલ કરો.");
+      showToast("કૃપા કરીને માન્ય યુઝરનેમ દાખલ કરો.");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(cleanUsername)) {
+      setUsernameError("યુઝરનેમમાં માત્ર અંગ્રેજી અક્ષરો, અંકો અથવા (_) જ માન્ય છે (૩ થી ૩૦ અક્ષર).");
+      showToast("યુઝરનેમ ફોર્મેટ અમાન્ય છે.");
+      return;
+    }
+    setUsernameError(null);
+
     const father = familyRelations.find((r) => r.relation.includes("પિતા"))?.name || "";
     const grandfather = familyRelations.find((r) => r.relation.includes("દાદા"))?.name || "";
     const maternalUncle = familyRelations.find((r) => r.relation.includes("મામા"))?.name || "";
     const maternalGrandfather = familyRelations.find((r) => r.relation.includes("નાના"))?.name || "";
 
     const updates: Partial<Member> = {
+      username: cleanUsername,
       name,
       email: email.trim(),
       phone,
@@ -886,6 +915,8 @@ export default function ProfilePage() {
   // Automatically update form fields when user logs in, switches role, or admin selects another member
   React.useEffect(() => {
     if (effectiveMember) {
+      setUsername(effectiveMember.username || "");
+      setUsernameError(null);
       setName(effectiveMember.name || "");
       setEmail(effectiveMember.email || "");
       setPhone(effectiveMember.phone || "");
@@ -1173,10 +1204,11 @@ export default function ProfilePage() {
                   currentImageUrl={photoUrl || effectiveMember?.photo_url || currentUser.photo_url}
                   onImageCropped={(url) => {
                     setPhotoUrl(url);
-                    if (effectiveMember) {
-                      updateMember(effectiveMember.id, { photo_url: url });
+                    const targetId = effectiveMember?.id || currentUser?.id;
+                    if (targetId) {
+                      updateMember(targetId, { photo_url: url });
                     }
-                    if (currentUser && effectiveMember?.id === currentUser.id) {
+                    if (currentUser && (!effectiveMember || effectiveMember.id === currentUser.id)) {
                       updateCurrentUserProfile({ photo_url: url });
                     }
                     showToast("પ્રોફાઇલ ફોટો સફળતાપૂર્વક અપડેટ થયો!");
@@ -1195,6 +1227,11 @@ export default function ProfilePage() {
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
               <h1 className="text-2xl font-bold text-charcoal-900">{effectiveMember?.name || currentUser.name}</h1>
+              {(effectiveMember?.username || currentUser?.username) && (
+                <span className="text-xs bg-ivory-200 text-charcoal-700 font-mono font-semibold px-2 py-0.5 rounded-full border border-ivory-300">
+                  @{effectiveMember?.username || currentUser.username}
+                </span>
+              )}
               <span className="text-xs bg-saffron-100 text-saffron-800 font-bold px-2.5 py-0.5 rounded-full border border-saffron-200">
                 {effectiveMember?.committee_role || currentUser.committee_role || "સમાજ સભ્ય"}
               </span>
@@ -1302,20 +1339,23 @@ export default function ProfilePage() {
           )}
         </button>
 
-        <button
-          onClick={() => setActiveTab("matrimony")}
-          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === "matrimony"
-              ? "border-rose-600 text-rose-700 bg-rose-50/50"
-              : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-          }`}
-        >
-          <Heart className="w-4 h-4 text-rose-500 fill-rose-100" />
-          <span>લગ્ન વિષયક (Matrimony)</span>
-          {isAvailableForMatrimony && (
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          )}
-        </button>
+        {/* Only show Matrimony Tab if user is Unmarried (અપરણિત). Completely removed for Married (પરણિત) members */}
+        {isUnmarried && (
+          <button
+            onClick={() => setActiveTab("matrimony")}
+            className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "matrimony"
+                ? "border-rose-600 text-rose-700 bg-rose-50/50"
+                : "border-transparent text-charcoal-600 hover:text-charcoal-900"
+            }`}
+          >
+            <Heart className="w-4 h-4 text-rose-500 fill-rose-100" />
+            <span>લગ્ન વિષયક (Matrimony)</span>
+            {isAvailableForMatrimony && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab("privacy")}
@@ -1344,6 +1384,47 @@ export default function ProfilePage() {
                 required
                 className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-charcoal-700">
+                  યુઝરનેમ (Username) *
+                </label>
+                <span className="text-[10px] text-saffron-700 font-semibold bg-saffron-50 px-2 py-0.5 rounded-full border border-saffron-200">
+                  લૉગિન આઈડી (Login ID)
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 font-mono text-xs select-none">
+                  @
+                </span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => {
+                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                    setUsername(val);
+                    if (usernameError) setUsernameError(null);
+                  }}
+                  placeholder="દા.ત. utsavdarji"
+                  required
+                  minLength={3}
+                  maxLength={30}
+                  className={`w-full pl-7 pr-3.5 py-2.5 text-xs border rounded-xl focus:outline-none font-mono font-medium ${
+                    usernameError
+                      ? "border-rose-400 bg-rose-50/30 focus:border-rose-500"
+                      : "border-ivory-300 focus:border-saffron-500"
+                  }`}
+                />
+              </div>
+              {usernameError ? (
+                <p className="text-[10px] text-rose-600 mt-1 font-medium">{usernameError}</p>
+              ) : (
+                <p className="text-[10px] text-charcoal-400 mt-1">
+                  અંગ્રેજી અક્ષરો, અંકો અથવા (_) • લૉગિન માટે આ યુઝરનેમ ઉપયોગી થશે
+                </p>
+              )}
             </div>
 
             <div>
@@ -1431,7 +1512,7 @@ export default function ProfilePage() {
                 onChange={(e) => {
                   const newStatus = e.target.value;
                   setMaritalStatus(newStatus);
-                  if (!newStatus.includes("અપરણિત")) {
+                  if (!newStatus.startsWith("અપરણિત")) {
                     setIsAvailableForMatrimony(false);
                     setIsPublicListing(false);
                   }
@@ -1473,136 +1554,119 @@ export default function ProfilePage() {
               />
             </div>
 
-            {/* મેટ્રિમોની ઓપ્ટ-ઇન કાર્ડ (Matrimony Opt-in & Public Listing Consent) */}
-            <div className="sm:col-span-2 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/80 via-pink-50/50 to-amber-50/50 border border-rose-200/80 shadow-xs space-y-3">
-              {!isUnmarried ? (
+            {/* મેટ્રિમોની ઓપ્ટ-ઇન કાર્ડ (Matrimony Opt-in & Public Listing Consent) - ONLY SHOWN IF UNMARRIED */}
+            {isUnmarried && (
+              <div className="sm:col-span-2 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/80 via-pink-50/50 to-amber-50/50 border border-rose-200/80 shadow-xs space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 flex-shrink-0">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-charcoal-900 flex items-center gap-1.5">
-                      <Heart className="w-4 h-4 text-rose-500" />
-                      <span>મેટ્રિમોની પાત્રતા શરત (Matrimony Eligibility)</span>
-                    </h4>
-                    <p className="text-[11px] text-charcoal-600 mt-1 leading-relaxed">
-                      સમાજના નિયમ મુજબ માત્ર <strong>અપરણિત (Unmarried)</strong> સભ્યો જ મેટ્રિમોની પોર્ટલ પર નોંધણી કરાવી શકે છે. સગાઈ થયેલ (Engaged) કે પરણિત (Married) સભ્યો મેટ્રિમોની લિસ્ટિંગમાં ઉપલબ્ધ નથી. આપની લગ્ન સ્થિતિ <strong>{maritalStatus}</strong> છે.
+                  <input
+                    type="checkbox"
+                    id="matrimonyOptInGeneral"
+                    checked={isAvailableForMatrimony}
+                    onChange={(e) => setIsAvailableForMatrimony(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-rose-600 rounded border-rose-300 focus:ring-rose-500 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="matrimonyOptInGeneral" className="text-xs sm:text-sm font-bold text-rose-950 flex items-center gap-1.5 cursor-pointer">
+                      <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
+                      <span>૧. મેટ્રિમોની માટે ઉપલબ્ધ (Available for Matrimony)</span>
+                    </label>
+                    <p className="text-[11px] text-charcoal-600 mt-0.5 leading-relaxed">
+                      અપરણિત સભ્ય તરીકે યોગ્ય જીવનસાથીની શોધ માટે સમાજના મેટ્રિમોની વિભાગમાં જોડાઓ.
                     </p>
                   </div>
                 </div>
-              ) : (
-                <>
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      id="matrimonyOptInGeneral"
-                      checked={isAvailableForMatrimony}
-                      onChange={(e) => setIsAvailableForMatrimony(e.target.checked)}
-                      className="mt-1 w-4 h-4 text-rose-600 rounded border-rose-300 focus:ring-rose-500 cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <label htmlFor="matrimonyOptInGeneral" className="text-xs sm:text-sm font-bold text-rose-950 flex items-center gap-1.5 cursor-pointer">
-                        <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
-                        <span>૧. મેટ્રિમોની માટે ઉપલબ્ધ (Available for Matrimony)</span>
-                      </label>
-                      <p className="text-[11px] text-charcoal-600 mt-0.5 leading-relaxed">
-                        અપરણિત સભ્ય તરીકે યોગ્ય જીવનસાથીની શોધ માટે સમાજના મેટ્રિમોની વિભાગમાં જોડાઓ.
-                      </p>
+
+                {isAvailableForMatrimony && (
+                  <div className="mt-3 pt-3 border-t border-rose-200/60 space-y-3">
+                    {/* Selection 2: Public Listing Consent */}
+                    <div className="p-3 bg-white rounded-xl border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-xs text-charcoal-900 block">
+                          ૨. મારી પ્રોફાઇલ Public Listing માં બતાવવી છે?
+                        </span>
+                        <span className="text-[11px] text-charcoal-500 block">
+                          Header માં રહેલા મેટ્રિમોની પબ્લિક પેજ પર સામાન્ય મુલાકાતીઓ (Visitors) માટે પ્રોફાઇલ દર્શાવવા સંમતિ આપો.
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="generalPublicListing"
+                            checked={isPublicListing === true}
+                            onChange={() => setIsPublicListing(true)}
+                            className="text-rose-600 focus:ring-rose-500"
+                          />
+                          <span>હા (Yes)</span>
+                        </label>
+                        <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="generalPublicListing"
+                            checked={isPublicListing === false}
+                            onChange={() => setIsPublicListing(false)}
+                            className="text-rose-600 focus:ring-rose-500"
+                          />
+                          <span>ના (No)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                          ઊંચાઈ (Height)
+                        </label>
+                        <input
+                          type="text"
+                          value={matrimonyHeight}
+                          onChange={(e) => setMatrimonyHeight(e.target.value)}
+                          placeholder="દા.ત. 5 ફૂટ 8 ઇંચ (172 cm)"
+                          className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                          વાન / રંગરૂપ (Complexion)
+                        </label>
+                        <input
+                          type="text"
+                          value={matrimonyComplexion}
+                          onChange={(e) => setMatrimonyComplexion(e.target.value)}
+                          placeholder="દા.ત. ગોરો, ઘઉંવર્ણ"
+                          className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                          અપેક્ષિત જીવનસાથી (Partner Expectations)
+                        </label>
+                        <input
+                          type="text"
+                          value={matrimonyExpectations}
+                          onChange={(e) => setMatrimonyExpectations(e.target.value)}
+                          placeholder="દા.ત. શિક્ષિત (ગ્રેજ્યુએટ/એન્જિનિયર/બેંકિંગ), સંસ્કારી પાત્ર"
+                          className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
+                        />
+                      </div>
+                      <div className="sm:col-span-2 flex items-center justify-between pt-1">
+                        <span className="text-[11px] text-rose-800 font-semibold flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                          <span>વધુ ગોપનીયતા & બાયો સેટિંગ્સ &apos;લગ્ન વિષયક (Matrimony)&apos; ટેબમાં ઉપલબ્ધ છે.</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("matrimony")}
+                          className="text-xs font-bold text-rose-700 hover:text-rose-900 underline"
+                        >
+                          મેટ્રિમોની ટેબ ખોલો →
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {isAvailableForMatrimony && (
-                    <div className="mt-3 pt-3 border-t border-rose-200/60 space-y-3">
-                      {/* Selection 2: Public Listing Consent */}
-                      <div className="p-3 bg-white rounded-xl border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-0.5">
-                          <span className="font-bold text-xs text-charcoal-900 block">
-                            ૨. મારી પ્રોફાઇલ Public Listing માં બતાવવી છે?
-                          </span>
-                          <span className="text-[11px] text-charcoal-500 block">
-                            Header માં રહેલા મેટ્રિમોની પબ્લિક પેજ પર સામાન્ય મુલાકાતીઓ (Visitors) માટે પ્રોફાઇલ દર્શાવવા સંમતિ આપો.
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="generalPublicListing"
-                              checked={isPublicListing === true}
-                              onChange={() => setIsPublicListing(true)}
-                              className="text-rose-600 focus:ring-rose-500"
-                            />
-                            <span>હા (Yes)</span>
-                          </label>
-                          <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="generalPublicListing"
-                              checked={isPublicListing === false}
-                              onChange={() => setIsPublicListing(false)}
-                              className="text-rose-600 focus:ring-rose-500"
-                            />
-                            <span>ના (No)</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                            ઊંચાઈ (Height)
-                          </label>
-                          <input
-                            type="text"
-                            value={matrimonyHeight}
-                            onChange={(e) => setMatrimonyHeight(e.target.value)}
-                            placeholder="દા.ત. 5 ફૂટ 8 ઇંચ (172 cm)"
-                            className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                            વાન / રંગરૂપ (Complexion)
-                          </label>
-                          <input
-                            type="text"
-                            value={matrimonyComplexion}
-                            onChange={(e) => setMatrimonyComplexion(e.target.value)}
-                            placeholder="દા.ત. ગોરો, ઘઉંવર્ણ"
-                            className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                            અપેક્ષિત જીવનસાથી (Partner Expectations)
-                          </label>
-                          <input
-                            type="text"
-                            value={matrimonyExpectations}
-                            onChange={(e) => setMatrimonyExpectations(e.target.value)}
-                            placeholder="દા.ત. શિક્ષિત (ગ્રેજ્યુએટ/એન્જિનિયર/બેંકિંગ), સંસ્કારી પાત્ર"
-                            className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
-                          />
-                        </div>
-                        <div className="sm:col-span-2 flex items-center justify-between pt-1">
-                          <span className="text-[11px] text-rose-800 font-semibold flex items-center gap-1">
-                            <Sparkles className="w-3.5 h-3.5 text-rose-600" />
-                            <span>વધુ ગોપનીયતા & બાયો સેટિંગ્સ &apos;લગ્ન વિષયક (Matrimony)&apos; ટેબમાં ઉપલબ્ધ છે.</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab("matrimony")}
-                            className="text-xs font-bold text-rose-700 hover:text-rose-900 underline"
-                          >
-                            મેટ્રિમોની ટેબ ખોલો →
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* પારિવારિક સંબંધો (Family Relations) - AT THE END */}
             <div className="sm:col-span-2 bg-gradient-to-b from-ivory-50/80 to-white rounded-2xl border border-ivory-300 p-4 sm:p-5 space-y-4 mt-2">
@@ -3066,8 +3130,8 @@ export default function ProfilePage() {
         </form>
       )}
 
-      {/* TAB 6: MATRIMONY (લગ્ન વિષયક માહિતી & ડિરેક્ટરી) */}
-      {activeTab === "matrimony" && (
+      {/* TAB 6: MATRIMONY (લગ્ન વિષયક માહિતી & ડિરેક્ટરી) - ONLY ACCESSIBLE IF UNMARRIED */}
+      {activeTab === "matrimony" && isUnmarried && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {/* Card 1: User's Own Matrimony Profile & Privacy Settings */}
           <form
@@ -3866,22 +3930,24 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                    બેનર / ફોટો URL (Banner / Image URL)
+                    જાહેરાત બેનર / તસવીર (Advertisement Banner / Image) *
                   </label>
-                  <input
-                    type="url"
-                    value={adImageUrl}
-                    onChange={(e) => setAdImageUrl(e.target.value)}
-                    placeholder="https://example.com/banner.jpg"
-                    className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                  <ImageUploadWithCrop
+                    currentImageUrl={adImageUrl}
+                    onImageCropped={(url) => setAdImageUrl(url)}
+                    aspectRatio={16 / 9}
+                    aspectRatioLabel="૧૬:૯ (વાઈડ બેનર)"
+                    category="advertisement-banners"
+                    label="જાહેરાતનું બેનર અપલોડ &amp; ક્રોપ કરો"
+                    helperText="૧૬:૯ વાઈડ સાઈઝ • ડ્રેગ &amp; ડ્રોપ સપોર્ટ • JPG, PNG, WebP (મહત્તમ ૫ MB)"
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                    વેબસાઇટ અથવા સોશિયલ લિંક (Website / Link)
+                    વેબસાઇટ અથવા સોશિયલ લિંક (Website / Link - વૈકલ્પિક)
                   </label>
                   <input
                     type="url"

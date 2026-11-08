@@ -3,7 +3,7 @@ import crypto from "crypto";
 interface OtpRecord {
   email: string;
   hashedCode: string;
-  purpose: "signup" | "login" | "profile_update";
+  purpose: "signup" | "login" | "profile_update" | "reset_password";
   expiresAt: number; // Unix epoch ms (5 minutes)
   lastRequestedAt: number; // For 60-second cooldown
   attempts: number; // Max 5 incorrect attempts
@@ -60,7 +60,7 @@ export function checkCooldown(email: string): { allowed: boolean; remainingSecon
 export function storeOtp(
   email: string,
   rawOtp: string,
-  purpose: "signup" | "login" | "profile_update" = "signup"
+  purpose: "signup" | "login" | "profile_update" | "reset_password" = "signup"
 ): { expiresAt: number } {
   const normalizedEmail = email.toLowerCase().trim();
   const hashedCode = hashOtp(rawOtp);
@@ -86,7 +86,7 @@ export function storeOtp(
 export function verifyOtpCode(
   email: string,
   userCode: string,
-  expectedPurpose?: "signup" | "login" | "profile_update"
+  expectedPurpose?: "signup" | "login" | "profile_update" | "reset_password"
 ): {
   success: boolean;
   message: string;
