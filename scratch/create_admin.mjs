@@ -108,7 +108,7 @@ async function createAdminUser() {
     salt,
     is_email_verified: true,
     email_verified_at: new Date().toISOString(),
-    photo_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+    photo_url: "/default-avatar.svg",
     address: "મોડાસા",
     city: "મોડાસા",
     district: "અરવલ્લી",

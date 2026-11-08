@@ -100,9 +100,44 @@ export function AutoScrollSlider<T extends { id?: string | number }>({
     );
   }
 
-  // To achieve a 100% gapless infinite loop, duplicate items so the track width is at least 200% of viewport
-  // If items length is small (e.g. 2-3 items), repeat 4 times; otherwise repeat 2 times.
-  const repeatCount = items.length <= 3 ? 4 : 2;
+  // If items count is small (e.g. 1 to 3 items), DO NOT duplicate items!
+  // Render them in a clean centered flex row without looping or duplicate cards.
+  if (items.length <= 3) {
+    return (
+      <section className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 select-none ${className}`}>
+        {/* Header with Title and View All link */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              {icon}
+              <h2 className="text-xl sm:text-2xl font-black text-charcoal-900 tracking-tight">
+                {title}
+              </h2>
+            </div>
+            {subtitle && (
+              <p className="text-[11px] sm:text-xs text-charcoal-600 mt-0.5">{subtitle}</p>
+            )}
+          </div>
+          {headerRight}
+        </div>
+
+        {/* Clean, Non-Duplicated Display Row */}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 py-2">
+          {items.map((item, idx) => (
+            <div
+              key={item.id ? String(item.id) : `item-${idx}`}
+              className="flex-shrink-0 transition-transform duration-200 hover:-translate-y-1"
+            >
+              {renderItem(item, idx)}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // For 4 or more items, achieve a gapless infinite marquee loop by repeating items twice
+  const repeatCount = 2;
   const loopItems: { item: T; key: string }[] = [];
   for (let r = 0; r < repeatCount; r++) {
     items.forEach((item, idx) => {

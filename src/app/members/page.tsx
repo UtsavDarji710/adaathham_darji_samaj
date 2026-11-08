@@ -219,8 +219,11 @@ export default function MembersDirectoryPage() {
                 <div className="flex items-start gap-3.5 mb-3">
                   <div className="relative">
                     <img
-                      src={member.photo_url}
+                      src={member.photo_url || "/default-avatar.svg"}
                       alt={member.name}
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-avatar.svg";
+                      }}
                       className="w-14 h-14 rounded-2xl object-cover border border-ivory-300 group-hover:border-saffron-400 transition-colors"
                     />
                     {member.is_lifetime_member && (
@@ -353,8 +356,11 @@ export default function MembersDirectoryPage() {
 
             <div className="py-4 text-center">
               <img
-                src={activeModalMember.photo_url}
+                src={activeModalMember.photo_url || "/default-avatar.svg"}
                 alt={activeModalMember.name}
+                onError={(e) => {
+                  e.currentTarget.src = "/default-avatar.svg";
+                }}
                 className="w-24 h-24 rounded-2xl object-cover mx-auto border-3 border-saffron-500 shadow-md mb-2"
               />
               <h3 className="font-bold text-lg text-charcoal-900">{activeModalMember.name}</h3>

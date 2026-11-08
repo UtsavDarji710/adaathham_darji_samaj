@@ -43,8 +43,11 @@ const FamilyTreeNode = ({ data }: { data: NodeData }) => {
       <div className="flex items-center gap-3">
         <div className="relative flex-shrink-0">
           <img
-            src={member.photo_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120"}
+            src={member.photo_url || "/default-avatar.svg"}
             alt={member.name}
+            onError={(e) => {
+              e.currentTarget.src = "/default-avatar.svg";
+            }}
             className="w-13 h-13 rounded-xl object-cover border-2 border-ivory-200 group-hover:border-saffron-400 transition-colors"
           />
           {member.is_lifetime_member && (

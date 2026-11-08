@@ -217,8 +217,11 @@ export default function Header() {
                   }`}
                 >
                   <img
-                    src={currentUser.photo_url}
+                    src={currentUser.photo_url || "/default-avatar.svg"}
                     alt={currentUser.name}
+                    onError={(e) => {
+                      e.currentTarget.src = "/default-avatar.svg";
+                    }}
                     className="w-6 h-6 rounded-full object-cover border border-saffron-400 flex-shrink-0"
                   />
                   <div className="text-left text-xs leading-none">
@@ -258,8 +261,11 @@ export default function Header() {
             {currentUser && (
               <Link href="/profile" className="p-0.5 rounded-full border border-saffron-400">
                 <img
-                  src={currentUser.photo_url}
+                  src={currentUser.photo_url || "/default-avatar.svg"}
                   alt={currentUser.name}
+                  onError={(e) => {
+                    e.currentTarget.src = "/default-avatar.svg";
+                  }}
                   className="w-7 h-7 rounded-full object-cover"
                 />
               </Link>

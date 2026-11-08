@@ -1169,8 +1169,11 @@ export default function ProfilePage() {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <div className="relative">
             <img
-              src={photoUrl || effectiveMember?.photo_url || currentUser.photo_url}
+              src={photoUrl || effectiveMember?.photo_url || currentUser.photo_url || "/default-avatar.svg"}
               alt={effectiveMember?.name || currentUser.name}
+              onError={(e) => {
+                e.currentTarget.src = "/default-avatar.svg";
+              }}
               className="w-28 h-28 rounded-3xl object-cover border-4 border-saffron-500 shadow-md"
             />
             <button
@@ -4008,8 +4011,11 @@ export default function ProfilePage() {
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-rose-200 bg-rose-50 flex-shrink-0 shadow-sm">
                   {selectedCandidateModal.matrimony?.privacy?.show_photo !== false ? (
                     <img
-                      src={selectedCandidateModal.photo_url}
+                      src={selectedCandidateModal.photo_url || "/default-avatar.svg"}
                       alt={selectedCandidateModal.name}
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-avatar.svg";
+                      }}
                       className="w-full h-full object-cover"
                     />
                   ) : (

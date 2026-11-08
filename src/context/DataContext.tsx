@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import {
   Member,
   FamilyRelationship,
@@ -92,7 +92,7 @@ interface DataContextType {
   // Logs
   addLog: (action: string, target: string, details: string, adminName: string, adminRole: string) => void;
 
-  // Reset to initial demo data
+  // Reset to clean dynamic data
   resetDemoData: () => void;
 }
 
@@ -108,152 +108,168 @@ const STORAGE_KEYS = {
   donations: "ad8_data_donations",
   bank_details: "ad8_data_bank_details",
   announcements: "ad8_data_announcements",
+  circulars: "ad8_data_circulars",
   committee: "ad8_data_committee",
   logs: "ad8_data_logs",
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [relationships, setRelationships] = useState<FamilyRelationship[]>(INITIAL_RELATIONSHIPS);
-  const [businesses, setBusinesses] = useState<BusinessItem[]>(INITIAL_BUSINESSES);
-  const [advertisements, setAdvertisements] = useState<BusinessAdvertisement[]>(INITIAL_ADVERTISEMENTS);
-  const [jobPostings, setJobPostings] = useState<JobPosting[]>(INITIAL_JOB_POSTINGS);
-  const [events, setEvents] = useState<CommunityEvent[]>(INITIAL_EVENTS);
-  const [donations, setDonations] = useState<Donation[]>(INITIAL_DONATIONS);
+  const [relationships, setRelationships] = useState<FamilyRelationship[]>([]);
+  const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
+  const [advertisements, setAdvertisements] = useState<BusinessAdvertisement[]>([]);
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [donations, setDonations] = useState<Donation[]>([]);
   const [bankDetails, setBankDetails] = useState<SamitiBankDetails>(INITIAL_BANK_DETAILS);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
-  const [circulars, setCirculars] = useState<Circular[]>(INITIAL_CIRCULARS);
-  const [committee, setCommittee] = useState<CommitteeMember[]>(INITIAL_COMMITTEE);
-  const [logs, setLogs] = useState<ActivityLog[]>(INITIAL_LOGS);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [circulars, setCirculars] = useState<Circular[]>([]);
+  const [customCommittee, setCustomCommittee] = useState<CommitteeMember[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
 
-  // Load dynamic data on mount
+  // Dynamically derive Committee list from live registered members with committee_role or admin role
+  const committee = useMemo(() => {
+    const list: CommitteeMember[] = [];
+    members.forEach((m) => {
+      if (m.committee_role || (m.role && m.role !== "member")) {
+        list.push({
+          id: m.id,
+          name: m.name,
+          designation: m.committee_role || (m.role === "admin" ? "સિસ્ટમ એડમિનિસ્ટ્રેટર" : String(m.role)),
+          photo_url: m.photo_url || "/default-avatar.svg",
+          phone: m.phone,
+          city: m.city || "મોડાસા",
+          term: "૨૦૨૩ - ૨૦૨૬",
+          order: m.committee_order ?? 99,
+          is_lifetime_member: !!m.is_lifetime_member,
+          role_key: (m.role as any) || "admin",
+        });
+      }
+    });
+
+    // Merge with any custom registered committee members
+    customCommittee.forEach((c) => {
+      if (!list.some((existing) => existing.id === c.id || existing.name === c.name)) {
+        list.push(c);
+      }
+    });
+
+    return list.sort((a, b) => a.order - b.order);
+  }, [members, customCommittee]);
+
+  // Load live dynamic data from Supabase APIs & purge stale legacy mock data
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      // 1. Fetch live dynamic members from API / Supabase
-      fetch("/api/members")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && Array.isArray(data.members) && data.members.length > 0) {
-            setMembers(data.members);
-            sync(STORAGE_KEYS.members, data.members);
+
+    // Helper to purge legacy mock items (mem-1, biz-1, etc.) from browser localStorage
+    const purgeLegacyMockData = () => {
+      const legacyPrefixes = ["mem-", "biz-", "evt-", "don-", "adv-", "job-", "ann-", "circ-", "comm-", "log-"];
+      const isLegacy = (item: any) =>
+        item && typeof item.id === "string" && legacyPrefixes.some((p) => item.id.startsWith(p));
+
+      Object.values(STORAGE_KEYS).forEach((key) => {
+        try {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed) && parsed.some(isLegacy)) {
+              localStorage.removeItem(key);
+            }
           }
-        })
-        .catch((err) => {
-          console.warn("[DataContext] Live members fetch warning:", err);
-        });
-
-      // 2. Load stored dynamic data or fallback to initial lists
-      const storedMembers = localStorage.getItem(STORAGE_KEYS.members);
-      if (storedMembers) {
-        try {
-          const parsed = JSON.parse(storedMembers);
-          if (Array.isArray(parsed) && parsed.length > 0) setMembers(parsed);
         } catch {}
-      }
+      });
 
-      const storedRels = localStorage.getItem(STORAGE_KEYS.relationships);
-      if (storedRels) {
-        try {
-          const parsed = JSON.parse(storedRels);
-          if (Array.isArray(parsed) && parsed.length > 0) setRelationships(parsed);
-        } catch {}
-      }
+      try {
+        const val = localStorage.getItem("ad8_members_data");
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed) && parsed.some(isLegacy)) {
+            localStorage.removeItem("ad8_members_data");
+          }
+        }
+      } catch {}
+    };
 
-      const storedBiz = localStorage.getItem(STORAGE_KEYS.businesses);
-      if (storedBiz) {
-        try {
-          const parsed = JSON.parse(storedBiz);
-          if (Array.isArray(parsed) && parsed.length > 0) setBusinesses(parsed);
-          else if (INITIAL_BUSINESSES.length > 0) setBusinesses(INITIAL_BUSINESSES);
-        } catch {}
-      } else if (INITIAL_BUSINESSES.length > 0) {
-        setBusinesses(INITIAL_BUSINESSES);
-      }
+    purgeLegacyMockData();
 
-      const storedAds = localStorage.getItem(STORAGE_KEYS.advertisements);
-      if (storedAds) {
-        try {
-          const parsed = JSON.parse(storedAds);
-          if (Array.isArray(parsed) && parsed.length > 0) setAdvertisements(parsed);
-          else if (INITIAL_ADVERTISEMENTS.length > 0) setAdvertisements(INITIAL_ADVERTISEMENTS);
-        } catch {}
-      } else if (INITIAL_ADVERTISEMENTS.length > 0) {
-        setAdvertisements(INITIAL_ADVERTISEMENTS);
-      }
+    // 1. Fetch live dynamic members from API / Supabase
+    fetch("/api/members")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.members)) {
+          setMembers(data.members);
+          sync(STORAGE_KEYS.members, data.members);
+        }
+      })
+      .catch((err) => {
+        console.warn("[DataContext] Live members fetch warning:", err);
+      });
 
-      const storedJobs = localStorage.getItem(STORAGE_KEYS.jobs);
-      if (storedJobs) {
-        try {
-          const parsed = JSON.parse(storedJobs);
-          if (Array.isArray(parsed) && parsed.length > 0) setJobPostings(parsed);
-          else if (INITIAL_JOB_POSTINGS.length > 0) setJobPostings(INITIAL_JOB_POSTINGS);
-        } catch {}
-      } else if (INITIAL_JOB_POSTINGS.length > 0) {
-        setJobPostings(INITIAL_JOB_POSTINGS);
-      }
+    // 2. Fetch live businesses from Supabase API
+    fetch("/api/businesses")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.businesses)) {
+          setBusinesses(data.businesses);
+          sync(STORAGE_KEYS.businesses, data.businesses);
+        }
+      })
+      .catch((err) => console.warn("[DataContext] Live businesses fetch warning:", err));
 
-      const storedEvents = localStorage.getItem(STORAGE_KEYS.events);
-      if (storedEvents) {
-        try {
-          const parsed = JSON.parse(storedEvents);
-          if (Array.isArray(parsed) && parsed.length > 0) setEvents(parsed);
-          else if (INITIAL_EVENTS.length > 0) setEvents(INITIAL_EVENTS);
-        } catch {}
-      } else if (INITIAL_EVENTS.length > 0) {
-        setEvents(INITIAL_EVENTS);
-      }
+    // 3. Fetch live jobs from Supabase API
+    fetch("/api/jobs")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.jobs)) {
+          setJobPostings(data.jobs);
+          sync(STORAGE_KEYS.jobs, data.jobs);
+        }
+      })
+      .catch((err) => console.warn("[DataContext] Live jobs fetch warning:", err));
 
-      const storedDonations = localStorage.getItem(STORAGE_KEYS.donations);
-      if (storedDonations) {
-        try {
-          const parsed = JSON.parse(storedDonations);
-          if (Array.isArray(parsed) && parsed.length > 0) setDonations(parsed);
-          else if (INITIAL_DONATIONS.length > 0) setDonations(INITIAL_DONATIONS);
-        } catch {}
-      } else if (INITIAL_DONATIONS.length > 0) {
-        setDonations(INITIAL_DONATIONS);
-      }
+    // 4. Fetch live advertisements from Supabase API
+    fetch("/api/advertisements")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.advertisements)) {
+          setAdvertisements(data.advertisements);
+          sync(STORAGE_KEYS.advertisements, data.advertisements);
+        }
+      })
+      .catch((err) => console.warn("[DataContext] Live advertisements fetch warning:", err));
 
-      const storedBank = localStorage.getItem(STORAGE_KEYS.bank_details);
-      if (storedBank) {
-        try {
-          setBankDetails(JSON.parse(storedBank));
-        } catch {}
-      }
+    // 5. Fetch live events from Supabase API
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.events)) {
+          setEvents(data.events);
+          sync(STORAGE_KEYS.events, data.events);
+        }
+      })
+      .catch((err) => console.warn("[DataContext] Live events fetch warning:", err));
 
-      const storedAnnouncements = localStorage.getItem(STORAGE_KEYS.announcements);
-      if (storedAnnouncements) {
-        try {
-          const parsed = JSON.parse(storedAnnouncements);
-          if (Array.isArray(parsed) && parsed.length > 0) setAnnouncements(parsed);
-          else if (INITIAL_ANNOUNCEMENTS.length > 0) setAnnouncements(INITIAL_ANNOUNCEMENTS);
-        } catch {}
-      } else if (INITIAL_ANNOUNCEMENTS.length > 0) {
-        setAnnouncements(INITIAL_ANNOUNCEMENTS);
-      }
+    // 6. Fetch live donations from Supabase API
+    fetch("/api/donations")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.donations)) {
+          setDonations(data.donations);
+          sync(STORAGE_KEYS.donations, data.donations);
+        }
+      })
+      .catch((err) => console.warn("[DataContext] Live donations fetch warning:", err));
 
-      const storedCommittee = localStorage.getItem(STORAGE_KEYS.committee);
-      if (storedCommittee) {
-        try {
-          const parsed = JSON.parse(storedCommittee);
-          if (Array.isArray(parsed) && parsed.length > 0) setCommittee(parsed);
-          else if (INITIAL_COMMITTEE.length > 0) setCommittee(INITIAL_COMMITTEE);
-        } catch {}
-      } else if (INITIAL_COMMITTEE.length > 0) {
-        setCommittee(INITIAL_COMMITTEE);
-      }
-
-      const storedLogs = localStorage.getItem(STORAGE_KEYS.logs);
-      if (storedLogs) {
-        try {
-          const parsed = JSON.parse(storedLogs);
-          if (Array.isArray(parsed) && parsed.length > 0) setLogs(parsed);
-        } catch {}
-      }
-    } catch (e) {
-      console.error("Failed to load data from localStorage", e);
-    }
+    // 7. Fetch live announcements from Supabase API
+    fetch("/api/announcements")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.announcements)) {
+          setAnnouncements(data.announcements);
+          sync(STORAGE_KEYS.announcements, data.announcements);
+        }
+      })
+      .catch((err) => console.warn("[DataContext] Live announcements fetch warning:", err));
   }, []);
 
   const sync = <T,>(key: string, data: T) => {
@@ -277,7 +293,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMembers(updated);
     sync(STORAGE_KEYS.members, updated);
 
-    // Sync ad8_current_user in localStorage if updating the current user
+    // Sync ad8_current_user in localStorage if updating current user
     if (typeof window !== "undefined") {
       try {
         const rawUser = localStorage.getItem("ad8_current_user");
@@ -314,7 +330,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addRelationship = (rel: Omit<FamilyRelationship, "id" | "created_at">) => {
     const newRel: FamilyRelationship = {
       ...rel,
-      id: `rel-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `rel-${Date.now()}`,
       created_at: new Date().toISOString(),
     };
     const updated = [newRel, ...relationships];
@@ -354,12 +370,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addBusiness = (biz: Omit<BusinessItem, "id" | "created_at">) => {
     const newBiz: BusinessItem = {
       ...biz,
-      id: `biz-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `biz-${Date.now()}`,
       created_at: new Date().toISOString(),
     };
     const updated = [newBiz, ...businesses];
     setBusinesses(updated);
     sync(STORAGE_KEYS.businesses, updated);
+
+    // Save to Supabase API
+    fetch("/api/businesses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newBiz),
+    }).catch((err) => console.warn("[addBusiness error]", err));
   };
 
   const updateBusiness = (id: string, updates: Partial<BusinessItem>) => {
@@ -382,13 +405,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addAdvertisement = (adv: Omit<BusinessAdvertisement, "id" | "created_at">) => {
     const newAdv: BusinessAdvertisement = {
       ...adv,
-      id: `adv-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `adv-${Date.now()}`,
       created_at: new Date().toISOString(),
       status: "pending",
     };
     const updated = [newAdv, ...advertisements];
     setAdvertisements(updated);
     sync(STORAGE_KEYS.advertisements, updated);
+
+    // Save to Supabase API
+    fetch("/api/advertisements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newAdv),
+    }).catch((err) => console.warn("[addAdvertisement error]", err));
   };
 
   const approveAdvertisement = (id: string, approvedBy: string) => {
@@ -433,13 +463,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addJobPosting = (job: Omit<JobPosting, "id" | "created_at">) => {
     const newJob: JobPosting = {
       ...job,
-      id: `job-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `job-${Date.now()}`,
       created_at: new Date().toISOString(),
       status: "active",
     };
     const updated = [newJob, ...jobPostings];
     setJobPostings(updated);
     sync(STORAGE_KEYS.jobs, updated);
+
+    // Save to Supabase API
+    fetch("/api/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newJob),
+    }).catch((err) => console.warn("[addJobPosting error]", err));
   };
 
   const deleteJobPosting = (id: string) => {
@@ -448,14 +485,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sync(STORAGE_KEYS.jobs, updated);
   };
 
+  // Events methods
   const addEvent = (event: Omit<CommunityEvent, "id">) => {
     const newEvent: CommunityEvent = {
       ...event,
-      id: `evt-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `evt-${Date.now()}`,
     };
     const updated = [newEvent, ...events];
     setEvents(updated);
     sync(STORAGE_KEYS.events, updated);
+
+    // Save to Supabase API
+    fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newEvent),
+    }).catch((err) => console.warn("[addEvent error]", err));
   };
 
   const updateEvent = (id: string, updates: Partial<CommunityEvent>) => {
@@ -470,46 +515,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sync(STORAGE_KEYS.events, updated);
   };
 
-  const addDonation = (don: Partial<Donation> & { donor_name: string; mobile_number?: string; donation_purpose?: string; amount?: number }) => {
-    const year = don.donation_year || String(new Date().getFullYear());
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const donationId = don.donation_id || `DON-${year}-${randomSuffix}`;
-    const receiptNumber = don.receipt_number || `ADS-${year}-${String(donations.length + 1).padStart(3, "0")}`;
-
+  // Donations methods
+  const addDonation = (
+    don: Partial<Donation> & {
+      donor_name: string;
+      mobile_number?: string;
+      donation_purpose?: string;
+      amount?: number;
+    }
+  ): Donation => {
     const newDonation: Donation = {
-      id: `don-${Date.now()}`,
-      donation_id: donationId,
-      user_id: don.user_id,
-      donor_id: don.donor_id,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}`,
+      donation_id: don.donation_id || `DON-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
       donor_name: don.donor_name,
       mobile_number: don.mobile_number || "",
       donor_photo: don.donor_photo,
       hasthe_names: don.hasthe_names || [],
-      donation_purpose: don.donation_purpose || don.purpose || "સમાજના વિકાસ માટે",
-      specific_purpose: don.specific_purpose,
-      donation_year: year,
-      amount: Number(don.amount) || 0,
+      donation_purpose: don.donation_purpose || "સમાજના વિકાસ માટે",
+      specific_purpose: don.specific_purpose || don.purpose,
+      donation_year: don.donation_year || String(new Date().getFullYear()),
+      amount: don.amount || 0,
       date: don.date || new Date().toISOString().split("T")[0],
-      purpose: don.purpose || don.donation_purpose || "સમાજના વિકાસ માટે",
-      campaign: don.campaign || "સમાજ વિકાસ ભંડોળ",
+      purpose: don.purpose || don.donation_purpose || "",
+      campaign: don.campaign,
       payment_proof: don.payment_proof,
-      status: don.status || "pending",
-      payment_status: don.payment_status || "pending",
-      is_anonymous: don.is_anonymous || false,
+      status: "pending",
+      payment_status: "pending",
+      is_anonymous: !!don.is_anonymous,
       public_consent: don.public_consent !== false,
-      receipt_number: receiptNumber,
-      payment_method: don.payment_method || "UPI / ઓનલાઇન",
-      created_at: new Date().toISOString(),
+      receipt_number: `ADS-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      payment_method: don.payment_method || "UPI",
     };
 
     const updated = [newDonation, ...donations];
     setDonations(updated);
     sync(STORAGE_KEYS.donations, updated);
+
+    // Save to Supabase API
+    fetch("/api/donations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDonation),
+    }).catch((err) => console.warn("[addDonation error]", err));
+
     return newDonation;
   };
 
   const approveDonation = (id: string, approvedBy: string) => {
-    const today = new Date().toISOString().split("T")[0];
     const updated = donations.map((d) =>
       d.id === id
         ? {
@@ -517,8 +569,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             status: "approved" as const,
             payment_status: "verified" as const,
             approved_by: approvedBy,
-            approved_at: today,
-            updated_at: new Date().toISOString(),
+            approved_at: new Date().toISOString().split("T")[0],
           }
         : d
     );
@@ -535,7 +586,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             payment_status: "pending" as const,
             admin_remarks: remarks,
             approved_by: rejectedBy,
-            updated_at: new Date().toISOString(),
+            approved_at: new Date().toISOString().split("T")[0],
           }
         : d
     );
@@ -550,27 +601,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const verifyDonation = (id: string) => {
-    approveDonation(id, "ખજાનચી શ્રી");
+    const updated = donations.map((d) =>
+      d.id === id ? { ...d, payment_status: "verified" as const } : d
+    );
+    setDonations(updated);
+    sync(STORAGE_KEYS.donations, updated);
   };
 
   const updateBankDetails = (details: Partial<SamitiBankDetails>) => {
-    const updated: SamitiBankDetails = {
-      ...bankDetails,
-      ...details,
-      updated_at: new Date().toISOString().split("T")[0],
-    };
+    const updated = { ...bankDetails, ...details, updated_at: new Date().toISOString().split("T")[0] };
     setBankDetails(updated);
     sync(STORAGE_KEYS.bank_details, updated);
   };
 
+  // Announcements methods
   const addAnnouncement = (ann: Omit<Announcement, "id">) => {
     const newAnn: Announcement = {
       ...ann,
-      id: `ann-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ann-${Date.now()}`,
     };
     const updated = [newAnn, ...announcements];
     setAnnouncements(updated);
     sync(STORAGE_KEYS.announcements, updated);
+
+    // Save to Supabase API
+    fetch("/api/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newAnn),
+    }).catch((err) => console.warn("[addAnnouncement error]", err));
   };
 
   const deleteAnnouncement = (id: string) => {
@@ -579,21 +638,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sync(STORAGE_KEYS.announcements, updated);
   };
 
-  const addLog = (
-    action: string,
-    target: string,
-    details: string,
-    adminName: string,
-    adminRole: string
-  ) => {
+  // Activity Logs
+  const addLog = (action: string, target: string, details: string, adminName: string, adminRole: string) => {
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `log-${Date.now()}`,
       action,
       target,
       details,
       admin_name: adminName,
       admin_role: adminRole,
-      timestamp: new Date().toLocaleString("gu-IN"),
+      timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
     };
     const updated = [newLog, ...logs];
     setLogs(updated);
@@ -602,16 +656,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetDemoData = () => {
     setMembers([]);
-    setRelationships(INITIAL_RELATIONSHIPS);
-    setBusinesses(INITIAL_BUSINESSES);
-    setAdvertisements(INITIAL_ADVERTISEMENTS);
-    setJobPostings(INITIAL_JOB_POSTINGS);
-    setEvents(INITIAL_EVENTS);
-    setDonations(INITIAL_DONATIONS);
+    setRelationships([]);
+    setBusinesses([]);
+    setAdvertisements([]);
+    setJobPostings([]);
+    setEvents([]);
+    setDonations([]);
     setBankDetails(INITIAL_BANK_DETAILS);
-    setAnnouncements(INITIAL_ANNOUNCEMENTS);
-    setCommittee(INITIAL_COMMITTEE);
-    setLogs(INITIAL_LOGS);
+    setAnnouncements([]);
+    setCirculars([]);
+    setCustomCommittee([]);
+    setLogs([]);
 
     Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
   };

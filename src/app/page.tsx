@@ -159,8 +159,11 @@ export default function HomePage() {
             <div className="w-[170px] sm:w-[190px] bg-white rounded-2xl border border-ivory-300 p-3.5 text-center shadow-card hover:shadow-hover hover:border-saffron-300 transition-all flex flex-col items-center justify-between h-[185px] group">
               <div className="relative mx-auto w-16 h-16 sm:w-18 sm:h-18 mb-2">
                 <img
-                  src={member.photo_url}
+                  src={member.photo_url || "/default-avatar.svg"}
                   alt={member.name}
+                  onError={(e) => {
+                    e.currentTarget.src = "/default-avatar.svg";
+                  }}
                   className="w-full h-full rounded-2xl object-cover border-2 border-ivory-300 shadow-2xs group-hover:scale-105 transition-transform"
                 />
                 {member.is_lifetime_member && (
@@ -475,6 +478,9 @@ export default function HomePage() {
                     <img
                       src={donor.donor_photo}
                       alt={donor.donor_name}
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-avatar.svg";
+                      }}
                       className="w-full h-full object-cover"
                     />
                   ) : (

@@ -28,7 +28,7 @@ export function dbRowToMember(row: any): Member {
     email_verified_at: row.email_verified_at || undefined,
     photo_url:
       row.photo_url ||
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+      "/default-avatar.svg",
     address: row.address || "",
     city: row.city || "મોડાસા",
     district: row.district || "અરવલ્લી",
@@ -342,7 +342,7 @@ export async function authenticateSupabase(
       role: meta.role || "member",
       is_lifetime_member: false,
       photo_url:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+        "/default-avatar.svg",
       address: "મોડાસા",
       city: "મોડાસા",
       district: "અરવલ્લી",

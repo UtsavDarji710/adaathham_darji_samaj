@@ -46,8 +46,8 @@ function loadPersistentStore(): Member[] | null {
       const content = fs.readFileSync(PERSISTENT_FILE, "utf-8");
       if (content && content.trim()) {
         const parsed = JSON.parse(content);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed as Member[];
+        if (Array.isArray(parsed)) {
+          return parsed.filter((m: any) => m && !String(m.id || "").startsWith("mem-")) as Member[];
         }
       }
     }
@@ -259,7 +259,7 @@ export function ensureSessionUser(sessionVal: string): Member {
     name: displayName,
     email: isEmail ? clean : "member@adaadhamsamaj.org",
     phone: isPhone ? clean : "98250 00000",
-    photo_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+    photo_url: "/default-avatar.svg",
     role: "member",
     is_lifetime_member: false,
     address: "મોડાસા",

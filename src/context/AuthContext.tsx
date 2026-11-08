@@ -70,7 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (savedUserStr) {
                 try {
                   const savedUser = JSON.parse(savedUserStr);
-                  if (
+                  if (savedUser?.id && String(savedUser.id).startsWith("mem-")) {
+                    localStorage.removeItem("ad8_current_user");
+                  } else if (
                     savedUser &&
                     (savedUser.id === data.user.id ||
                       savedUser.email?.toLowerCase() === data.user.email?.toLowerCase())
@@ -89,9 +91,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   const parsed = JSON.parse(localMembers);
                   const found = parsed.find(
                     (m: any) =>
-                      m.id === data.user.id ||
-                      (m.email && m.email.toLowerCase() === data.user.email?.toLowerCase()) ||
-                      (m.phone && m.phone.replace(/\D/g, "") === data.user.phone?.replace(/\D/g, ""))
+                      m &&
+                      !String(m.id || "").startsWith("mem-") &&
+                      (m.id === data.user.id ||
+                        (m.email && m.email.toLowerCase() === data.user.email?.toLowerCase()) ||
+                        (m.phone && m.phone.replace(/\D/g, "") === data.user.phone?.replace(/\D/g, "")))
                   );
                   if (found) {
                     effectiveUser = { ...effectiveUser, ...found };
@@ -112,16 +116,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedUserId = typeof window !== "undefined" ? localStorage.getItem(AUTH_STORAGE_KEY) : null;
       if (savedUserId && savedUserId !== "guest") {
         if (typeof window !== "undefined") {
-          const localMembers = localStorage.getItem("ad8_members_data");
-          if (localMembers) {
-            try {
-              const parsed = JSON.parse(localMembers);
-              const found = parsed.find((m: any) => m.id === savedUserId);
-              if (found) {
-                setCurrentUser(found);
-                return;
-              }
-            } catch (e) {}
+          if (savedUserId.startsWith("mem-")) {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            localStorage.removeItem("ad8_current_user");
+          } else {
+            const localMembers = localStorage.getItem("ad8_members_data");
+            if (localMembers) {
+              try {
+                const parsed = JSON.parse(localMembers);
+                const found = parsed.find((m: any) => m.id === savedUserId && !String(m.id || "").startsWith("mem-"));
+                if (found) {
+                  setCurrentUser(found);
+                  return;
+                }
+              } catch (e) {}
+            }
           }
         }
       }
@@ -375,9 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newMember: Member = {
       id: `mem-${Date.now()}`,
       name: data.name || "નવા સભ્ય",
-      photo_url:
-        data.photo_url ||
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+      photo_url: data.photo_url || "/default-avatar.svg",
       phone: data.phone || "",
       email: data.email || "",
       is_email_verified: true,
