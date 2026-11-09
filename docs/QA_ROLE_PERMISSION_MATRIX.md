@@ -81,3 +81,4 @@ Inspection of `src/types/index.ts`, `src/lib/roleCredentials.ts`, `src/lib/membe
 
 ---
 **Status:** Permission matrix verified across both frontend and backend layers.
+
