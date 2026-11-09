@@ -48,11 +48,18 @@ export default function EventDetailPage() {
       <div className="bg-white rounded-3xl border border-ivory-300 shadow-card overflow-hidden">
         {/* Cover Image */}
         <div className="relative aspect-[21/9] bg-ivory-200">
-          <img
-            src={event.cover_image}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
+          {event.cover_image ? (
+            <img
+              src={event.cover_image}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-saffron-100 via-saffron-50 to-ivory-200 flex flex-col items-center justify-center p-6 text-center">
+              <Calendar className="w-14 h-14 text-saffron-600/40 mb-2" />
+              <h2 className="text-xl font-extrabold text-saffron-900/80">{event.title}</h2>
+            </div>
+          )}
           <div className="absolute top-4 left-4 bg-white/95 text-saffron-800 font-bold text-xs px-3 py-1 rounded-xl shadow-xs">
             {event.date}
           </div>

@@ -49,6 +49,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
 import {
   PrivacyVisibility,
+  DEFAULT_MEMBER_PRIVACY,
   ChildEducation,
   MemberEducationRecord,
   FamilyRelationDetail,
@@ -164,13 +165,25 @@ export default function ProfilePage() {
   } = useData();
 
   const router = useRouter();
-  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
-  const [isAddingNewMember, setIsAddingNewMember] = useState<boolean>(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("memberId") || params.get("memberid") || "";
+    }
+    return "";
+  });
+  const [isAddingNewMember, setIsAddingNewMember] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("action") === "new";
+    }
+    return false;
+  });
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const mId = params.get("memberId");
+      const mId = params.get("memberId") || params.get("memberid");
       const action = params.get("action");
       if (action === "new") {
         setIsAddingNewMember(true);
@@ -187,7 +200,26 @@ export default function ProfilePage() {
       return null;
     }
     if (isAdmin && selectedMemberId) {
-      return members.find((m) => m.id === selectedMemberId) || currentUser;
+      if (currentUser && currentUser.id === selectedMemberId) return currentUser;
+      const found = members.find(
+        (m) => m.id === selectedMemberId || (m as any).auth_user_id === selectedMemberId
+      );
+      if (found) return found;
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("ad8_data_members");
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              const localFound = list.find(
+                (m: any) => m.id === selectedMemberId || m.auth_user_id === selectedMemberId
+              );
+              if (localFound) return localFound;
+            }
+          }
+        } catch {}
+      }
+      return null;
     }
     if (currentUser) {
       const fromStore = members.find(
@@ -207,35 +239,36 @@ export default function ProfilePage() {
     "general" | "privacy" | "employment" | "education" | "donations" | "matrimony"
   >("general");
 
-  // User's Submitted Donations (Requirement 13.6)
-  const myDonations = currentUser
+  // User's Submitted Donations (shows target member's donations when admin is editing, or current user's donations)
+  const targetMemberForDonations = effectiveMember || currentUser;
+  const myDonations = targetMemberForDonations
     ? donations.filter(
-        (d) =>
-          d.user_id === currentUser.id ||
-          d.donor_id === currentUser.id ||
-          (d.mobile_number && d.mobile_number === currentUser.phone) ||
-          (d.donor_name && d.donor_name.toLowerCase() === currentUser.name.toLowerCase())
-      )
+      (d) =>
+        d.user_id === targetMemberForDonations.id ||
+        d.donor_id === targetMemberForDonations.id ||
+        (d.mobile_number && targetMemberForDonations.phone && d.mobile_number === targetMemberForDonations.phone) ||
+        (d.donor_name && targetMemberForDonations.name && d.donor_name.toLowerCase() === targetMemberForDonations.name.toLowerCase())
+    )
     : [];
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Form states initialized with currentUser data
-  const [username, setUsername] = useState(currentUser?.username || "");
+  // Form states initialized with effectiveMember or currentUser data
+  const [username, setUsername] = useState(effectiveMember?.username || currentUser?.username || "");
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [name, setName] = useState(currentUser?.name || "");
-  const [email, setEmail] = useState(currentUser?.email || "");
-  const [phone, setPhone] = useState(currentUser?.phone || "");
-  const [address, setAddress] = useState(currentUser?.address || "");
-  const [nativePlace, setNativePlace] = useState(currentUser?.native_place || "અડાઆઠમ");
-  const [city, setCity] = useState(currentUser?.city || "મોડાસા");
-  const [sasriName, setSasriName] = useState(currentUser?.sasri_name || "");
-  const [piyarName, setPiyarName] = useState(currentUser?.piyar_name || "");
-  const [maritalStatus, setMaritalStatus] = useState(currentUser?.marital_status || "પરણિત (Married)");
-  const [bloodGroup, setBloodGroup] = useState(currentUser?.blood_group || "B+");
-  const [photoUrl, setPhotoUrl] = useState(currentUser?.photo_url || "");
-  const [jati, setJati] = useState<string>(currentUser?.jati || "અડાઆઠમ દરજી");
-  const [dod, setDod] = useState<string>(currentUser?.dod || "");
-  const [dob, setDob] = useState<string>(currentUser?.dob || "");
+  const [name, setName] = useState(effectiveMember?.name || currentUser?.name || "");
+  const [email, setEmail] = useState(effectiveMember?.email || currentUser?.email || "");
+  const [phone, setPhone] = useState(effectiveMember?.phone || currentUser?.phone || "");
+  const [address, setAddress] = useState(effectiveMember?.address || currentUser?.address || "");
+  const [nativePlace, setNativePlace] = useState(effectiveMember?.native_place || currentUser?.native_place || "અડાઆઠમ");
+  const [city, setCity] = useState(effectiveMember?.city || currentUser?.city || "મોડાસા");
+  const [sasriName, setSasriName] = useState(effectiveMember?.sasri_name || currentUser?.sasri_name || "");
+  const [piyarName, setPiyarName] = useState(effectiveMember?.piyar_name || currentUser?.piyar_name || "");
+  const [maritalStatus, setMaritalStatus] = useState(effectiveMember?.marital_status || currentUser?.marital_status || "પરણિત (Married)");
+  const [bloodGroup, setBloodGroup] = useState(effectiveMember?.blood_group || currentUser?.blood_group || "B+");
+  const [photoUrl, setPhotoUrl] = useState(effectiveMember?.photo_url || currentUser?.photo_url || "");
+  const [jati, setJati] = useState<string>(effectiveMember?.jati || currentUser?.jati || "અડાઆઠમ દરજી");
+  const [dod, setDod] = useState<string>(effectiveMember?.dod || currentUser?.dod || "");
+  const [dob, setDob] = useState<string>(effectiveMember?.dob || currentUser?.dob || "");
   const [showProfilePhotoCropModal, setShowProfilePhotoCropModal] = useState(false);
 
   // Matrimony states
@@ -264,9 +297,9 @@ export default function ProfilePage() {
   // Eligibility: strictly Unmarried (અપરણિત). Married & Engaged are NOT eligible.
   const isUnmarried = Boolean(
     maritalStatus &&
-      (maritalStatus.startsWith("અપરણિત") ||
-        maritalStatus.toLowerCase().includes("unmarried") ||
-        maritalStatus.toLowerCase().includes("single"))
+    (maritalStatus.startsWith("અપરણિત") ||
+      maritalStatus.toLowerCase().includes("unmarried") ||
+      maritalStatus.toLowerCase().includes("single"))
   );
 
   // If user is married (પરણિત) and currently on matrimony tab, auto-switch to general
@@ -296,7 +329,7 @@ export default function ProfilePage() {
 
   // Dynamic Family Relations state
   const [familyRelations, setFamilyRelations] = useState<FamilyRelationDetail[]>(() =>
-    getInitialFamilyRelations(currentUser)
+    getInitialFamilyRelations(effectiveMember || currentUser)
   );
   const [newRelationType, setNewRelationType] = useState("");
   const [newRelationName, setNewRelationName] = useState("");
@@ -365,16 +398,17 @@ export default function ProfilePage() {
     setNewMemberPiyarName(piyarName || currentUser?.piyar_name || "");
 
     const copiedRelations: FamilyRelationDetail[] = [];
-    if (currentUser) {
+    const targetHead = effectiveMember || currentUser;
+    if (targetHead) {
       copiedRelations.push({
         id: `rel-head-${Date.now()}`,
         relation: "મુખ્ય સભ્ય (Self/Head)",
-        name: currentUser.name,
-        phone: currentUser.phone,
-        city: currentUser.city,
-        native_place: currentUser.native_place,
+        name: targetHead.name,
+        phone: targetHead.phone,
+        city: targetHead.city,
+        native_place: targetHead.native_place,
         is_registered: true,
-        member_id: currentUser.id,
+        member_id: targetHead.id,
       });
     }
     familyRelations.forEach((r) => {
@@ -404,16 +438,17 @@ export default function ProfilePage() {
     setNewMemberGender("male");
 
     const initialCopiedRelations: FamilyRelationDetail[] = [];
-    if (currentUser) {
+    const targetHead = effectiveMember || currentUser;
+    if (targetHead) {
       initialCopiedRelations.push({
         id: `rel-head-${Date.now()}`,
         relation: "મુખ્ય સભ્ય (Self/Head)",
-        name: currentUser.name,
-        phone: currentUser.phone,
-        city: currentUser.city,
-        native_place: currentUser.native_place,
+        name: targetHead.name,
+        phone: targetHead.phone,
+        city: targetHead.city,
+        native_place: targetHead.native_place,
         is_registered: true,
-        member_id: currentUser.id,
+        member_id: targetHead.id,
       });
     }
     familyRelations.forEach((r) => {
@@ -476,35 +511,28 @@ export default function ProfilePage() {
       is_lifetime_member: false,
       completeness: 85,
       created_at: new Date().toISOString(),
-      privacy: {
-        phone: "members",
-        address: "members",
-        photo: "public",
-        family: "members",
-        business: "public",
-        employment: "members",
-        education: "members",
-      },
+      privacy: { ...DEFAULT_MEMBER_PRIVACY },
     };
 
     // 1. Add to DataContext
     addMember(createdMember);
 
     // 2. Add family relationship
-    if (currentUser) {
+    const parentMember = effectiveMember || currentUser;
+    if (parentMember) {
       addRelationship({
-        from_member_id: currentUser.id,
-        from_member_name: currentUser.name,
+        from_member_id: parentMember.id,
+        from_member_name: parentMember.name,
         to_member_id: newId,
         to_member_name: createdMember.name,
         relationship: "other",
         relationship_label: newMemberRelation.split(" (")[0] || "સંબંધી",
         status: "approved",
-        requested_by: currentUser.id,
-        approved_by: currentUser.name,
+        requested_by: currentUser?.id || parentMember.id,
+        approved_by: currentUser?.name || parentMember.name,
       });
 
-      if (addLog) {
+      if (addLog && currentUser) {
         addLog(
           "પરિવારમાં નવા સભ્યની નોંધણી",
           `${createdMember.name} (${newMemberRelation})`,
@@ -543,15 +571,15 @@ export default function ProfilePage() {
   };
 
   // ૧. બિઝનેસ / વ્યવસાય (ઉપર બિઝનેસ)
-  const [businessOwnerName, setBusinessOwnerName] = useState(currentUser?.business?.owner_name || currentUser?.name || "");
-  const [businessName, setBusinessName] = useState(currentUser?.business?.business_name || "");
-  const [businessCategory, setBusinessCategory] = useState(currentUser?.business?.category || "");
-  const [businessRole, setBusinessRole] = useState(currentUser?.business?.role || "Owner");
-  const [businessCity, setBusinessCity] = useState(currentUser?.business?.city || currentUser?.city || "");
-  const [businessPhone, setBusinessPhone] = useState(currentUser?.business?.phone || currentUser?.phone || "");
-  const [businessAddress, setBusinessAddress] = useState(currentUser?.business?.address || "");
-  const [businessBannerUrl, setBusinessBannerUrl] = useState(currentUser?.business?.banner_url || "");
-  const [businessIsPublic, setBusinessIsPublic] = useState<boolean>(currentUser?.business?.is_public ?? true);
+  const [businessOwnerName, setBusinessOwnerName] = useState(effectiveMember?.business?.owner_name || effectiveMember?.name || (!selectedMemberId ? currentUser?.business?.owner_name || currentUser?.name : "") || "");
+  const [businessName, setBusinessName] = useState(effectiveMember?.business?.business_name || (!selectedMemberId ? currentUser?.business?.business_name : "") || "");
+  const [businessCategory, setBusinessCategory] = useState(effectiveMember?.business?.category || (!selectedMemberId ? currentUser?.business?.category : "") || "");
+  const [businessRole, setBusinessRole] = useState(effectiveMember?.business?.role || (!selectedMemberId ? currentUser?.business?.role : "") || "Owner");
+  const [businessCity, setBusinessCity] = useState(effectiveMember?.business?.city || effectiveMember?.city || (!selectedMemberId ? currentUser?.business?.city || currentUser?.city : "") || "");
+  const [businessPhone, setBusinessPhone] = useState(effectiveMember?.business?.phone || effectiveMember?.phone || (!selectedMemberId ? currentUser?.business?.phone || currentUser?.phone : "") || "");
+  const [businessAddress, setBusinessAddress] = useState(effectiveMember?.business?.address || (!selectedMemberId ? currentUser?.business?.address : "") || "");
+  const [businessBannerUrl, setBusinessBannerUrl] = useState(effectiveMember?.business?.banner_url || (!selectedMemberId ? currentUser?.business?.banner_url : "") || "");
+  const [businessIsPublic, setBusinessIsPublic] = useState<boolean>(effectiveMember?.business?.is_public ?? (!selectedMemberId ? currentUser?.business?.is_public : true) ?? true);
 
   const handleBusinessPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -570,19 +598,19 @@ export default function ProfilePage() {
   };
 
   // ૨. નોકરી / રોજગાર (નીચે નોકરી)
-  const [jobFullName, setJobFullName] = useState(currentUser?.employment?.full_name || currentUser?.name || "");
-  const [jobSector, setJobSector] = useState(currentUser?.employment?.job_type || "ખાનગી ક્ષેત્ર (Private Sector)");
-  const [jobCompany, setJobCompany] = useState(currentUser?.employment?.company || "");
-  const [jobTitle, setJobTitle] = useState(currentUser?.employment?.job_title || "");
-  const [jobCity, setJobCity] = useState(currentUser?.employment?.city || currentUser?.city || "");
-  const [jobPhone, setJobPhone] = useState(currentUser?.employment?.phone || currentUser?.phone || "");
-  const [jobIndustry, setJobIndustry] = useState(currentUser?.employment?.industry || "");
-  const [jobExperience, setJobExperience] = useState(currentUser?.employment?.experience_years || "");
-  const [jobIsPublic, setJobIsPublic] = useState<boolean>(currentUser?.employment?.is_public ?? true);
+  const [jobFullName, setJobFullName] = useState(effectiveMember?.employment?.full_name || effectiveMember?.name || (!selectedMemberId ? currentUser?.employment?.full_name || currentUser?.name : "") || "");
+  const [jobSector, setJobSector] = useState(effectiveMember?.employment?.job_type || (!selectedMemberId ? currentUser?.employment?.job_type : "") || "ખાનગી ક્ષેત્ર (Private Sector)");
+  const [jobCompany, setJobCompany] = useState(effectiveMember?.employment?.company || (!selectedMemberId ? currentUser?.employment?.company : "") || "");
+  const [jobTitle, setJobTitle] = useState(effectiveMember?.employment?.job_title || (!selectedMemberId ? currentUser?.employment?.job_title : "") || "");
+  const [jobCity, setJobCity] = useState(effectiveMember?.employment?.city || effectiveMember?.city || (!selectedMemberId ? currentUser?.employment?.city || currentUser?.city : "") || "");
+  const [jobPhone, setJobPhone] = useState(effectiveMember?.employment?.phone || effectiveMember?.phone || (!selectedMemberId ? currentUser?.employment?.phone || currentUser?.phone : "") || "");
+  const [jobIndustry, setJobIndustry] = useState(effectiveMember?.employment?.industry || (!selectedMemberId ? currentUser?.employment?.industry : "") || "");
+  const [jobExperience, setJobExperience] = useState(effectiveMember?.employment?.experience_years || (!selectedMemberId ? currentUser?.employment?.experience_years : "") || "");
+  const [jobIsPublic, setJobIsPublic] = useState<boolean>(effectiveMember?.employment?.is_public ?? (!selectedMemberId ? currentUser?.employment?.is_public : true) ?? true);
 
   // Education Multiple Degrees State (એક વ્યક્તિ બહુવિધ ડિગ્રીઓ ઉમેરી શકે છે)
   const [educationRecords, setEducationRecords] = useState<MemberEducationRecord[]>(
-    () => getInitialEducationRecords(currentUser)
+    () => getInitialEducationRecords(effectiveMember || currentUser)
   );
   const [selectedEduMemberId, setSelectedEduMemberId] = useState<string>("self");
   const [eduCategory, setEduCategory] = useState<string>(SAMITI_EDUCATION_CATEGORIES[0]);
@@ -636,7 +664,7 @@ export default function ProfilePage() {
       return;
     }
 
-    let memberName = currentUser?.name || name || "મુખ્ય સભ્ય";
+    let memberName = effectiveMember?.name || name || (!selectedMemberId ? currentUser?.name : "") || "મુખ્ય સભ્ય";
     if (selectedEduMemberId !== "self") {
       const rel = familyRelations.find((r) => r.id === selectedEduMemberId);
       memberName = rel ? `${rel.name} (${rel.relation})` : "પરિવાર સભ્ય";
@@ -649,12 +677,12 @@ export default function ProfilePage() {
       updatedRecords = educationRecords.map((rec) =>
         rec.id === editingDegreeId
           ? {
-              ...rec,
-              member_id: selectedEduMemberId,
-              member_name: memberName,
-              degree: eduDegreeInput.trim(),
-              field_of_study: eduCategory,
-            }
+            ...rec,
+            member_id: selectedEduMemberId,
+            member_name: memberName,
+            degree: eduDegreeInput.trim(),
+            field_of_study: eduCategory,
+          }
           : rec
       );
       setEditingDegreeId(null);
@@ -714,14 +742,15 @@ export default function ProfilePage() {
     setEduDegreeInput("");
   };
 
-  // Privacy Settings state
-  const [privacyPhone, setPrivacyPhone] = useState<PrivacyVisibility>(currentUser?.privacy.phone || "members");
-  const [privacyAddress, setPrivacyAddress] = useState<PrivacyVisibility>(currentUser?.privacy.address || "members");
-  const [privacyPhoto, setPrivacyPhoto] = useState<PrivacyVisibility>(currentUser?.privacy.photo || "public");
-  const [privacyFamily, setPrivacyFamily] = useState<PrivacyVisibility>(currentUser?.privacy.family || "members");
-  const [privacyBusiness, setPrivacyBusiness] = useState<PrivacyVisibility>(currentUser?.privacy.business || "public");
-  const [privacyEmployment, setPrivacyEmployment] = useState<PrivacyVisibility>(currentUser?.privacy.employment || "members");
-  const [privacyEducation, setPrivacyEducation] = useState<PrivacyVisibility>(currentUser?.privacy.education || "members");
+  // Privacy Settings state (Default: mobile is private, all else public)
+  const [privacyPhone, setPrivacyPhone] = useState<PrivacyVisibility>(effectiveMember?.privacy?.phone || (!selectedMemberId ? currentUser?.privacy?.phone : undefined) || DEFAULT_MEMBER_PRIVACY.phone);
+  const [privacyDob, setPrivacyDob] = useState<PrivacyVisibility>(effectiveMember?.privacy?.dob || (!selectedMemberId ? currentUser?.privacy?.dob : undefined) || DEFAULT_MEMBER_PRIVACY.dob || "public");
+  const [privacyAddress, setPrivacyAddress] = useState<PrivacyVisibility>(effectiveMember?.privacy?.address || (!selectedMemberId ? currentUser?.privacy?.address : undefined) || DEFAULT_MEMBER_PRIVACY.address);
+  const [privacyPhoto, setPrivacyPhoto] = useState<PrivacyVisibility>(effectiveMember?.privacy?.photo || (!selectedMemberId ? currentUser?.privacy?.photo : undefined) || DEFAULT_MEMBER_PRIVACY.photo);
+  const [privacyFamily, setPrivacyFamily] = useState<PrivacyVisibility>(effectiveMember?.privacy?.family || (!selectedMemberId ? currentUser?.privacy?.family : undefined) || DEFAULT_MEMBER_PRIVACY.family);
+  const [privacyBusiness, setPrivacyBusiness] = useState<PrivacyVisibility>(effectiveMember?.privacy?.business || (!selectedMemberId ? currentUser?.privacy?.business : undefined) || DEFAULT_MEMBER_PRIVACY.business);
+  const [privacyEmployment, setPrivacyEmployment] = useState<PrivacyVisibility>(effectiveMember?.privacy?.employment || (!selectedMemberId ? currentUser?.privacy?.employment : undefined) || DEFAULT_MEMBER_PRIVACY.employment);
+  const [privacyEducation, setPrivacyEducation] = useState<PrivacyVisibility>(effectiveMember?.privacy?.education || (!selectedMemberId ? currentUser?.privacy?.education : undefined) || DEFAULT_MEMBER_PRIVACY.education);
 
 
   const handleAddRelation = () => {
@@ -828,6 +857,7 @@ export default function ProfilePage() {
           business: "public",
           employment: "members",
           education: "members",
+          dob: "members",
         },
       } as Member;
 
@@ -943,15 +973,13 @@ export default function ProfilePage() {
       business_name: adBusinessName.trim(),
       category: adCategory.trim() || "સામાન્ય વેપાર",
       description: adDescription.trim() || `${adBusinessName} - વ્યવસાય જાહેરાત`,
-      owner_name: adOwnerName.trim() || currentUser?.name || "ઓનર",
-      contact_number: adPhone.trim() || currentUser?.phone || "",
-      address: adAddress.trim() || currentUser?.address || "",
-      image_url:
-        adImageUrl.trim() ||
-        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop&q=80",
+      owner_name: adOwnerName.trim() || effectiveMember?.name || currentUser?.name || "ઓનર",
+      contact_number: adPhone.trim() || effectiveMember?.phone || currentUser?.phone || "",
+      address: adAddress.trim() || effectiveMember?.address || currentUser?.address || "",
+      image_url: adImageUrl.trim() || null,
       website_link: adWebsite.trim() || undefined,
       status: "pending",
-      submitted_by: currentUser?.id,
+      submitted_by: effectiveMember?.id || currentUser?.id,
     });
 
     if (addLog && currentUser) {
@@ -972,6 +1000,7 @@ export default function ProfilePage() {
     e.preventDefault();
     const privacyUpdates = {
       phone: privacyPhone,
+      dob: privacyDob,
       address: privacyAddress,
       photo: privacyPhoto,
       family: privacyFamily,
@@ -983,6 +1012,15 @@ export default function ProfilePage() {
       updateMember(effectiveMember.id, {
         privacy: { ...(effectiveMember.privacy || {}), ...privacyUpdates },
       });
+      // Sync to backend /api/profile
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId: effectiveMember.id,
+          updates: { privacy: privacyUpdates },
+        }),
+      }).catch((err) => console.warn("[privacy sync error]", err));
     }
     if (currentUser && effectiveMember?.id === currentUser.id) {
       updatePrivacySettings(privacyUpdates);
@@ -1059,7 +1097,7 @@ export default function ProfilePage() {
             city: businessCity || targetUser.city || "મોડાસા",
             address: businessAddress || targetUser.address || "",
             phone: businessPhone || targetUser.phone || "",
-            cover_url: businessBannerUrl || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800",
+            cover_url: businessBannerUrl || "",
             is_featured: false,
             is_paid: false,
             status: "active",
@@ -1183,6 +1221,15 @@ export default function ProfilePage() {
 
       setIsAvailableForMatrimony(false);
       setIsPublicListing(false);
+
+      setPrivacyPhone(DEFAULT_MEMBER_PRIVACY.phone);
+      setPrivacyDob(DEFAULT_MEMBER_PRIVACY.dob || "public");
+      setPrivacyAddress(DEFAULT_MEMBER_PRIVACY.address);
+      setPrivacyPhoto(DEFAULT_MEMBER_PRIVACY.photo);
+      setPrivacyFamily(DEFAULT_MEMBER_PRIVACY.family);
+      setPrivacyBusiness(DEFAULT_MEMBER_PRIVACY.business);
+      setPrivacyEmployment(DEFAULT_MEMBER_PRIVACY.employment);
+      setPrivacyEducation(DEFAULT_MEMBER_PRIVACY.education);
       return;
     }
 
@@ -1224,8 +1271,8 @@ export default function ProfilePage() {
         effectiveMember.business?.is_public !== undefined
           ? effectiveMember.business.is_public
           : linkedBiz
-          ? linkedBiz.status === "active" && linkedBiz.is_public !== false
-          : true
+            ? linkedBiz.status === "active" && linkedBiz.is_public !== false
+            : true
       );
 
       // Job / Employment fields (નીચે નોકરી)
@@ -1253,14 +1300,25 @@ export default function ProfilePage() {
       if (effectiveMember.matrimony?.privacy) {
         setMatrimonyPrivacy(effectiveMember.matrimony.privacy);
       }
+
+      const memberPriv = effectiveMember.privacy || {};
+      setPrivacyPhone(memberPriv.phone || DEFAULT_MEMBER_PRIVACY.phone);
+      setPrivacyDob(memberPriv.dob || DEFAULT_MEMBER_PRIVACY.dob || "public");
+      setPrivacyAddress(memberPriv.address || DEFAULT_MEMBER_PRIVACY.address);
+      setPrivacyPhoto(memberPriv.photo || DEFAULT_MEMBER_PRIVACY.photo);
+      setPrivacyFamily(memberPriv.family || DEFAULT_MEMBER_PRIVACY.family);
+      setPrivacyBusiness(memberPriv.business || DEFAULT_MEMBER_PRIVACY.business);
+      setPrivacyEmployment(memberPriv.employment || DEFAULT_MEMBER_PRIVACY.employment);
+      setPrivacyEducation(memberPriv.education || DEFAULT_MEMBER_PRIVACY.education);
     }
   }, [effectiveMember]);
 
-  // User connected family count (safe against null currentUser)
-  const userFamilyCount = currentUser
+  // User connected family count (safe against null currentUser or effectiveMember)
+  const targetMemberForFamily = effectiveMember || currentUser;
+  const userFamilyCount = targetMemberForFamily
     ? relationships.filter(
-        (r) => r.from_member_id === currentUser.id || r.to_member_id === currentUser.id
-      ).length
+      (r) => r.from_member_id === targetMemberForFamily.id || r.to_member_id === targetMemberForFamily.id
+    ).length
     : 0;
 
   // Filter requested advertisements for the current/selected user
@@ -1289,7 +1347,6 @@ export default function ProfilePage() {
   const visibilityOptions: { value: PrivacyVisibility; label: string }[] = [
     { value: "public", label: "જાહેર (કોઈપણ જોઈ શકે)" },
     { value: "members", label: "માત્ર લોગિન કરેલા સભ્યો" },
-    { value: "family", label: "માત્ર મંજૂર પરિવારના સભ્યો" },
     { value: "private", label: "ખાનગી (માત્ર હું અને એડમિન)" },
   ];
 
@@ -1633,11 +1690,10 @@ export default function ProfilePage() {
       <div className="flex border-b border-ivory-300 mb-8 space-x-1 sm:space-x-4 overflow-x-auto">
         <button
           onClick={() => setActiveTab("general")}
-          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${
-            activeTab === "general"
+          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === "general"
               ? "border-saffron-600 text-saffron-700"
               : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-          }`}
+            }`}
         >
           <User className="w-4 h-4 inline-block mr-1.5" />
           સામાન્ય માહિતી
@@ -1645,11 +1701,10 @@ export default function ProfilePage() {
 
         <button
           onClick={() => setActiveTab("employment")}
-          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${
-            activeTab === "employment"
+          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === "employment"
               ? "border-saffron-600 text-saffron-700"
               : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-          }`}
+            }`}
         >
           <Briefcase className="w-4 h-4 inline-block mr-1.5" />
           વ્યવસાય & નોકરી
@@ -1657,11 +1712,10 @@ export default function ProfilePage() {
 
         <button
           onClick={() => setActiveTab("education")}
-          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${
-            activeTab === "education"
+          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === "education"
               ? "border-saffron-600 text-saffron-700"
               : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-          }`}
+            }`}
         >
           <GraduationCap className="w-4 h-4 inline-block mr-1.5" />
           શિક્ષણની વિગત (Education)
@@ -1669,21 +1723,19 @@ export default function ProfilePage() {
 
         <button
           onClick={() => setActiveTab("donations")}
-          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === "donations"
+          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === "donations"
               ? "border-saffron-600 text-saffron-700"
               : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-          }`}
+            }`}
         >
           <Heart className="w-4 h-4" />
           <span>મારા દાન (My Donations)</span>
           {myDonations.length > 0 && (
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                activeTab === "donations"
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeTab === "donations"
                   ? "bg-saffron-100 text-saffron-800"
                   : "bg-ivory-200 text-charcoal-700"
-              }`}
+                }`}
             >
               {myDonations.length}
             </span>
@@ -1694,11 +1746,10 @@ export default function ProfilePage() {
         {isUnmarried && (
           <button
             onClick={() => setActiveTab("matrimony")}
-            className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === "matrimony"
+            className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === "matrimony"
                 ? "border-rose-600 text-rose-700 bg-rose-50/50"
                 : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-            }`}
+              }`}
           >
             <Heart className="w-4 h-4 text-rose-500 fill-rose-100" />
             <span>લગ્ન વિષયક (Matrimony)</span>
@@ -1710,11 +1761,10 @@ export default function ProfilePage() {
 
         <button
           onClick={() => setActiveTab("privacy")}
-          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${
-            activeTab === "privacy"
+          className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === "privacy"
               ? "border-saffron-600 text-saffron-700"
               : "border-transparent text-charcoal-600 hover:text-charcoal-900"
-          }`}
+            }`}
         >
           <Lock className="w-4 h-4 inline-block mr-1.5" />
           ગોપનીયતા સેટિંગ્સ (Privacy)
@@ -1726,680 +1776,94 @@ export default function ProfilePage() {
         <div className="space-y-8">
           <form onSubmit={handleSaveGeneral} className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">પૂરું નામ *</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-charcoal-700">
-                  યુઝરનેમ (Username) *
-                </label>
-                <span className="text-[10px] text-saffron-700 font-semibold bg-saffron-50 px-2 py-0.5 rounded-full border border-saffron-200">
-                  લૉગિન આઈડી (Login ID)
-                </span>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 font-mono text-xs select-none">
-                  @
-                </span>
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">પૂરું નામ *</label>
                 <input
                   type="text"
-                  value={username}
-                  onChange={(e) => {
-                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
-                    setUsername(val);
-                    if (usernameError) setUsernameError(null);
-                  }}
-                  placeholder="દા.ત. utsavdarji"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
-                  minLength={3}
-                  maxLength={30}
-                  className={`w-full pl-7 pr-3.5 py-2.5 text-xs border rounded-xl focus:outline-none font-mono font-medium ${
-                    usernameError
-                      ? "border-rose-400 bg-rose-50/30 focus:border-rose-500"
-                      : "border-ivory-300 focus:border-saffron-500"
-                  }`}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
-              {usernameError ? (
-                <p className="text-[10px] text-rose-600 mt-1 font-medium">{usernameError}</p>
-              ) : (
-                <p className="text-[10px] text-charcoal-400 mt-1">
-                  અંગ્રેજી અક્ષરો, અંકો અથવા (_) • લૉગિન માટે આ યુઝરનેમ ઉપયોગી થશે
-                </p>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">મોબાઈલ નંબર (Mobile Number) *</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-bold"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-charcoal-700">ઈમેઈલ સરનામું (Email Address)</label>
-                {currentUser?.email && (
-                  <span className="text-[10px] font-bold text-forest-700 bg-forest-50 px-2 py-0.2 rounded-full border border-forest-200">
-                    ચકાસાયેલ ✓ (Verified)
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-charcoal-700">
+                    યુઝરનેમ (Username) *
+                  </label>
+                  <span className="text-[10px] text-saffron-700 font-semibold bg-saffron-50 px-2 py-0.5 rounded-full border border-saffron-200">
+                    લૉગિન આઈડી (Login ID)
                   </span>
-                )}
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="દા.ત. member@example.com"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">મૂળ વતન (ગામ) *</label>
-              <select
-                value={nativePlace}
-                onChange={(e) => setNativePlace(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-900"
-              >
-                {SAMITI_NATIVE_PLACES.map((place) => (
-                  <option key={place} value={place}>
-                    {place}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">હાલનું શહેર *</label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">સાસરીનું નામ (Sasri Name)</label>
-              <input
-                type="text"
-                value={sasriName}
-                onChange={(e) => setSasriName(e.target.value)}
-                placeholder="દા.ત. અમદાવાદ, મોડાસા, હિંમતનગર"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">પિયરનું નામ (Piyar Name)</label>
-              <input
-                type="text"
-                value={piyarName}
-                onChange={(e) => setPiyarName(e.target.value)}
-                placeholder="દા.ત. અડાઆઠમ, ધનસુરા"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">લગ્ન સ્થિતિ (Married Status) *</label>
-              <select
-                value={maritalStatus}
-                onChange={(e) => {
-                  const newStatus = e.target.value;
-                  setMaritalStatus(newStatus);
-                  if (!newStatus.startsWith("અપરણિત")) {
-                    setIsAvailableForMatrimony(false);
-                    setIsPublicListing(false);
-                  }
-                }}
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
-              >
-                <option value="પરણિત (Married)">પરણિત (Married)</option>
-                <option value="અપરણિત (Unmarried)">અપરણિત (Unmarried)</option>
-                <option value="સગાઈ થયેલ (Engaged)">સગાઈ થયેલ (Engaged)</option>
-                <option value="અન્ય (Other)">અન્ય (Other)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">બ્લડ ગ્રૂપ</label>
-              <select
-                value={bloodGroup}
-                onChange={(e) => setBloodGroup(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none"
-              >
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                જાતિ (Jati / Caste) *
-              </label>
-              <input
-                type="text"
-                value={jati}
-                onChange={(e) => setJati(e.target.value)}
-                placeholder="દા.ત. અડાઆઠમ દરજી, દરજી, શ્રીમાળી"
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                જન્મ તારીખ (DOB)
-              </label>
-              <input
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">રહેઠાણનું સરનામું</label>
-              <textarea
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                rows={2}
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-            </div>
-
-            {/* મેટ્રિમોની ઓપ્ટ-ઇન કાર્ડ (Matrimony Opt-in & Public Listing Consent) - ONLY SHOWN IF UNMARRIED */}
-            {isUnmarried && (
-              <div className="sm:col-span-2 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/80 via-pink-50/50 to-amber-50/50 border border-rose-200/80 shadow-xs space-y-3">
-                <div className="flex items-start gap-3">
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 font-mono text-xs select-none">
+                    @
+                  </span>
                   <input
-                    type="checkbox"
-                    id="matrimonyOptInGeneral"
-                    checked={isAvailableForMatrimony}
-                    onChange={(e) => setIsAvailableForMatrimony(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-rose-600 rounded border-rose-300 focus:ring-rose-500 cursor-pointer"
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                      setUsername(val);
+                      if (usernameError) setUsernameError(null);
+                    }}
+                    placeholder="દા.ત. utsavdarji"
+                    required
+                    minLength={3}
+                    maxLength={30}
+                    className={`w-full pl-7 pr-3.5 py-2.5 text-xs border rounded-xl focus:outline-none font-mono font-medium ${usernameError
+                        ? "border-rose-400 bg-rose-50/30 focus:border-rose-500"
+                        : "border-ivory-300 focus:border-saffron-500"
+                      }`}
                   />
-                  <div className="flex-1">
-                    <label htmlFor="matrimonyOptInGeneral" className="text-xs sm:text-sm font-bold text-rose-950 flex items-center gap-1.5 cursor-pointer">
-                      <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
-                      <span>૧. મેટ્રિમોની માટે ઉપલબ્ધ (Available for Matrimony)</span>
-                    </label>
-                    <p className="text-[11px] text-charcoal-600 mt-0.5 leading-relaxed">
-                      અપરણિત સભ્ય તરીકે યોગ્ય જીવનસાથીની શોધ માટે સમાજના મેટ્રિમોની વિભાગમાં જોડાઓ.
-                    </p>
-                  </div>
                 </div>
-
-                {isAvailableForMatrimony && (
-                  <div className="mt-3 pt-3 border-t border-rose-200/60 space-y-3">
-                    {/* Selection 2: Public Listing Consent */}
-                    <div className="p-3 bg-white rounded-xl border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <span className="font-bold text-xs text-charcoal-900 block">
-                          ૨. મારી પ્રોફાઇલ Public Listing માં બતાવવી છે?
-                        </span>
-                        <span className="text-[11px] text-charcoal-500 block">
-                          Header માં રહેલા મેટ્રિમોની પબ્લિક પેજ પર સામાન્ય મુલાકાતીઓ (Visitors) માટે પ્રોફાઇલ દર્શાવવા સંમતિ આપો.
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="generalPublicListing"
-                            checked={isPublicListing === true}
-                            onChange={() => setIsPublicListing(true)}
-                            className="text-rose-600 focus:ring-rose-500"
-                          />
-                          <span>હા (Yes)</span>
-                        </label>
-                        <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="generalPublicListing"
-                            checked={isPublicListing === false}
-                            onChange={() => setIsPublicListing(false)}
-                            className="text-rose-600 focus:ring-rose-500"
-                          />
-                          <span>ના (No)</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                          ઊંચાઈ (Height)
-                        </label>
-                        <input
-                          type="text"
-                          value={matrimonyHeight}
-                          onChange={(e) => setMatrimonyHeight(e.target.value)}
-                          placeholder="દા.ત. 5 ફૂટ 8 ઇંચ (172 cm)"
-                          className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                          વાન / રંગરૂપ (Complexion)
-                        </label>
-                        <input
-                          type="text"
-                          value={matrimonyComplexion}
-                          onChange={(e) => setMatrimonyComplexion(e.target.value)}
-                          placeholder="દા.ત. ગોરો, ઘઉંવર્ણ"
-                          className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                          અપેક્ષિત જીવનસાથી (Partner Expectations)
-                        </label>
-                        <input
-                          type="text"
-                          value={matrimonyExpectations}
-                          onChange={(e) => setMatrimonyExpectations(e.target.value)}
-                          placeholder="દા.ત. શિક્ષિત (ગ્રેજ્યુએટ/એન્જિનિયર/બેંકિંગ), સંસ્કારી પાત્ર"
-                          className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
-                        />
-                      </div>
-                      <div className="sm:col-span-2 flex items-center justify-between pt-1">
-                        <span className="text-[11px] text-rose-800 font-semibold flex items-center gap-1">
-                          <Sparkles className="w-3.5 h-3.5 text-rose-600" />
-                          <span>વધુ ગોપનીયતા & બાયો સેટિંગ્સ &apos;લગ્ન વિષયક (Matrimony)&apos; ટેબમાં ઉપલબ્ધ છે.</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab("matrimony")}
-                          className="text-xs font-bold text-rose-700 hover:text-rose-900 underline"
-                        >
-                          મેટ્રિમોની ટેબ ખોલો →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                {usernameError ? (
+                  <p className="text-[10px] text-rose-600 mt-1 font-medium">{usernameError}</p>
+                ) : (
+                  <p className="text-[10px] text-charcoal-400 mt-1">
+                    અંગ્રેજી અક્ષરો, અંકો અથવા (_) • લૉગિન માટે આ યુઝરનેમ ઉપયોગી થશે
+                  </p>
                 )}
               </div>
-            )}
 
-            {/* પારિવારિક સંબંધો (Family Relations) - AT THE END */}
-            <div className="sm:col-span-2 bg-gradient-to-b from-ivory-50/80 to-white rounded-2xl border border-ivory-300 p-4 sm:p-5 space-y-4 mt-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-ivory-200">
-                <div className="flex items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-saffron-100 text-saffron-800">
-                    <Users className="w-4 h-4" />
-                  </span>
-                  <div>
-                    <h3 className="font-bold text-xs sm:text-sm text-charcoal-900">
-                      પારિવારિક સંબંધો (Family Relations)
-                    </h3>
-                    <p className="text-[11px] text-charcoal-500">
-                      પરિવારના સભ્યો, સંબંધો અને મોબાઇલ નંબર ઉમેરો
-                    </p>
-                  </div>
-                </div>
-
-                <span className="self-start sm:self-auto text-[11px] font-bold text-saffron-800 bg-saffron-50 border border-saffron-200 px-3 py-1 rounded-full shadow-xs">
-                  કુલ સંબંધો: {familyRelations.length}
-                </span>
-              </div>
-
-              {/* List of Added Relations */}
-              {familyRelations.length > 0 ? (
-                <div className="space-y-2.5">
-                  {familyRelations.map((rel, index) => (
-                    <div
-                      key={rel.id}
-                      className="p-3.5 sm:px-4 sm:py-3 bg-white rounded-xl border border-ivory-300 shadow-xs hover:border-saffron-300 transition-all flex items-center justify-between gap-3 group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-7 h-7 rounded-lg bg-saffron-50 text-saffron-800 border border-saffron-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                          {index + 1}
-                        </span>
-
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-saffron-50 text-saffron-800 border border-saffron-200 flex-shrink-0">
-                              {rel.relation}
-                            </span>
-                            <h4 className="font-bold text-xs sm:text-sm text-charcoal-900 truncate">
-                              {rel.name}
-                            </h4>
-                            {rel.is_registered && (
-                              <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 flex-shrink-0">
-                                <UserCheck className="w-3 h-3 text-emerald-600" />
-                                <span>સમાજ સભ્ય</span>
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
-                            {rel.phone ? (
-                              <span className="flex items-center gap-1.5 text-charcoal-700 font-semibold text-[11px] sm:text-xs">
-                                <Phone className="w-3 h-3 text-forest-700 flex-shrink-0" />
-                                <span>{rel.phone}</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-charcoal-400 italic">
-                                મોબાઇલ નંબર નોંધાયેલ નથી
-                              </span>
-                            )}
-
-                            {(rel.city || rel.native_place) && (
-                              <span className="flex items-center gap-1 text-[11px] text-charcoal-500">
-                                <MapPin className="w-3 h-3 text-saffron-600 flex-shrink-0" />
-                                <span>{[rel.city, rel.native_place].filter(Boolean).join(" • ")}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRelation(rel.id)}
-                          className="p-1.5 text-charcoal-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="સંબંધ કાઢી નાખો"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-xs text-charcoal-400 border border-dashed border-ivory-300 rounded-xl bg-white">
-                  હજુ સુધી કોઈ પારિવારિક સંબંધ ઉમેરેલ નથી. નીચેના ફોર્મમાંથી સંબંધ પસંદ કરી ઉમેરો.
-                </div>
-              )}
-
-              {/* Add New Relation Sub-form */}
-              <div className="bg-white p-4 rounded-xl border border-ivory-300 shadow-xs space-y-3">
-                <span className="font-bold text-xs text-charcoal-800 flex items-center gap-1.5">
-                  <Plus className="w-3.5 h-3.5 text-saffron-600" />
-                  <span>નવો પારિવારિક સંબંધ ઉમેરો:</span>
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                      ૧. સંબંધ પસંદ કરો *
-                    </label>
-                    <select
-                      value={newRelationType}
-                      onChange={(e) => setNewRelationType(e.target.value)}
-                      className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-medium text-charcoal-800"
-                    >
-                      <option value="">-- સંબંધ પસંદ કરો --</option>
-                      {RELATION_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                      ૨. સંબંધીનું પૂરું નામ *
-                    </label>
-                    <input
-                      type="text"
-                      value={newRelationName}
-                      onChange={(e) => setNewRelationName(e.target.value)}
-                      placeholder="દા.ત. દિનેશભાઈ બાબુલાલ દરજી"
-                      className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
-                      ૩. મોબાઇલ નંબર
-                    </label>
-                    <input
-                      type="tel"
-                      value={newRelationPhone}
-                      onChange={(e) => setNewRelationPhone(e.target.value)}
-                      placeholder="દા.ત. 98250 12345"
-                      className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={handleAddRelation}
-                    className="px-5 py-2 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>સંબંધ ઉમેરો (Add Relation)</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-ivory-200">
-              <button
-                type="button"
-                onClick={handleOpenNewMemberCard}
-              className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>{showNewMemberCard ? "નવો સભ્ય ઉમેરો કાર્ડ નીચે જુઓ ↓" : "+ નવો સભ્ય ઉમેરો (Add New Member)"}</span>
-            </button>
-
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              <span>વિગતો સાચવો</span>
-            </button>
-          </div>
-        </form>
-
-        {/* INLINE CARD TO ADD NEW MEMBER (COPIED DETAILS FROM ABOVE) */}
-        {showNewMemberCard && (
-          <form
-            id="new-member-card"
-            onSubmit={handleAddNewMemberSubmit}
-            className="bg-white rounded-3xl border-2 border-forest-400 p-6 sm:p-8 shadow-card space-y-6 animate-in fade-in slide-in-from-top-4 duration-300"
-          >
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-ivory-200">
-              <div className="flex items-center gap-3">
-                <span className="p-2.5 rounded-2xl bg-gradient-to-br from-forest-600 to-forest-800 text-white shadow-sm">
-                  <UserPlus className="w-5 h-5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-base text-charcoal-900">
-                      નવા પરિવાર સભ્યની માહિતી (Add New Family Member)
-                    </h3>
-                    <span className="text-[10px] font-bold bg-forest-50 text-forest-800 px-2.5 py-0.5 rounded-full border border-forest-200">
-                      નવું કાર્ડ
-                    </span>
-                  </div>
-                  <p className="text-xs text-charcoal-500 mt-0.5">
-                    ઉપરના કાર્ડમાંથી મૂળ વતન, શહેર અને સરનામું આપોઆપ કોપી થયેલ છે.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-end sm:self-auto">
-                <button
-                  type="button"
-                  onClick={copyFromAbove}
-                  className="px-3 py-1.5 text-xs font-bold text-forest-800 bg-forest-50 hover:bg-forest-100 border border-forest-200 rounded-xl transition-colors flex items-center gap-1.5"
-                  title="ઉપરના કાર્ડમાંથી વતન, શહેર અને સરનામું ફરીથી કોપી કરો"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>ઉપરથી વિગત કોપી કરો</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowNewMemberCard(false)}
-                  className="p-1.5 text-charcoal-400 hover:text-charcoal-700 hover:bg-ivory-100 rounded-xl transition-colors"
-                  title="બંધ કરો"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Form Fields - Mirrors the upper general card */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* ૧. સંબંધ */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૧. પારિવારિક સંબંધ (Relation) *
-                </label>
-                <select
-                  value={newMemberRelation}
-                  onChange={(e) => {
-                    const rel = e.target.value;
-                    setNewMemberRelation(rel);
-                    if (["પત્ની", "માતા", "પુત્રી", "બહેન", "દાદી", "કાકી", "મામી", "ફોઈ", "પૌત્રી", "ભાણી", "ભત્રીજી"].some((s) => rel.includes(s))) {
-                      setNewMemberGender("female");
-                    } else if (["પુત્ર", "પિતા", "ભાઈ", "દાદા", "કાકા", "મામા", "ફુવા", "પૌત્ર", "ભાણો", "ભત્રીજો", "પતિ"].some((s) => rel.includes(s))) {
-                      setNewMemberGender("male");
-                    }
-                  }}
-                  required
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-800"
-                >
-                  <option value="">-- સંબંધ પસંદ કરો --</option>
-                  {RELATION_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* ૨. જાતિ */}
-              <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૨. જાતિ (Gender) *
-                </label>
-                <div className="flex items-center gap-4 h-[38px]">
-                  <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newMemberGender"
-                      value="male"
-                      checked={newMemberGender === "male"}
-                      onChange={() => setNewMemberGender("male")}
-                      className="text-forest-700 focus:ring-forest-500"
-                    />
-                    <span>પુરુષ (Male)</span>
-                  </label>
-                  <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newMemberGender"
-                      value="female"
-                      checked={newMemberGender === "female"}
-                      onChange={() => setNewMemberGender("female")}
-                      className="text-forest-700 focus:ring-forest-500"
-                    />
-                    <span>સ્ત્રી (Female)</span>
-                  </label>
-                  <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newMemberGender"
-                      value="other"
-                      checked={newMemberGender === "other"}
-                      onChange={() => setNewMemberGender("other")}
-                      className="text-forest-700 focus:ring-forest-500"
-                    />
-                    <span>અન્ય (Other)</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* ૩. પૂરું નામ */}
-              <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૩. પૂરું નામ *
-                </label>
-                <input
-                  type="text"
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  placeholder="દા.ત. મીનાબેન ભાવિનભાઈ દરજી"
-                  required
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none font-semibold text-charcoal-900"
-                />
-              </div>
-
-              {/* ૪. મોબાઇલ નંબર */}
-              <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૪. મોબાઈલ નંબર
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">મોબાઈલ નંબર (Mobile Number) *</label>
                 <input
                   type="tel"
-                  value={newMemberPhone}
-                  onChange={(e) => setNewMemberPhone(e.target.value)}
-                  placeholder="દા.ત. 98250 99887"
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-bold"
                 />
               </div>
 
-              {/* ઈમેઈલ સરનામું */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ઈમેઈલ સરનામું (Email Address)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-charcoal-700">ઈમેઈલ સરનામું (Email Address)</label>
+                  {(effectiveMember?.email || (!selectedMemberId && currentUser?.email)) && (
+                    <span className="text-[10px] font-bold text-forest-700 bg-forest-50 px-2 py-0.2 rounded-full border border-forest-200">
+                      ચકાસાયેલ ✓ (Verified)
+                    </span>
+                  )}
+                </div>
                 <input
                   type="email"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  placeholder="દા.ત. new.member@example.com"
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="દા.ત. member@example.com"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
 
-              {/* ૫. મૂળ વતન (ગામ) */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1 flex items-center justify-between">
-                  <span>૫. મૂળ વતન (ગામ) *</span>
-                  <span className="text-[10px] text-forest-700 font-semibold bg-forest-50 px-1.5 py-0.5 rounded">યાદીમાંથી પસંદ કરો</span>
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">મૂળ વતન (ગામ) *</label>
                 <select
-                  value={newMemberNativePlace}
-                  onChange={(e) => setNewMemberNativePlace(e.target.value)}
+                  value={nativePlace}
+                  onChange={(e) => setNativePlace(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-900"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-900"
                 >
-                  <option value="">-- મૂળ વતન પસંદ કરો --</option>
                   {SAMITI_NATIVE_PLACES.map((place) => (
                     <option key={place} value={place}>
                       {place}
@@ -2408,58 +1872,52 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* ૬. હાલનું શહેર */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1 flex items-center justify-between">
-                  <span>૬. હાલનું શહેર *</span>
-                  <span className="text-[10px] text-forest-700 font-semibold bg-forest-50 px-1.5 py-0.5 rounded">ઉપરથી કોપી થયેલ</span>
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">હાલનું શહેર *</label>
                 <input
                   type="text"
-                  value={newMemberCity}
-                  onChange={(e) => setNewMemberCity(e.target.value)}
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none bg-ivory-50/50"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
 
-              {/* ૭. સાસરીનું નામ */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૭. સાસરીનું નામ (Sasri Name)
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">સાસરીનું નામ (Sasri Name)</label>
                 <input
                   type="text"
-                  value={newMemberSasriName}
-                  onChange={(e) => setNewMemberSasriName(e.target.value)}
+                  value={sasriName}
+                  onChange={(e) => setSasriName(e.target.value)}
                   placeholder="દા.ત. અમદાવાદ, મોડાસા, હિંમતનગર"
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
 
-              {/* ૮. પિયરનું નામ */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૮. પિયરનું નામ (Piyar Name)
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">પિયરનું નામ (Piyar Name)</label>
                 <input
                   type="text"
-                  value={newMemberPiyarName}
-                  onChange={(e) => setNewMemberPiyarName(e.target.value)}
+                  value={piyarName}
+                  onChange={(e) => setPiyarName(e.target.value)}
                   placeholder="દા.ત. અડાઆઠમ, ધનસુરા"
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
 
-              {/* ૯. લગ્ન સ્થિતિ */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૯. લગ્ન સ્થિતિ (Married Status) *
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">લગ્ન સ્થિતિ (Married Status) *</label>
                 <select
-                  value={newMemberMaritalStatus}
-                  onChange={(e) => setNewMemberMaritalStatus(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-800"
+                  value={maritalStatus}
+                  onChange={(e) => {
+                    const newStatus = e.target.value;
+                    setMaritalStatus(newStatus);
+                    if (!newStatus.startsWith("અપરણિત")) {
+                      setIsAvailableForMatrimony(false);
+                      setIsPublicListing(false);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
                 >
                   <option value="પરણિત (Married)">પરણિત (Married)</option>
                   <option value="અપરણિત (Unmarried)">અપરણિત (Unmarried)</option>
@@ -2468,15 +1926,12 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* ૧૦. બ્લડ ગ્રૂપ */}
               <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૧૦. બ્લડ ગ્રૂપ
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">બ્લડ ગ્રૂપ</label>
                 <select
-                  value={newMemberBloodGroup}
-                  onChange={(e) => setNewMemberBloodGroup(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none"
+                  value={bloodGroup}
+                  onChange={(e) => setBloodGroup(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none"
                 >
                   <option value="A+">A+</option>
                   <option value="A-">A-</option>
@@ -2489,72 +1944,160 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* ૧૧. જાતિ (Jati) */}
               <div>
                 <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૧૧. જાતિ (Jati / Caste)
+                  જાતિ (Jati / Caste) *
                 </label>
                 <input
                   type="text"
-                  value={newMemberJati}
-                  onChange={(e) => setNewMemberJati(e.target.value)}
-                  placeholder="દા.ત. અડાઆઠમ દરજી"
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  value={jati}
+                  onChange={(e) => setJati(e.target.value)}
+                  placeholder="દા.ત. અડાઆઠમ દરજી, દરજી, શ્રીમાળી"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
                 />
               </div>
 
-              {/* ૧૨. પ્રાઇવસી સેટિંગ (Requirement 11) */}
-              <div className="sm:col-span-2 p-3.5 rounded-2xl bg-forest-50/60 border border-forest-200">
-                <label className="block text-xs font-bold text-charcoal-900 mb-1 flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-forest-700" />
-                  <span>આ સભ્યની માહિતી જાહેર (Public) માં દર્શાવવી છે? (Show this member's information publicly?) *</span>
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  જન્મ તારીખ (DOB)
                 </label>
-                <p className="text-[11px] text-charcoal-500 mb-2.5">
-                  ગોપનીયતા સુરક્ષા હેતુથી આ સભ્યની વિગતો જાહેર સર્ચમાં દર્શાવવી કે નહીં તે અહીં પસંદ કરો. (ડિફોલ્ટ: ના)
-                </p>
-                <div className="flex items-center gap-5">
-                  <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newMemberPrivacy"
-                      checked={newMemberIsPublic === false}
-                      onChange={() => setNewMemberIsPublic(false)}
-                      className="text-forest-700 focus:ring-forest-500"
-                    />
-                    <span>ના (No) — માત્ર પરિવાર/સભ્યો પૂરતી સુરક્ષિત (ભલામણ કરેલ)</span>
-                  </label>
-                  <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newMemberPrivacy"
-                      checked={newMemberIsPublic === true}
-                      onChange={() => setNewMemberIsPublic(true)}
-                      className="text-forest-700 focus:ring-forest-500"
-                    />
-                    <span>હા (Yes) — જાહેર દર્શન માટે માન્ય</span>
-                  </label>
-                </div>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+                />
               </div>
 
-              {/* ૯. રહેઠાણનું સરનામું */}
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-charcoal-700 mb-1 flex items-center justify-between">
-                  <span>૯. રહેઠાણનું સરનામું</span>
-                  <span className="text-[10px] text-forest-700 font-semibold bg-forest-50 px-1.5 py-0.5 rounded">ઉપરથી કોપી થયેલ</span>
-                </label>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">રહેઠાણનું સરનામું</label>
                 <textarea
-                  value={newMemberAddress}
-                  onChange={(e) => setNewMemberAddress(e.target.value)}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
                   rows={2}
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none bg-ivory-50/50"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
               </div>
 
-              {/* પારિવારિક સંબંધો (Family Relations) - INSIDE NEW MEMBER CARD */}
-              <div className="sm:col-span-2 bg-gradient-to-b from-forest-50/40 to-white rounded-2xl border border-forest-200 p-4 sm:p-5 space-y-4 mt-2">
+              {/* મેટ્રિમોની ઓપ્ટ-ઇન કાર્ડ (Matrimony Opt-in & Public Listing Consent) - ONLY SHOWN IF UNMARRIED */}
+              {isUnmarried && (
+                <div className="sm:col-span-2 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/80 via-pink-50/50 to-amber-50/50 border border-rose-200/80 shadow-xs space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="matrimonyOptInGeneral"
+                      checked={isAvailableForMatrimony}
+                      onChange={(e) => setIsAvailableForMatrimony(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-rose-600 rounded border-rose-300 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <label htmlFor="matrimonyOptInGeneral" className="text-xs sm:text-sm font-bold text-rose-950 flex items-center gap-1.5 cursor-pointer">
+                        <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
+                        <span>૧. મેટ્રિમોની માટે ઉપલબ્ધ (Available for Matrimony)</span>
+                      </label>
+                      <p className="text-[11px] text-charcoal-600 mt-0.5 leading-relaxed">
+                        અપરણિત સભ્ય તરીકે યોગ્ય જીવનસાથીની શોધ માટે સમાજના મેટ્રિમોની વિભાગમાં જોડાઓ.
+                      </p>
+                    </div>
+                  </div>
+
+                  {isAvailableForMatrimony && (
+                    <div className="mt-3 pt-3 border-t border-rose-200/60 space-y-3">
+                      {/* Selection 2: Public Listing Consent */}
+                      <div className="p-3 bg-white rounded-xl border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-xs text-charcoal-900 block">
+                            ૨. મારી પ્રોફાઇલ Public Listing માં બતાવવી છે?
+                          </span>
+                          <span className="text-[11px] text-charcoal-500 block">
+                            Header માં રહેલા મેટ્રિમોની પબ્લિક પેજ પર સામાન્ય મુલાકાતીઓ (Visitors) માટે પ્રોફાઇલ દર્શાવવા સંમતિ આપો.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="generalPublicListing"
+                              checked={isPublicListing === true}
+                              onChange={() => setIsPublicListing(true)}
+                              className="text-rose-600 focus:ring-rose-500"
+                            />
+                            <span>હા (Yes)</span>
+                          </label>
+                          <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="generalPublicListing"
+                              checked={isPublicListing === false}
+                              onChange={() => setIsPublicListing(false)}
+                              className="text-rose-600 focus:ring-rose-500"
+                            />
+                            <span>ના (No)</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                            ઊંચાઈ (Height)
+                          </label>
+                          <input
+                            type="text"
+                            value={matrimonyHeight}
+                            onChange={(e) => setMatrimonyHeight(e.target.value)}
+                            placeholder="દા.ત. 5 ફૂટ 8 ઇંચ (172 cm)"
+                            className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                            વાન / રંગરૂપ (Complexion)
+                          </label>
+                          <input
+                            type="text"
+                            value={matrimonyComplexion}
+                            onChange={(e) => setMatrimonyComplexion(e.target.value)}
+                            placeholder="દા.ત. ગોરો, ઘઉંવર્ણ"
+                            className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                            અપેક્ષિત જીવનસાથી (Partner Expectations)
+                          </label>
+                          <input
+                            type="text"
+                            value={matrimonyExpectations}
+                            onChange={(e) => setMatrimonyExpectations(e.target.value)}
+                            placeholder="દા.ત. શિક્ષિત (ગ્રેજ્યુએટ/એન્જિનિયર/બેંકિંગ), સંસ્કારી પાત્ર"
+                            className="w-full px-3 py-2 text-xs border border-rose-200 bg-white rounded-xl focus:border-rose-400 focus:outline-none"
+                          />
+                        </div>
+                        <div className="sm:col-span-2 flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-rose-800 font-semibold flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                            <span>વધુ ગોપનીયતા & બાયો સેટિંગ્સ &apos;લગ્ન વિષયક (Matrimony)&apos; ટેબમાં ઉપલબ્ધ છે.</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("matrimony")}
+                            className="text-xs font-bold text-rose-700 hover:text-rose-900 underline"
+                          >
+                            મેટ્રિમોની ટેબ ખોલો →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* પારિવારિક સંબંધો (Family Relations) - AT THE END */}
+              <div className="sm:col-span-2 bg-gradient-to-b from-ivory-50/80 to-white rounded-2xl border border-ivory-300 p-4 sm:p-5 space-y-4 mt-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-ivory-200">
                   <div className="flex items-center gap-2.5">
-                    <span className="p-2 rounded-xl bg-forest-100 text-forest-800">
+                    <span className="p-2 rounded-xl bg-saffron-100 text-saffron-800">
                       <Users className="w-4 h-4" />
                     </span>
                     <div>
@@ -2567,27 +2110,27 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <span className="self-start sm:self-auto text-[11px] font-bold text-forest-800 bg-forest-50 border border-forest-200 px-3 py-1 rounded-full shadow-xs">
-                    કુલ સંબંધો: {newMemberFamilyRelations.length}
+                  <span className="self-start sm:self-auto text-[11px] font-bold text-saffron-800 bg-saffron-50 border border-saffron-200 px-3 py-1 rounded-full shadow-xs">
+                    કુલ સંબંધો: {familyRelations.length}
                   </span>
                 </div>
 
                 {/* List of Added Relations */}
-                {newMemberFamilyRelations.length > 0 ? (
+                {familyRelations.length > 0 ? (
                   <div className="space-y-2.5">
-                    {newMemberFamilyRelations.map((rel, index) => (
+                    {familyRelations.map((rel, index) => (
                       <div
                         key={rel.id}
-                        className="p-3.5 sm:px-4 sm:py-3 bg-white rounded-xl border border-ivory-300 shadow-xs hover:border-forest-300 transition-all flex items-center justify-between gap-3 group"
+                        className="p-3.5 sm:px-4 sm:py-3 bg-white rounded-xl border border-ivory-300 shadow-xs hover:border-saffron-300 transition-all flex items-center justify-between gap-3 group"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="w-7 h-7 rounded-lg bg-forest-50 text-forest-800 border border-forest-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          <span className="w-7 h-7 rounded-lg bg-saffron-50 text-saffron-800 border border-saffron-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {index + 1}
                           </span>
 
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-forest-50 text-forest-800 border border-forest-200 flex-shrink-0">
+                              <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-saffron-50 text-saffron-800 border border-saffron-200 flex-shrink-0">
                                 {rel.relation}
                               </span>
                               <h4 className="font-bold text-xs sm:text-sm text-charcoal-900 truncate">
@@ -2615,7 +2158,7 @@ export default function ProfilePage() {
 
                               {(rel.city || rel.native_place) && (
                                 <span className="flex items-center gap-1 text-[11px] text-charcoal-500">
-                                  <MapPin className="w-3 h-3 text-forest-600 flex-shrink-0" />
+                                  <MapPin className="w-3 h-3 text-saffron-600 flex-shrink-0" />
                                   <span>{[rel.city, rel.native_place].filter(Boolean).join(" • ")}</span>
                                 </span>
                               )}
@@ -2626,7 +2169,7 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleRemoveNewMemberRelation(rel.id)}
+                            onClick={() => handleRemoveRelation(rel.id)}
                             className="p-1.5 text-charcoal-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="સંબંધ કાઢી નાખો"
                           >
@@ -2645,7 +2188,7 @@ export default function ProfilePage() {
                 {/* Add New Relation Sub-form */}
                 <div className="bg-white p-4 rounded-xl border border-ivory-300 shadow-xs space-y-3">
                   <span className="font-bold text-xs text-charcoal-800 flex items-center gap-1.5">
-                    <Plus className="w-3.5 h-3.5 text-forest-700" />
+                    <Plus className="w-3.5 h-3.5 text-saffron-600" />
                     <span>નવો પારિવારિક સંબંધ ઉમેરો:</span>
                   </span>
 
@@ -2655,9 +2198,9 @@ export default function ProfilePage() {
                         ૧. સંબંધ પસંદ કરો *
                       </label>
                       <select
-                        value={newMemberSubRelationType}
-                        onChange={(e) => setNewMemberSubRelationType(e.target.value)}
-                        className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-medium text-charcoal-800"
+                        value={newRelationType}
+                        onChange={(e) => setNewRelationType(e.target.value)}
+                        className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-medium text-charcoal-800"
                       >
                         <option value="">-- સંબંધ પસંદ કરો --</option>
                         {RELATION_OPTIONS.map((opt) => (
@@ -2674,10 +2217,10 @@ export default function ProfilePage() {
                       </label>
                       <input
                         type="text"
-                        value={newMemberSubRelationName}
-                        onChange={(e) => setNewMemberSubRelationName(e.target.value)}
+                        value={newRelationName}
+                        onChange={(e) => setNewRelationName(e.target.value)}
                         placeholder="દા.ત. દિનેશભાઈ બાબુલાલ દરજી"
-                        className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none"
+                        className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none"
                       />
                     </div>
 
@@ -2687,10 +2230,10 @@ export default function ProfilePage() {
                       </label>
                       <input
                         type="tel"
-                        value={newMemberSubRelationPhone}
-                        onChange={(e) => setNewMemberSubRelationPhone(e.target.value)}
+                        value={newRelationPhone}
+                        onChange={(e) => setNewRelationPhone(e.target.value)}
                         placeholder="દા.ત. 98250 12345"
-                        className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none"
+                        className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2698,8 +2241,8 @@ export default function ProfilePage() {
                   <div className="flex justify-end pt-1">
                     <button
                       type="button"
-                      onClick={handleAddNewMemberRelation}
-                      className="px-5 py-2 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                      onClick={handleAddRelation}
+                      className="px-5 py-2 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>સંબંધ ઉમેરો (Add Relation)</span>
@@ -2709,28 +2252,534 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-ivory-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-ivory-200">
               <button
                 type="button"
-                onClick={() => setShowNewMemberCard(false)}
-                className="w-full sm:w-auto px-5 py-2.5 border border-ivory-300 hover:bg-ivory-100 text-charcoal-700 font-bold text-xs rounded-xl transition-colors"
+                onClick={handleOpenNewMemberCard}
+                className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
               >
-                રદ કરો (Cancel)
+                <UserPlus className="w-4 h-4" />
+                <span>{showNewMemberCard ? "નવો સભ્ય ઉમેરો કાર્ડ નીચે જુઓ ↓" : "+ નવો સભ્ય ઉમેરો (Add New Member)"}</span>
               </button>
 
               <button
                 type="submit"
-                className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
               >
-                <UserPlus className="w-4 h-4" />
-                <span>+ નવો સભ્ય સાચવો અને ઉમેરો (Save New Member)</span>
+                <Save className="w-4 h-4" />
+                <span>વિગતો સાચવો</span>
               </button>
             </div>
           </form>
-        )}
-      </div>
-    )}
+
+          {/* INLINE CARD TO ADD NEW MEMBER (COPIED DETAILS FROM ABOVE) */}
+          {showNewMemberCard && (
+            <form
+              id="new-member-card"
+              onSubmit={handleAddNewMemberSubmit}
+              className="bg-white rounded-3xl border-2 border-forest-400 p-6 sm:p-8 shadow-card space-y-6 animate-in fade-in slide-in-from-top-4 duration-300"
+            >
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-ivory-200">
+                <div className="flex items-center gap-3">
+                  <span className="p-2.5 rounded-2xl bg-gradient-to-br from-forest-600 to-forest-800 text-white shadow-sm">
+                    <UserPlus className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-base text-charcoal-900">
+                        નવા પરિવાર સભ્યની માહિતી (Add New Family Member)
+                      </h3>
+                      <span className="text-[10px] font-bold bg-forest-50 text-forest-800 px-2.5 py-0.5 rounded-full border border-forest-200">
+                        નવું કાર્ડ
+                      </span>
+                    </div>
+                    <p className="text-xs text-charcoal-500 mt-0.5">
+                      ઉપરના કાર્ડમાંથી મૂળ વતન, શહેર અને સરનામું આપોઆપ કોપી થયેલ છે.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={copyFromAbove}
+                    className="px-3 py-1.5 text-xs font-bold text-forest-800 bg-forest-50 hover:bg-forest-100 border border-forest-200 rounded-xl transition-colors flex items-center gap-1.5"
+                    title="ઉપરના કાર્ડમાંથી વતન, શહેર અને સરનામું ફરીથી કોપી કરો"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>ઉપરથી વિગત કોપી કરો</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewMemberCard(false)}
+                    className="p-1.5 text-charcoal-400 hover:text-charcoal-700 hover:bg-ivory-100 rounded-xl transition-colors"
+                    title="બંધ કરો"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Form Fields - Mirrors the upper general card */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* ૧. સંબંધ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૧. પારિવારિક સંબંધ (Relation) *
+                  </label>
+                  <select
+                    value={newMemberRelation}
+                    onChange={(e) => {
+                      const rel = e.target.value;
+                      setNewMemberRelation(rel);
+                      if (["પત્ની", "માતા", "પુત્રી", "બહેન", "દાદી", "કાકી", "મામી", "ફોઈ", "પૌત્રી", "ભાણી", "ભત્રીજી"].some((s) => rel.includes(s))) {
+                        setNewMemberGender("female");
+                      } else if (["પુત્ર", "પિતા", "ભાઈ", "દાદા", "કાકા", "મામા", "ફુવા", "પૌત્ર", "ભાણો", "ભત્રીજો", "પતિ"].some((s) => rel.includes(s))) {
+                        setNewMemberGender("male");
+                      }
+                    }}
+                    required
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-800"
+                  >
+                    <option value="">-- સંબંધ પસંદ કરો --</option>
+                    {RELATION_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* ૨. જાતિ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૨. જાતિ (Gender) *
+                  </label>
+                  <div className="flex items-center gap-4 h-[38px]">
+                    <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newMemberGender"
+                        value="male"
+                        checked={newMemberGender === "male"}
+                        onChange={() => setNewMemberGender("male")}
+                        className="text-forest-700 focus:ring-forest-500"
+                      />
+                      <span>પુરુષ (Male)</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newMemberGender"
+                        value="female"
+                        checked={newMemberGender === "female"}
+                        onChange={() => setNewMemberGender("female")}
+                        className="text-forest-700 focus:ring-forest-500"
+                      />
+                      <span>સ્ત્રી (Female)</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newMemberGender"
+                        value="other"
+                        checked={newMemberGender === "other"}
+                        onChange={() => setNewMemberGender("other")}
+                        className="text-forest-700 focus:ring-forest-500"
+                      />
+                      <span>અન્ય (Other)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* ૩. પૂરું નામ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૩. પૂરું નામ *
+                  </label>
+                  <input
+                    type="text"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    placeholder="દા.ત. મીનાબેન ભાવિનભાઈ દરજી"
+                    required
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none font-semibold text-charcoal-900"
+                  />
+                </div>
+
+                {/* ૪. મોબાઇલ નંબર */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૪. મોબાઈલ નંબર
+                  </label>
+                  <input
+                    type="tel"
+                    value={newMemberPhone}
+                    onChange={(e) => setNewMemberPhone(e.target.value)}
+                    placeholder="દા.ત. 98250 99887"
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* ઈમેઈલ સરનામું */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ઈમેઈલ સરનામું (Email Address)
+                  </label>
+                  <input
+                    type="email"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    placeholder="દા.ત. new.member@example.com"
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* ૫. મૂળ વતન (ગામ) */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1 flex items-center justify-between">
+                    <span>૫. મૂળ વતન (ગામ) *</span>
+                    <span className="text-[10px] text-forest-700 font-semibold bg-forest-50 px-1.5 py-0.5 rounded">યાદીમાંથી પસંદ કરો</span>
+                  </label>
+                  <select
+                    value={newMemberNativePlace}
+                    onChange={(e) => setNewMemberNativePlace(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-900"
+                  >
+                    <option value="">-- મૂળ વતન પસંદ કરો --</option>
+                    {SAMITI_NATIVE_PLACES.map((place) => (
+                      <option key={place} value={place}>
+                        {place}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* ૬. હાલનું શહેર */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1 flex items-center justify-between">
+                    <span>૬. હાલનું શહેર *</span>
+                    <span className="text-[10px] text-forest-700 font-semibold bg-forest-50 px-1.5 py-0.5 rounded">ઉપરથી કોપી થયેલ</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newMemberCity}
+                    onChange={(e) => setNewMemberCity(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none bg-ivory-50/50"
+                  />
+                </div>
+
+                {/* ૭. સાસરીનું નામ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૭. સાસરીનું નામ (Sasri Name)
+                  </label>
+                  <input
+                    type="text"
+                    value={newMemberSasriName}
+                    onChange={(e) => setNewMemberSasriName(e.target.value)}
+                    placeholder="દા.ત. અમદાવાદ, મોડાસા, હિંમતનગર"
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* ૮. પિયરનું નામ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૮. પિયરનું નામ (Piyar Name)
+                  </label>
+                  <input
+                    type="text"
+                    value={newMemberPiyarName}
+                    onChange={(e) => setNewMemberPiyarName(e.target.value)}
+                    placeholder="દા.ત. અડાઆઠમ, ધનસુરા"
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* ૯. લગ્ન સ્થિતિ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૯. લગ્ન સ્થિતિ (Married Status) *
+                  </label>
+                  <select
+                    value={newMemberMaritalStatus}
+                    onChange={(e) => setNewMemberMaritalStatus(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-semibold text-charcoal-800"
+                  >
+                    <option value="પરણિત (Married)">પરણિત (Married)</option>
+                    <option value="અપરણિત (Unmarried)">અપરણિત (Unmarried)</option>
+                    <option value="સગાઈ થયેલ (Engaged)">સગાઈ થયેલ (Engaged)</option>
+                    <option value="અન્ય (Other)">અન્ય (Other)</option>
+                  </select>
+                </div>
+
+                {/* ૧૦. બ્લડ ગ્રૂપ */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૧૦. બ્લડ ગ્રૂપ
+                  </label>
+                  <select
+                    value={newMemberBloodGroup}
+                    onChange={(e) => setNewMemberBloodGroup(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+
+                {/* ૧૧. જાતિ (Jati) */}
+                <div>
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                    ૧૧. જાતિ (Jati / Caste)
+                  </label>
+                  <input
+                    type="text"
+                    value={newMemberJati}
+                    onChange={(e) => setNewMemberJati(e.target.value)}
+                    placeholder="દા.ત. અડાઆઠમ દરજી"
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* ૧૨. પ્રાઇવસી સેટિંગ (Requirement 11) */}
+                <div className="sm:col-span-2 p-3.5 rounded-2xl bg-forest-50/60 border border-forest-200">
+                  <label className="block text-xs font-bold text-charcoal-900 mb-1 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-forest-700" />
+                    <span>આ સભ્યની માહિતી જાહેર (Public) માં દર્શાવવી છે? (Show this member's information publicly?) *</span>
+                  </label>
+                  <p className="text-[11px] text-charcoal-500 mb-2.5">
+                    ગોપનીયતા સુરક્ષા હેતુથી આ સભ્યની વિગતો જાહેર સર્ચમાં દર્શાવવી કે નહીં તે અહીં પસંદ કરો. (ડિફોલ્ટ: ના)
+                  </p>
+                  <div className="flex items-center gap-5">
+                    <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newMemberPrivacy"
+                        checked={newMemberIsPublic === false}
+                        onChange={() => setNewMemberIsPublic(false)}
+                        className="text-forest-700 focus:ring-forest-500"
+                      />
+                      <span>ના (No) — માત્ર પરિવાર/સભ્યો પૂરતી સુરક્ષિત (ભલામણ કરેલ)</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 text-xs font-bold text-charcoal-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="newMemberPrivacy"
+                        checked={newMemberIsPublic === true}
+                        onChange={() => setNewMemberIsPublic(true)}
+                        className="text-forest-700 focus:ring-forest-500"
+                      />
+                      <span>હા (Yes) — જાહેર દર્શન માટે માન્ય</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* ૯. રહેઠાણનું સરનામું */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-charcoal-700 mb-1 flex items-center justify-between">
+                    <span>૯. રહેઠાણનું સરનામું</span>
+                    <span className="text-[10px] text-forest-700 font-semibold bg-forest-50 px-1.5 py-0.5 rounded">ઉપરથી કોપી થયેલ</span>
+                  </label>
+                  <textarea
+                    value={newMemberAddress}
+                    onChange={(e) => setNewMemberAddress(e.target.value)}
+                    rows={2}
+                    className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none bg-ivory-50/50"
+                  />
+                </div>
+
+                {/* પારિવારિક સંબંધો (Family Relations) - INSIDE NEW MEMBER CARD */}
+                <div className="sm:col-span-2 bg-gradient-to-b from-forest-50/40 to-white rounded-2xl border border-forest-200 p-4 sm:p-5 space-y-4 mt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-ivory-200">
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-2 rounded-xl bg-forest-100 text-forest-800">
+                        <Users className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-xs sm:text-sm text-charcoal-900">
+                          પારિવારિક સંબંધો (Family Relations)
+                        </h3>
+                        <p className="text-[11px] text-charcoal-500">
+                          પરિવારના સભ્યો, સંબંધો અને મોબાઇલ નંબર ઉમેરો
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="self-start sm:self-auto text-[11px] font-bold text-forest-800 bg-forest-50 border border-forest-200 px-3 py-1 rounded-full shadow-xs">
+                      કુલ સંબંધો: {newMemberFamilyRelations.length}
+                    </span>
+                  </div>
+
+                  {/* List of Added Relations */}
+                  {newMemberFamilyRelations.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {newMemberFamilyRelations.map((rel, index) => (
+                        <div
+                          key={rel.id}
+                          className="p-3.5 sm:px-4 sm:py-3 bg-white rounded-xl border border-ivory-300 shadow-xs hover:border-forest-300 transition-all flex items-center justify-between gap-3 group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-7 h-7 rounded-lg bg-forest-50 text-forest-800 border border-forest-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {index + 1}
+                            </span>
+
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-forest-50 text-forest-800 border border-forest-200 flex-shrink-0">
+                                  {rel.relation}
+                                </span>
+                                <h4 className="font-bold text-xs sm:text-sm text-charcoal-900 truncate">
+                                  {rel.name}
+                                </h4>
+                                {rel.is_registered && (
+                                  <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 flex-shrink-0">
+                                    <UserCheck className="w-3 h-3 text-emerald-600" />
+                                    <span>સમાજ સભ્ય</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
+                                {rel.phone ? (
+                                  <span className="flex items-center gap-1.5 text-charcoal-700 font-semibold text-[11px] sm:text-xs">
+                                    <Phone className="w-3 h-3 text-forest-700 flex-shrink-0" />
+                                    <span>{rel.phone}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-charcoal-400 italic">
+                                    મોબાઇલ નંબર નોંધાયેલ નથી
+                                  </span>
+                                )}
+
+                                {(rel.city || rel.native_place) && (
+                                  <span className="flex items-center gap-1 text-[11px] text-charcoal-500">
+                                    <MapPin className="w-3 h-3 text-forest-600 flex-shrink-0" />
+                                    <span>{[rel.city, rel.native_place].filter(Boolean).join(" • ")}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveNewMemberRelation(rel.id)}
+                              className="p-1.5 text-charcoal-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="સંબંધ કાઢી નાખો"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-xs text-charcoal-400 border border-dashed border-ivory-300 rounded-xl bg-white">
+                      હજુ સુધી કોઈ પારિવારિક સંબંધ ઉમેરેલ નથી. નીચેના ફોર્મમાંથી સંબંધ પસંદ કરી ઉમેરો.
+                    </div>
+                  )}
+
+                  {/* Add New Relation Sub-form */}
+                  <div className="bg-white p-4 rounded-xl border border-ivory-300 shadow-xs space-y-3">
+                    <span className="font-bold text-xs text-charcoal-800 flex items-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5 text-forest-700" />
+                      <span>નવો પારિવારિક સંબંધ ઉમેરો:</span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                          ૧. સંબંધ પસંદ કરો *
+                        </label>
+                        <select
+                          value={newMemberSubRelationType}
+                          onChange={(e) => setNewMemberSubRelationType(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none font-medium text-charcoal-800"
+                        >
+                          <option value="">-- સંબંધ પસંદ કરો --</option>
+                          {RELATION_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                          ૨. સંબંધીનું પૂરું નામ *
+                        </label>
+                        <input
+                          type="text"
+                          value={newMemberSubRelationName}
+                          onChange={(e) => setNewMemberSubRelationName(e.target.value)}
+                          placeholder="દા.ત. દિનેશભાઈ બાબુલાલ દરજી"
+                          className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                          ૩. મોબાઇલ નંબર
+                        </label>
+                        <input
+                          type="tel"
+                          value={newMemberSubRelationPhone}
+                          onChange={(e) => setNewMemberSubRelationPhone(e.target.value)}
+                          placeholder="દા.ત. 98250 12345"
+                          className="w-full px-3 py-2 text-xs border border-ivory-300 rounded-xl bg-white focus:border-forest-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={handleAddNewMemberRelation}
+                        className="px-5 py-2 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>સંબંધ ઉમેરો (Add Relation)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-ivory-200">
+                <button
+                  type="button"
+                  onClick={() => setShowNewMemberCard(false)}
+                  className="w-full sm:w-auto px-5 py-2.5 border border-ivory-300 hover:bg-ivory-100 text-charcoal-700 font-bold text-xs rounded-xl transition-colors"
+                >
+                  રદ કરો (Cancel)
+                </button>
+
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>+ નવો સભ્ય સાચવો અને ઉમેરો (Save New Member)</span>
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* TAB 2: BUSINESS & EMPLOYMENT (ઉપર બિઝનેસ, નીચે નોકરી) */}
       {activeTab === "employment" && (
@@ -2752,7 +2801,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                {(businessName.trim().length > 0 || !!currentUser?.business?.business_name) && (
+                {(businessName.trim().length > 0 || !!effectiveMember?.business?.business_name || (!selectedMemberId && !!currentUser?.business?.business_name)) && (
                   <button
                     type="button"
                     onClick={handleRemoveBusiness}
@@ -2768,9 +2817,9 @@ export default function ProfilePage() {
                     setAdBusinessName(businessName || "");
                     setAdCategory(businessCategory || "");
                     setAdDescription("");
-                    setAdOwnerName(businessOwnerName || currentUser?.name || "");
-                    setAdPhone(businessPhone || currentUser?.phone || "");
-                    setAdAddress(businessAddress || currentUser?.address || "");
+                    setAdOwnerName(businessOwnerName || effectiveMember?.name || (!selectedMemberId ? currentUser?.name : "") || "");
+                    setAdPhone(businessPhone || effectiveMember?.phone || (!selectedMemberId ? currentUser?.phone : "") || "");
+                    setAdAddress(businessAddress || effectiveMember?.address || (!selectedMemberId ? currentUser?.address : "") || "");
                     setAdImageUrl(businessBannerUrl || "");
                     setAdWebsite("");
                     setIsAdModalOpen(true);
@@ -2916,11 +2965,10 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <span
-                    className={`self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
-                      businessIsPublic
+                    className={`self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${businessIsPublic
                         ? "bg-emerald-50 text-emerald-800 border-emerald-300"
                         : "bg-charcoal-100 text-charcoal-700 border-charcoal-300"
-                    }`}
+                      }`}
                   >
                     {businessIsPublic ? (
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
@@ -2933,11 +2981,10 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      businessIsPublic
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${businessIsPublic
                         ? "bg-white border-saffron-500 shadow-sm ring-1 ring-saffron-500"
                         : "bg-white/60 border-ivory-300 hover:bg-white"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -2957,11 +3004,10 @@ export default function ProfilePage() {
                   </label>
 
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      !businessIsPublic
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${!businessIsPublic
                         ? "bg-white border-charcoal-500 shadow-sm ring-1 ring-charcoal-500"
                         : "bg-white/60 border-ivory-300 hover:bg-white"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -3012,9 +3058,9 @@ export default function ProfilePage() {
                   setAdBusinessName(businessName || "");
                   setAdCategory(businessCategory || "");
                   setAdDescription("");
-                  setAdOwnerName(businessOwnerName || currentUser?.name || "");
-                  setAdPhone(businessPhone || currentUser?.phone || "");
-                  setAdAddress(businessAddress || currentUser?.address || "");
+                  setAdOwnerName(businessOwnerName || effectiveMember?.name || (!selectedMemberId ? currentUser?.name : "") || "");
+                  setAdPhone(businessPhone || effectiveMember?.phone || (!selectedMemberId ? currentUser?.phone : "") || "");
+                  setAdAddress(businessAddress || effectiveMember?.address || (!selectedMemberId ? currentUser?.address : "") || "");
                   setAdImageUrl(businessBannerUrl || "");
                   setAdWebsite("");
                   setIsAdModalOpen(true);
@@ -3060,13 +3106,12 @@ export default function ProfilePage() {
                             />
                             <div className="absolute top-2 right-2">
                               <span
-                                className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 ${
-                                  isApproved
+                                className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 ${isApproved
                                     ? "bg-emerald-600 text-white"
                                     : isRejected
-                                    ? "bg-rose-600 text-white"
-                                    : "bg-amber-500 text-white"
-                                }`}
+                                      ? "bg-rose-600 text-white"
+                                      : "bg-amber-500 text-white"
+                                  }`}
                               >
                                 {isApproved && <CheckCircle className="w-3 h-3" />}
                                 {isRejected && <X className="w-3 h-3" />}
@@ -3075,8 +3120,8 @@ export default function ProfilePage() {
                                   {isApproved
                                     ? "મંજૂર (Approved)"
                                     : isRejected
-                                    ? "અસ્વીકૃત (Rejected)"
-                                    : "ચકાસણી હેઠળ (Pending)"}
+                                      ? "અસ્વીકૃત (Rejected)"
+                                      : "ચકાસણી હેઠળ (Pending)"}
                                 </span>
                               </span>
                             </div>
@@ -3094,13 +3139,12 @@ export default function ProfilePage() {
                           </div>
                           {!ad.image_url && (
                             <span
-                              className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1 ${
-                                isApproved
+                              className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1 ${isApproved
                                   ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
                                   : isRejected
-                                  ? "bg-rose-50 text-rose-800 border border-rose-300"
-                                  : "bg-amber-50 text-amber-800 border border-amber-300"
-                              }`}
+                                    ? "bg-rose-50 text-rose-800 border border-rose-300"
+                                    : "bg-amber-50 text-amber-800 border border-amber-300"
+                                }`}
                             >
                               {isApproved && <CheckCircle className="w-3 h-3 text-emerald-600" />}
                               {isRejected && <X className="w-3 h-3 text-rose-600" />}
@@ -3109,8 +3153,8 @@ export default function ProfilePage() {
                                 {isApproved
                                   ? "મંજૂર (Approved)"
                                   : isRejected
-                                  ? "અસ્વીકૃત (Rejected)"
-                                  : "ચકાસણી હેઠળ (Pending)"}
+                                    ? "અસ્વીકૃત (Rejected)"
+                                    : "ચકાસણી હેઠળ (Pending)"}
                               </span>
                             </span>
                           )}
@@ -3319,11 +3363,10 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <span
-                    className={`self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
-                      jobIsPublic
+                    className={`self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${jobIsPublic
                         ? "bg-emerald-50 text-emerald-800 border-emerald-300"
                         : "bg-charcoal-100 text-charcoal-700 border-charcoal-300"
-                    }`}
+                      }`}
                   >
                     {jobIsPublic ? (
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
@@ -3336,11 +3379,10 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      jobIsPublic
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${jobIsPublic
                         ? "bg-white border-forest-600 shadow-sm ring-1 ring-forest-600"
                         : "bg-white/60 border-ivory-300 hover:bg-white"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -3360,11 +3402,10 @@ export default function ProfilePage() {
                   </label>
 
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      !jobIsPublic
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${!jobIsPublic
                         ? "bg-white border-charcoal-500 shadow-sm ring-1 ring-charcoal-500"
                         : "bg-white/60 border-ivory-300 hover:bg-white"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -3446,7 +3487,7 @@ export default function ProfilePage() {
                 className="w-full px-3.5 py-2.5 text-xs font-bold border border-saffron-300 rounded-xl bg-white text-charcoal-900 focus:border-saffron-600 focus:outline-none shadow-2xs"
               >
                 <option value="self">
-                  👤 {currentUser?.name || name || "મુખ્ય સભ્ય"} (પોતે / Self)
+                  👤 {effectiveMember?.name || name || (!selectedMemberId ? currentUser?.name : "") || "મુખ્ય સભ્ય"} (પોતે / Self)
                 </option>
                 {familyRelations.map((rel) => (
                   <option key={rel.id} value={rel.id}>
@@ -3549,7 +3590,7 @@ export default function ProfilePage() {
                   const mRecords = educationRecords.filter((r) => r.member_id === mId);
                   const isSelf = mId === "self";
                   const memberDisplayName = isSelf
-                    ? (currentUser?.name || name || "પોતે (Self)")
+                    ? (effectiveMember?.name || name || (!selectedMemberId ? currentUser?.name : "") || "પોતે (Self)")
                     : mRecords[0]?.member_name;
 
                   return (
@@ -3560,9 +3601,8 @@ export default function ProfilePage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-ivory-200">
                         <div className="flex items-center gap-2.5">
                           <span
-                            className={`p-1.5 rounded-xl text-white ${
-                              isSelf ? "bg-saffron-600" : "bg-forest-700"
-                            }`}
+                            className={`p-1.5 rounded-xl text-white ${isSelf ? "bg-saffron-600" : "bg-forest-700"
+                              }`}
                           >
                             <User className="w-3.5 h-3.5" />
                           </span>
@@ -3572,11 +3612,10 @@ export default function ProfilePage() {
                                 {memberDisplayName}
                               </h4>
                               <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                  isSelf
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isSelf
                                     ? "bg-saffron-50 text-saffron-800 border-saffron-200"
                                     : "bg-forest-50 text-forest-800 border-forest-200"
-                                }`}
+                                  }`}
                               >
                                 {isSelf ? "પોતે (Self)" : "પરિવાર સભ્ય"}
                               </span>
@@ -3715,13 +3754,12 @@ export default function ProfilePage() {
                           </span>
 
                           <span
-                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                              isApproved
+                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${isApproved
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                                 : isRejected
-                                ? "bg-red-100 text-red-800 border border-red-200"
-                                : "bg-amber-100 text-amber-800 border border-amber-200"
-                            }`}
+                                  ? "bg-red-100 text-red-800 border border-red-200"
+                                  : "bg-amber-100 text-amber-800 border border-amber-200"
+                              }`}
                           >
                             {isApproved && <CheckCircle className="w-3 h-3 text-emerald-600" />}
                             {isRejected && <XCircle className="w-3 h-3 text-red-600" />}
@@ -3730,8 +3768,8 @@ export default function ProfilePage() {
                               {isApproved
                                 ? "મંજૂર / સ્વીકૃત (Approved)"
                                 : isRejected
-                                ? "અસ્વીકાર (Rejected)"
-                                : "ચકાસણી પેન્ડિંગ (Awaiting Approval)"}
+                                  ? "અસ્વીકાર (Rejected)"
+                                  : "ચકાસણી પેન્ડિંગ (Awaiting Approval)"}
                             </span>
                           </span>
                         </div>
@@ -3844,6 +3882,23 @@ export default function ProfilePage() {
               <select
                 value={privacyPhone}
                 onChange={(e) => setPrivacyPhone(e.target.value as PrivacyVisibility)}
+                className="px-3 py-2 border border-ivory-300 rounded-xl text-xs bg-white font-medium focus:border-saffron-500 focus:outline-none"
+              >
+                {visibilityOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date of Birth Privacy */}
+            <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-xs text-charcoal-900 block">જન્મ તારીખ દર્શાવવી (Date of Birth)</span>
+                <span className="text-[11px] text-charcoal-500">આપની જન્મ તારીખ અને ઉંમર ડિરેક્ટરીમાં કોણ જોઈ શકે</span>
+              </div>
+              <select
+                value={privacyDob}
+                onChange={(e) => setPrivacyDob(e.target.value as PrivacyVisibility)}
                 className="px-3 py-2 border border-ivory-300 rounded-xl text-xs bg-white font-medium focus:border-saffron-500 focus:outline-none"
               >
                 {visibilityOptions.map((o) => (
@@ -3975,16 +4030,14 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                    isAvailableForMatrimony
+                  className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${isAvailableForMatrimony
                       ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                       : "bg-slate-100 text-slate-700 border border-slate-200"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`w-2 h-2 rounded-full ${
-                      isAvailableForMatrimony ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
-                    }`}
+                    className={`w-2 h-2 rounded-full ${isAvailableForMatrimony ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                      }`}
                   />
                   <span>{isAvailableForMatrimony ? "મેટ્રિમોની સક્રિય (Active)" : "નિષ્ક્રિય (Inactive)"}</span>
                 </span>
@@ -4012,11 +4065,10 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Selection 1: Matrimony Opt-In */}
                   <div
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                      isAvailableForMatrimony
+                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${isAvailableForMatrimony
                         ? "bg-rose-50/70 border-rose-200 shadow-xs"
                         : "bg-ivory-50 border-ivory-200"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
@@ -4042,11 +4094,10 @@ export default function ProfilePage() {
 
                   {/* Selection 2: Public Listing Consent */}
                   <div
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                      isAvailableForMatrimony && isPublicListing
+                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${isAvailableForMatrimony && isPublicListing
                         ? "bg-emerald-50/70 border-emerald-200 shadow-xs"
                         : "bg-ivory-50 border-ivory-200 opacity-90"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
@@ -4472,14 +4523,14 @@ export default function ProfilePage() {
                     const displayPlace = priv.show_native_place ? cand.native_place : "ગોપનીય";
                     const displayEdu = priv.show_education
                       ? cand.education?.education_details ||
-                        cand.education?.highest_degree ||
-                        "શિક્ષિત"
+                      cand.education?.highest_degree ||
+                      "શિક્ષિત"
                       : "ગોપનીય";
                     const displayJob = priv.show_occupation
                       ? cand.employment?.job_title ||
-                        cand.business?.business_name ||
-                        cand.employment?.company ||
-                        "સેવા / નોકરી"
+                      cand.business?.business_name ||
+                      cand.employment?.company ||
+                      "સેવા / નોકરી"
                       : "ગોપનીય";
 
                     return (
@@ -4489,11 +4540,10 @@ export default function ProfilePage() {
                       >
                         {/* Top Gradient Stripe */}
                         <div
-                          className={`absolute top-0 left-0 right-0 h-1 ${
-                            cand.gender === "female"
+                          className={`absolute top-0 left-0 right-0 h-1 ${cand.gender === "female"
                               ? "bg-gradient-to-r from-pink-500 to-rose-500"
                               : "bg-gradient-to-r from-blue-500 to-indigo-600"
-                          }`}
+                            }`}
                         />
 
                         <div>
@@ -4517,15 +4567,14 @@ export default function ProfilePage() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    cand.gender === "female"
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cand.gender === "female"
                                       ? "bg-pink-100 text-pink-800 border border-pink-200"
                                       : "bg-blue-100 text-blue-800 border border-blue-200"
-                                  }`}
+                                    }`}
                                 >
                                   {cand.gender === "female" ? "કન્યા પક્ષ (Bride)" : "વર પક્ષ (Groom)"}
                                 </span>
-                                {cand.id === currentUser?.id && (
+                                {(cand.id === effectiveMember?.id || (!selectedMemberId && cand.id === currentUser?.id)) && (
                                   <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded-full border border-amber-200">
                                     આપની પ્રોફાઇલ
                                   </span>
@@ -4842,11 +4891,10 @@ export default function ProfilePage() {
 
                 <div>
                   <span
-                    className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1 ${
-                      selectedCandidateModal.gender === "female"
+                    className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1 ${selectedCandidateModal.gender === "female"
                         ? "bg-pink-100 text-pink-800"
                         : "bg-blue-100 text-blue-800"
-                    }`}
+                      }`}
                   >
                     {selectedCandidateModal.gender === "female" ? "કન્યા પક્ષ" : "વર પક્ષ"}
                   </span>
@@ -4886,8 +4934,8 @@ export default function ProfilePage() {
                   <span className="font-bold text-charcoal-900">
                     {selectedCandidateModal.matrimony?.privacy?.show_education !== false
                       ? selectedCandidateModal.education?.education_details ||
-                        selectedCandidateModal.education?.highest_degree ||
-                        "શિક્ષિત"
+                      selectedCandidateModal.education?.highest_degree ||
+                      "શિક્ષિત"
                       : "ગોપનીય"}
                   </span>
                 </div>
@@ -4896,8 +4944,8 @@ export default function ProfilePage() {
                   <span className="font-bold text-charcoal-900">
                     {selectedCandidateModal.matrimony?.privacy?.show_occupation !== false
                       ? selectedCandidateModal.employment?.job_title ||
-                        selectedCandidateModal.business?.business_name ||
-                        "સેવા / વ્યવસાય"
+                      selectedCandidateModal.business?.business_name ||
+                      "સેવા / વ્યવસાય"
                       : "ગોપનીય"}
                   </span>
                 </div>

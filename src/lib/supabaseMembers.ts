@@ -1,17 +1,9 @@
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
-import { Member, PrivacySettings, MatrimonyProfile, MatrimonyPrivacySettings } from "@/types";
+import { Member, PrivacySettings, MatrimonyProfile, MatrimonyPrivacySettings, DEFAULT_MEMBER_PRIVACY } from "@/types";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
 import { deleteMemberRecord, getMemberByIdOrSession } from "@/lib/memberStore";
 
-const DEFAULT_PRIVACY: PrivacySettings = {
-  phone: "members",
-  address: "members",
-  photo: "public",
-  family: "members",
-  business: "public",
-  employment: "members",
-  education: "members",
-};
+const DEFAULT_PRIVACY: PrivacySettings = DEFAULT_MEMBER_PRIVACY;
 
 /**
  * Convert a Supabase `member_matrimony` row to application `MatrimonyProfile`
@@ -122,6 +114,7 @@ export function dbRowToMember(row: any, matRow?: any): Member {
       business: row.privacy_business || DEFAULT_PRIVACY.business,
       employment: row.privacy_employment || DEFAULT_PRIVACY.employment,
       education: row.privacy_education || DEFAULT_PRIVACY.education,
+      dob: row.privacy_dob || DEFAULT_PRIVACY.dob || "public",
     },
     family_relations: Array.isArray(row.family_relations) ? row.family_relations : [],
     business: row.employment && row.employment.business_detail ? row.employment.business_detail : undefined,
@@ -197,6 +190,7 @@ export function memberToDbRow(m: Partial<Member>): Record<string, any> {
     if (m.privacy.business) row.privacy_business = m.privacy.business;
     if (m.privacy.employment) row.privacy_employment = m.privacy.employment;
     if (m.privacy.education) row.privacy_education = m.privacy.education;
+    if (m.privacy.dob) row.privacy_dob = m.privacy.dob;
   }
 
   row.updated_at = new Date().toISOString();
@@ -612,7 +606,22 @@ export async function updateSupabaseMember(
       query = query.or(`username.ilike.${clean},phone.eq.${clean}`);
     }
 
-    const { data, error } = await query.select().maybeSingle();
+    let { data, error } = await query.select().maybeSingle();
+
+    if (error && error.message && error.message.includes("privacy_dob")) {
+      delete dbUpdates.privacy_dob;
+      let retryQuery = supabaseAdmin.from("members").update(dbUpdates);
+      if (isUUID) {
+        retryQuery = retryQuery.or(`id.eq.${clean},auth_user_id.eq.${clean}`);
+      } else if (clean.includes("@")) {
+        retryQuery = retryQuery.ilike("email", clean);
+      } else {
+        retryQuery = retryQuery.or(`username.ilike.${clean},phone.eq.${clean}`);
+      }
+      const retryRes = await retryQuery.select().maybeSingle();
+      data = retryRes.data;
+      error = retryRes.error;
+    }
 
     if (error) {
       console.warn("[updateSupabaseMember error]", error.message);

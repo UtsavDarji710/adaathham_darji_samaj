@@ -63,9 +63,7 @@ export default function EventsPage() {
       time: time || "સવારે ૯:૦૦",
       location,
       city,
-      cover_image:
-        coverImage ||
-        "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&auto=format&fit=crop&q=80",
+      cover_image: coverImage || null,
       gallery: [],
       video_url: videoUrl || undefined,
       status: isUpcoming ? "upcoming" : "past",
@@ -181,11 +179,18 @@ export default function EventsPage() {
           >
             <div>
               <div className="relative aspect-[16/10] overflow-hidden bg-ivory-200">
-                <img
-                  src={evt.cover_image}
-                  alt={evt.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {evt.cover_image ? (
+                  <img
+                    src={evt.cover_image}
+                    alt={evt.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-saffron-50 via-saffron-100/50 to-ivory-200 flex flex-col items-center justify-center p-4 text-center">
+                    <Calendar className="w-10 h-10 text-saffron-600/40 mb-1" />
+                    <span className="text-xs font-bold text-saffron-900/70 line-clamp-1">{evt.title}</span>
+                  </div>
+                )}
                 <div className="absolute top-3 left-3 bg-white/95 text-saffron-800 font-bold text-xs px-2.5 py-1 rounded-xl shadow-xs">
                   {evt.date}
                 </div>

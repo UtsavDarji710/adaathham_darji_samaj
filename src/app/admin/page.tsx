@@ -127,16 +127,16 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="bg-white rounded-3xl border border-ivory-300 p-5 shadow-card flex items-center gap-4">
-          <div className="w-13 h-13 rounded-2xl bg-forest-100 text-forest-800 flex items-center justify-center flex-shrink-0">
-            <GitFork className="w-6 h-6" />
+          <div className="w-13 h-13 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center flex-shrink-0">
+            <HeartHandshake className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-charcoal-500 block">માન્ય પારિવારિક સંબંધો</span>
+            <span className="text-xs font-semibold text-charcoal-500 block">મેટ્રિમોની ઉમેદવારો</span>
             <span className="text-2xl font-extrabold text-charcoal-900">
-              {relationships.filter((r) => r.status === "approved").length}
+              {members.filter((m) => m.marital_status?.includes("અપરણિત") && m.is_available_for_matrimony).length}
             </span>
-            <span className="text-[10px] text-saffron-700 font-bold block mt-0.5">
-              {pendingRelationships.length} મંજૂરી માટે પેન્ડિંગ
+            <span className="text-[10px] text-rose-700 font-bold block mt-0.5">
+              {matrimonyPublicCount} પબ્લિક લિસ્ટિંગમાં સક્રિય
             </span>
           </div>
         </div>
@@ -200,29 +200,7 @@ export default function AdminDashboardPage() {
             </div>
           </Link>
 
-          {/* Module 2: Family Relationships */}
-          <Link
-            href="/admin/families"
-            className="bg-white rounded-3xl border border-ivory-300 p-6 shadow-card hover:shadow-hover transition-all flex flex-col justify-between group"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-forest-100 text-forest-800 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <GitFork className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-base text-charcoal-900 group-hover:text-forest-800 transition-colors">
-                પરિવાર સંબંધ મંજૂરી (Family Workflow)
-              </h3>
-              <p className="text-xs text-charcoal-600 mt-1 leading-relaxed">
-                પરિવાર વૃક્ષમાં વિનંતી કરાયેલ સંબંધોની ખરાઈ, મંજૂરી અને સુધારણા.
-              </p>
-            </div>
-            <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-forest-800">
-              <span>{pendingRelationships.length} વિનંતીઓ પેન્ડિંગ</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </Link>
-
-          {/* Module 3: Advertisements & Sponsored */}
+          {/* Module 2: Advertisements & Sponsored */}
           <Link
             href="/admin/advertisements"
             className="bg-white rounded-3xl border border-ivory-300 p-6 shadow-card hover:shadow-hover transition-all flex flex-col justify-between group"

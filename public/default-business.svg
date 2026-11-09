@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bizBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFDF9"/>
+      <stop offset="50%" stop-color="#FFF7ED"/>
+      <stop offset="100%" stop-color="#FFEDD5"/>
+    </linearGradient>
+    <linearGradient id="bizAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="50%" stop-color="#C2410C"/>
+      <stop offset="100%" stop-color="#9A3412"/>
+    </linearGradient>
+    <linearGradient id="goldAura" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDBA74" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FED7AA" stop-opacity="0.05"/>
+    </linearGradient>
+    <filter id="bizShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#7C2D12" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="640" height="400" fill="url(#bizBg)"/>
+
+  <!-- Subtle Decorative Border -->
+  <rect x="12" y="12" width="616" height="376" rx="24" fill="none" stroke="#FDBA74" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.6"/>
+
+  <!-- Decorative Corner Accents -->
+  <circle cx="28" cy="28" r="4" fill="#EA580C" opacity="0.4"/>
+  <circle cx="612" cy="28" r="4" fill="#EA580C" opacity="0.4"/>
+  <circle cx="28" cy="372" r="4" fill="#EA580C" opacity="0.4"/>
+  <circle cx="612" cy="372" r="4" fill="#EA580C" opacity="0.4"/>
+
+  <!-- Central Glowing Aura -->
+  <circle cx="320" cy="180" r="130" fill="url(#goldAura)"/>
+
+  <!-- Central Icon Badge -->
+  <g filter="url(#bizShadow)">
+    <rect x="256" y="116" width="128" height="128" rx="36" fill="url(#bizAccent)"/>
+  </g>
+
+  <!-- Building / Storefront Vector Art -->
+  <!-- Roof / Pediment -->
+  <path d="M 320 144 L 284 164 L 356 164 Z" fill="#FFFFFF"/>
+  <!-- Architrave beam -->
+  <rect x="282" y="166" width="76" height="6" rx="2" fill="#FED7AA"/>
+  <!-- Columns -->
+  <rect x="288" y="174" width="8" height="40" rx="2" fill="#FFFFFF"/>
+  <rect x="306" y="174" width="8" height="40" rx="2" fill="#FFFFFF"/>
+  <rect x="326" y="174" width="8" height="40" rx="2" fill="#FFFFFF"/>
+  <rect x="344" y="174" width="8" height="40" rx="2" fill="#FFFFFF"/>
+  <!-- Base steps -->
+  <rect x="280" y="214" width="80" height="6" rx="2" fill="#FED7AA"/>
+  <rect x="274" y="220" width="92" height="6" rx="2" fill="#FFFFFF"/>
+
+  <!-- Samaj Seal / Small Emblem -->
+  <circle cx="320" cy="156" r="4" fill="#EA580C"/>
+
+  <!-- Text: Samaj Business Directory -->
+  <text x="320" y="290" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="800" fill="#7C2D12" letter-spacing="0.5">
+    સમાજ વ્યવસાય ડિરેક્ટરી
+  </text>
+  <text x="320" y="316" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#9A3412" opacity="0.8">
+    શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા
+  </text>
+</svg>
+

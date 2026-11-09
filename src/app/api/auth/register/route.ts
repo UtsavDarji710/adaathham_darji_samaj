@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Member } from "@/types";
+import { Member, DEFAULT_MEMBER_PRIVACY } from "@/types";
 import { registerMember, isUsernameTaken } from "@/lib/memberStore";
 import { hashPassword } from "@/lib/passwordUtils";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -164,15 +164,7 @@ export async function POST(request: Request) {
             experience_years: "૧ વર્ષ+",
           }
         : undefined,
-      privacy: {
-        phone: "members",
-        address: "members",
-        photo: "public",
-        family: "members",
-        business: "public",
-        employment: "members",
-        education: "members",
-      },
+      privacy: { ...DEFAULT_MEMBER_PRIVACY },
     };
 
     let finalMember = newMember;

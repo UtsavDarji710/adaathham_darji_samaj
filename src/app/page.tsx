@@ -35,7 +35,7 @@ import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { AutoScrollSlider } from "@/components/AutoScrollSlider";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Donation, Announcement, Circular, BusinessItem, CommunityEvent, CommitteeMember } from "@/types";
+import { Donation, Announcement, Circular, BusinessItem, CommunityEvent, CommitteeMember, DEFAULT_BUSINESS_COVER } from "@/types";
 
 export default function HomePage() {
   const {
@@ -457,11 +457,18 @@ export default function HomePage() {
                 <div key={ad.id} className="w-full flex-shrink-0 px-1">
                   <div className="bg-white rounded-3xl border border-ivory-300 p-5 sm:p-6 shadow-card hover:shadow-hover transition-all flex flex-col md:flex-row gap-6 items-center">
                     <div className="w-full md:w-5/12 aspect-[16/10] rounded-2xl overflow-hidden bg-ivory-200 relative shadow-xs flex-shrink-0">
-                      <img
-                        src={ad.image_url}
-                        alt={ad.business_name}
-                        className="w-full h-full object-cover"
-                      />
+                      {ad.image_url ? (
+                        <img
+                          src={ad.image_url}
+                          alt={ad.business_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-saffron-50 via-saffron-100/50 to-ivory-200 flex flex-col items-center justify-center p-4 text-center">
+                          <Megaphone className="w-10 h-10 text-saffron-600/30 mb-1" />
+                          <span className="text-xs font-bold text-saffron-900/70">{ad.business_name}</span>
+                        </div>
+                      )}
                       <span className="absolute top-3 left-3 bg-gradient-to-r from-saffron-600 to-saffron-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
                         પ્રાયોજિત જાહેરાત
@@ -769,8 +776,15 @@ export default function HomePage() {
           <div className="w-[280px] sm:w-[310px] md:w-[330px] bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-hover transition-all flex flex-col group h-[310px]">
             <div className="relative aspect-[16/10] overflow-hidden bg-ivory-200 flex-shrink-0">
               <img
-                src={biz.cover_url || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600"}
+                src={
+                  biz.cover_url && !biz.cover_url.includes("images.unsplash.com/photo-1558769132")
+                    ? biz.cover_url
+                    : DEFAULT_BUSINESS_COVER
+                }
                 alt={biz.name}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_BUSINESS_COVER;
+                }}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
               {biz.is_featured && (
@@ -842,11 +856,18 @@ export default function HomePage() {
         renderItem={(evt) => (
           <div className="w-[290px] sm:w-[320px] md:w-[340px] bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-hover transition-all flex flex-col group h-[310px]">
             <div className="relative aspect-[16/10] overflow-hidden flex-shrink-0">
-              <img
-                src={evt.cover_image}
-                alt={evt.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+              {evt.cover_image ? (
+                <img
+                  src={evt.cover_image}
+                  alt={evt.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-saffron-50 via-saffron-100/40 to-ivory-200 flex flex-col items-center justify-center p-3 text-center">
+                  <Calendar className="w-8 h-8 text-saffron-600/30 mb-1" />
+                  <span className="text-[11px] font-bold text-saffron-900/60 line-clamp-1">{evt.title}</span>
+                </div>
+              )}
               <div className="absolute top-2.5 left-2.5 bg-white/95 text-saffron-800 font-bold text-xs px-2 py-0.5 rounded-lg shadow-2xs">
                 {evt.date}
               </div>

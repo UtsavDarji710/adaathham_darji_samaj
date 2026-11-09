@@ -12,6 +12,7 @@ import {
   Lock,
   Plus,
   Trash2,
+  Pencil,
   Eye,
   Settings,
   QrCode,
@@ -26,16 +27,41 @@ import {
   Image as ImageIcon,
   ExternalLink,
   X,
+  Receipt,
+  Tag,
+  Check,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
-import { Donation } from "@/types";
+import { Donation, Member } from "@/types";
 import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
+
+const DONATION_PURPOSES = [
+  "સમાજના વિકાસ માટે",
+  "સમાજ ભવન નિર્માણ ફંડ",
+  "શિક્ષણ સહાય & સ્કોલરશીપ",
+  "આરોગ્ય & તબીબી સહાય",
+  "સામાજિક કાર્યક્રમ / મહોત્સવ",
+  "અન્નક્ષેત્ર / ભોજન સહાય",
+  "અન્ય (Other)",
+];
+
+const PAYMENT_METHODS = [
+  "રોકડ (Cash)",
+  "UPI / ઓનલાઇન",
+  "બેંક ટ્રાન્સફર (NEFT/RTGS)",
+  "ચેક (Cheque)",
+];
+
+const PRESET_AMOUNTS = [1100, 2100, 5100, 11000, 21000, 51000];
 
 export default function AdminDonationsPage() {
   const {
+    members,
     donations,
     bankDetails,
+    addDonation,
+    updateDonation,
     approveDonation,
     rejectDonation,
     deleteDonation,
@@ -53,6 +79,50 @@ export default function AdminDonationsPage() {
   const [rejectingDonation, setRejectingDonation] = useState<Donation | null>(null);
   const [rejectionRemarks, setRejectionRemarks] = useState("");
   const [showBankConfigModal, setShowBankConfigModal] = useState(false);
+
+  // Add Donation Modal States
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [donorSource, setDonorSource] = useState<"member" | "custom">("member");
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+
+  const [addDonorName, setAddDonorName] = useState("");
+  const [addMobileNumber, setAddMobileNumber] = useState("");
+  const [addAmount, setAddAmount] = useState("");
+  const [addPurpose, setAddPurpose] = useState(DONATION_PURPOSES[0]);
+  const [addSpecificPurpose, setAddSpecificPurpose] = useState("");
+  const [addYear, setAddYear] = useState(String(new Date().getFullYear()));
+  const [addDate, setAddDate] = useState(new Date().toISOString().split("T")[0]);
+  const [addPaymentMethod, setAddPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [addReceiptNumber, setAddReceiptNumber] = useState("");
+  const [addStatus, setAddStatus] = useState<"approved" | "pending" | "rejected">("approved");
+  const [addHastheInput, setAddHastheInput] = useState("");
+  const [addHastheList, setAddHastheList] = useState<string[]>([]);
+  const [addDonorPhoto, setAddDonorPhoto] = useState<string>("");
+  const [addPaymentProof, setAddPaymentProof] = useState<string>("");
+  const [addIsAnonymous, setAddIsAnonymous] = useState(false);
+  const [addPublicConsent, setAddPublicConsent] = useState(true);
+  const [addAdminRemarks, setAddAdminRemarks] = useState("");
+
+  // Edit Donation Modal States
+  const [editingDonation, setEditingDonation] = useState<Donation | null>(null);
+  const [editDonorName, setEditDonorName] = useState("");
+  const [editMobileNumber, setEditMobileNumber] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editPurpose, setEditPurpose] = useState(DONATION_PURPOSES[0]);
+  const [editSpecificPurpose, setEditSpecificPurpose] = useState("");
+  const [editYear, setEditYear] = useState(String(new Date().getFullYear()));
+  const [editDate, setEditDate] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [editReceiptNumber, setEditReceiptNumber] = useState("");
+  const [editStatus, setEditStatus] = useState<"approved" | "pending" | "rejected">("approved");
+  const [editHastheInput, setEditHastheInput] = useState("");
+  const [editHastheList, setEditHastheList] = useState<string[]>([]);
+  const [editDonorPhoto, setEditDonorPhoto] = useState<string>("");
+  const [editPaymentProof, setEditPaymentProof] = useState<string>("");
+  const [editIsAnonymous, setEditIsAnonymous] = useState(false);
+  const [editPublicConsent, setEditPublicConsent] = useState(true);
+  const [editAdminRemarks, setEditAdminRemarks] = useState("");
 
   // Bank Config Form State
   const [bankAccountHolder, setBankAccountHolder] = useState(bankDetails.account_holder);
@@ -151,11 +221,219 @@ export default function AdminDonationsPage() {
 
   // Action: Delete
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`શું તમે ખરેખર "${name}" નો દાન રેકોર્ડ કાઢી નાખવા માંગો છો?`)) {
+    if (confirm(`શું તમે ખરેખર "${name}" નો દાન રેકોર્ડ કાઢી નાખવા માંગો છો? આ પ્રક્રિયા રદ કરી શકાશે નહીં.`)) {
+      const adminName = currentUser?.name || "ખજાનચી / એડમિન";
       deleteDonation(id);
-      setSuccessToast("દાન રેકોર્ડ ડિલીટ કરવામાં આવ્યો.");
+      addLog(
+        "દાન રેકોર્ડ ડિલીટ કર્યો",
+        name,
+        `રેકોર્ડ ID: ${id}`,
+        adminName,
+        currentUser?.role || "treasurer"
+      );
+      setSuccessToast(`"${name}" નો દાન રેકોર્ડ સફળતાપૂર્વક ડિલીટ કરવામાં આવ્યો.`);
       setTimeout(() => setSuccessToast(null), 3000);
     }
+  };
+
+  // Filtered members for Add Donation dropdown
+  const filteredMembersForAdd = React.useMemo(() => {
+    if (!memberSearchQuery.trim()) return members.slice(0, 10);
+    const q = memberSearchQuery.toLowerCase().trim();
+    return members.filter(
+      (m) =>
+        m.name?.toLowerCase().includes(q) ||
+        m.phone?.includes(q) ||
+        (m.city && m.city.toLowerCase().includes(q)) ||
+        (m.native_place && m.native_place.toLowerCase().includes(q))
+    ).slice(0, 15);
+  }, [members, memberSearchQuery]);
+
+  const handleSelectMember = (m: Member) => {
+    setSelectedMember(m);
+    setAddDonorName(m.name);
+    setAddMobileNumber(m.phone || "");
+    setAddDonorPhoto(m.photo_url || "");
+    setMemberSearchQuery("");
+  };
+
+  const handleClearSelectedMember = () => {
+    setSelectedMember(null);
+    setAddDonorName("");
+    setAddMobileNumber("");
+    setAddDonorPhoto("");
+  };
+
+  const handleOpenAddModal = () => {
+    setDonorSource("member");
+    setMemberSearchQuery("");
+    setSelectedMember(null);
+    setAddDonorName("");
+    setAddMobileNumber("");
+    setAddAmount("");
+    setAddPurpose(DONATION_PURPOSES[0]);
+    setAddSpecificPurpose("");
+    setAddYear(String(new Date().getFullYear()));
+    setAddDate(new Date().toISOString().split("T")[0]);
+    setAddPaymentMethod(PAYMENT_METHODS[0]);
+    setAddReceiptNumber(`ADS-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`);
+    setAddStatus("approved");
+    setAddHastheInput("");
+    setAddHastheList([]);
+    setAddDonorPhoto("");
+    setAddPaymentProof("");
+    setAddIsAnonymous(false);
+    setAddPublicConsent(true);
+    setAddAdminRemarks("");
+    setShowAddModal(true);
+  };
+
+  const handleAddHasthe = () => {
+    const val = addHastheInput.trim();
+    if (val && !addHastheList.includes(val)) {
+      setAddHastheList((prev) => [...prev, val]);
+      setAddHastheInput("");
+    }
+  };
+
+  const handleRemoveHasthe = (index: number) => {
+    setAddHastheList((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddDonationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addDonorName.trim()) {
+      alert("કૃપા કરીને દાતાનું નામ દાખલ કરો.");
+      return;
+    }
+    const num = Number(addAmount);
+    if (!num || num <= 0) {
+      alert("કૃપા કરીને માન્ય રકમ દાખલ કરો.");
+      return;
+    }
+
+    const adminName = currentUser?.name || "ખજાનચી / એડમિન";
+    addDonation({
+      user_id: selectedMember?.id,
+      donor_id: selectedMember?.id,
+      donor_name: addDonorName.trim(),
+      mobile_number: addMobileNumber.trim(),
+      amount: num,
+      donation_purpose: addPurpose,
+      purpose: addPurpose,
+      specific_purpose: addSpecificPurpose.trim() || undefined,
+      donation_year: addYear,
+      date: addDate,
+      payment_method: addPaymentMethod,
+      receipt_number: addReceiptNumber.trim() || undefined,
+      status: addStatus,
+      payment_status: addStatus === "approved" ? "verified" : "pending",
+      hasthe_names: addHastheList,
+      donor_photo: addDonorPhoto || undefined,
+      payment_proof: addPaymentProof || undefined,
+      is_anonymous: addIsAnonymous,
+      public_consent: addPublicConsent,
+      approved_by: addStatus === "approved" ? adminName : undefined,
+      approved_at: addStatus === "approved" ? addDate : undefined,
+      admin_remarks: addAdminRemarks.trim() || undefined,
+    });
+
+    addLog(
+      "એડમિન દ્વારા નવું દાન ઉમેર્યું",
+      `${addDonorName.trim()} (રકમ: ₹${num.toLocaleString("en-IN")})`,
+      `હેતુ: ${addPurpose}, પદ્ધતિ: ${addPaymentMethod}, સ્થિતિ: ${addStatus === "approved" ? "માન્ય" : "પેન્ડિંગ"}`,
+      adminName,
+      currentUser?.role || "treasurer"
+    );
+
+    setShowAddModal(false);
+    setSuccessToast(`"${addDonorName.trim()}" નું ₹${num.toLocaleString("en-IN")} નું દાન સફળતાપૂર્વક ઉમેરાયું!`);
+    setTimeout(() => setSuccessToast(null), 3500);
+  };
+
+  const handleOpenEditModal = (don: Donation) => {
+    setEditingDonation(don);
+    setEditDonorName(don.donor_name || "");
+    setEditMobileNumber(don.mobile_number || "");
+    setEditAmount(String(don.amount || ""));
+    setEditPurpose(don.donation_purpose || don.purpose || DONATION_PURPOSES[0]);
+    setEditSpecificPurpose(don.specific_purpose || "");
+    setEditYear(don.donation_year || don.date?.split("-")[0] || String(new Date().getFullYear()));
+    setEditDate(don.date || new Date().toISOString().split("T")[0]);
+    setEditPaymentMethod(don.payment_method || PAYMENT_METHODS[0]);
+    setEditReceiptNumber(don.receipt_number || don.donation_id || "");
+    setEditStatus((don.status as any) || (don.payment_status === "verified" ? "approved" : "pending"));
+    setEditHastheList(Array.isArray(don.hasthe_names) ? [...don.hasthe_names] : []);
+    setEditHastheInput("");
+    setEditDonorPhoto(don.donor_photo || "");
+    setEditPaymentProof(don.payment_proof || "");
+    setEditIsAnonymous(!!don.is_anonymous);
+    setEditPublicConsent(don.public_consent !== false);
+    setEditAdminRemarks(don.admin_remarks || "");
+  };
+
+  const handleEditAddHasthe = () => {
+    const val = editHastheInput.trim();
+    if (val && !editHastheList.includes(val)) {
+      setEditHastheList((prev) => [...prev, val]);
+      setEditHastheInput("");
+    }
+  };
+
+  const handleEditRemoveHasthe = (index: number) => {
+    setEditHastheList((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditDonationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDonation) return;
+    if (!editDonorName.trim()) {
+      alert("કૃપા કરીને દાતાનું નામ દાખલ કરો.");
+      return;
+    }
+    const num = Number(editAmount);
+    if (!num || num <= 0) {
+      alert("કૃપા કરીને માન્ય રકમ દાખલ કરો.");
+      return;
+    }
+
+    const adminName = currentUser?.name || "ખજાનચી / એડમિન";
+    const updates: Partial<Donation> = {
+      donor_name: editDonorName.trim(),
+      mobile_number: editMobileNumber.trim(),
+      amount: num,
+      donation_purpose: editPurpose,
+      purpose: editPurpose,
+      specific_purpose: editSpecificPurpose.trim() || undefined,
+      donation_year: editYear,
+      date: editDate,
+      payment_method: editPaymentMethod,
+      receipt_number: editReceiptNumber.trim() || undefined,
+      status: editStatus,
+      payment_status: editStatus === "approved" ? "verified" : (editStatus === "pending" ? "pending" : editingDonation.payment_status),
+      hasthe_names: editHastheList,
+      donor_photo: editDonorPhoto || undefined,
+      payment_proof: editPaymentProof || undefined,
+      is_anonymous: editIsAnonymous,
+      public_consent: editPublicConsent,
+      admin_remarks: editAdminRemarks.trim() || undefined,
+      approved_by: editStatus === "approved" ? (editingDonation.approved_by || adminName) : undefined,
+      approved_at: editStatus === "approved" ? (editingDonation.approved_at || editDate) : undefined,
+    };
+
+    updateDonation(editingDonation.id, updates);
+
+    addLog(
+      "દાન વિગતો સુધારી",
+      `${editDonorName.trim()} (ID: ${editingDonation.donation_id || editingDonation.receipt_number})`,
+      `સુધારેલી રકમ: ₹${num.toLocaleString("en-IN")}, સ્થિતિ: ${editStatus}`,
+      adminName,
+      currentUser?.role || "treasurer"
+    );
+
+    setEditingDonation(null);
+    setSuccessToast(`"${editDonorName.trim()}" નો દાન રેકોર્ડ સફળતાપૂર્વક અપડેટ થયો!`);
+    setTimeout(() => setSuccessToast(null), 3500);
   };
 
   // Bank QR Upload handler
@@ -233,7 +511,16 @@ export default function AdminDonationsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Add Donation Button */}
+          <button
+            onClick={handleOpenAddModal}
+            className="px-4 py-2.5 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>નવું દાન ઉમેરો (Add Donation)</span>
+          </button>
+
           {/* Bank Configuration Button (Requirement 13.7) */}
           <button
             onClick={() => setShowBankConfigModal(true)}
@@ -344,6 +631,15 @@ export default function AdminDonationsPage() {
           <p className="text-xs text-charcoal-500">
             સભ્યો પોર્ટલ પરથી દાન નોંધણી કરશે ત્યારે અહીં ચકાસણી માટે દર્શાવાશે.
           </p>
+          <div className="pt-2">
+            <button
+              onClick={handleOpenAddModal}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs shadow-md transition-all hover:scale-[1.02]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>પ્રથમ દાન રેકોર્ડ ઉમેરો (Add Donation)</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -517,13 +813,22 @@ export default function AdminDonationsPage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleDelete(don.id, don.donor_name)}
-                    className="p-1.5 rounded-xl text-charcoal-400 hover:text-red-700 hover:bg-red-50 transition-colors"
-                    title="ડિલીટ કરો"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEditModal(don)}
+                      className="p-1.5 rounded-xl text-charcoal-400 hover:text-saffron-700 hover:bg-saffron-50 transition-colors"
+                      title="વિગતો સુધારો (Edit)"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(don.id, don.donor_name)}
+                      className="p-1.5 rounded-xl text-charcoal-400 hover:text-red-700 hover:bg-red-50 transition-colors"
+                      title="ડિલીટ કરો"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -801,6 +1106,762 @@ export default function AdminDonationsPage() {
                   className="px-5 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold shadow-md transition-colors"
                 >
                   સાચવો (Save Bank Details)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: ADD DONATION ON BEHALF OF ANY PERSON */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-ivory-300 overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="p-5 border-b border-ivory-200 flex items-center justify-between bg-gradient-to-r from-forest-50 via-emerald-50/40 to-ivory-50">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 rounded-xl bg-forest-800 text-white shadow-xs">
+                  <Heart className="w-5 h-5 fill-white" />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-base text-charcoal-900">
+                    નવું દાન ઉમેરો (Add Donation Record)
+                  </h3>
+                  <p className="text-[11px] text-charcoal-500">
+                    સમાજના સભ્ય અથવા અન્ય કોઈપણ વ્યક્તિ વતી એડમિન દ્વારા દાન નોંધણી.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="w-8 h-8 rounded-full bg-ivory-200 hover:bg-ivory-300 text-charcoal-600 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddDonationSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Step 1: Donor Source Selector */}
+              <div className="p-3.5 rounded-2xl bg-ivory-50 border border-ivory-200 space-y-2.5">
+                <span className="block font-bold text-charcoal-800">દાતા પસંદગી (Donor Selection) *</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDonorSource("member");
+                    }}
+                    className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 ${
+                      donorSource === "member"
+                        ? "bg-forest-800 text-white border-forest-800 shadow-xs"
+                        : "bg-white text-charcoal-700 border-ivory-300 hover:bg-ivory-100"
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>સમાજના સભ્યમાંથી પસંદ કરો</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDonorSource("custom");
+                      handleClearSelectedMember();
+                    }}
+                    className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 ${
+                      donorSource === "custom"
+                        ? "bg-forest-800 text-white border-forest-800 shadow-xs"
+                        : "bg-white text-charcoal-700 border-ivory-300 hover:bg-ivory-100"
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>અન્ય વ્યક્તિ / દાતા</span>
+                  </button>
+                </div>
+
+                {/* If Member source selected */}
+                {donorSource === "member" && (
+                  <div className="space-y-2 pt-1">
+                    {selectedMember ? (
+                      <div className="p-3 rounded-xl bg-white border border-forest-300 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {selectedMember.photo_url ? (
+                            <img
+                              src={selectedMember.photo_url}
+                              alt={selectedMember.name}
+                              className="w-10 h-10 rounded-xl object-cover border border-ivory-300 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-forest-100 text-forest-800 font-bold flex items-center justify-center flex-shrink-0">
+                              {selectedMember.name.charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <span className="font-bold text-charcoal-900 block truncate">
+                              {selectedMember.name}
+                            </span>
+                            <span className="text-[11px] text-charcoal-500 block">
+                              ફોન: {selectedMember.phone} | {selectedMember.city} ({selectedMember.native_place})
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleClearSelectedMember}
+                          className="px-2.5 py-1 text-[11px] text-red-700 hover:bg-red-50 rounded-lg border border-red-200 font-semibold"
+                        >
+                          બદલો ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <Search className="w-3.5 h-3.5 text-charcoal-400 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            value={memberSearchQuery}
+                            onChange={(e) => setMemberSearchQuery(e.target.value)}
+                            placeholder="સભ્યનું નામ, ફોન અથવા ગામ શોધો..."
+                            className="w-full pl-8 pr-3 py-2 text-xs border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 bg-white"
+                          />
+                        </div>
+                        <div className="max-h-40 overflow-y-auto space-y-1 divide-y divide-ivory-100 bg-white rounded-xl border border-ivory-200 p-1">
+                          {filteredMembersForAdd.length === 0 ? (
+                            <p className="p-2 text-charcoal-400 text-center">કોઈ સભ્ય મળ્યા નથી.</p>
+                          ) : (
+                            filteredMembersForAdd.map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => handleSelectMember(m)}
+                                className="w-full text-left p-2 hover:bg-forest-50/70 rounded-lg flex items-center justify-between text-xs transition-colors"
+                              >
+                                <span className="font-bold text-charcoal-900">{m.name}</span>
+                                <span className="text-charcoal-500 text-[11px]">
+                                  {m.phone} • {m.city}
+                                </span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Donor Name & Mobile Number */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાતાનું પૂરું નામ (Donor Full Name) *
+                  </label>
+                  <input
+                    type="text"
+                    value={addDonorName}
+                    onChange={(e) => setAddDonorName(e.target.value)}
+                    required
+                    placeholder="દા.ત. શેઠ શ્રી રમણલાલ પી. દરજી"
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    મોબાઇલ નંબર (Mobile Number)
+                  </label>
+                  <input
+                    type="tel"
+                    value={addMobileNumber}
+                    onChange={(e) => setAddMobileNumber(e.target.value)}
+                    placeholder="દા.ત. 98250 12345"
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Step 3: "હસ્તે" (On Behalf Of / Collected By) */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-ivory-50 border border-ivory-200">
+                <label className="block font-bold text-saffron-900">
+                  હસ્તે વિગત (Donated By / On Behalf Of / Managed By)
+                </label>
+                <p className="text-[11px] text-charcoal-500">
+                  કોઈ અન્ય વ્યક્તિ કે પરિવારજન વતી દાન આપવામાં આવ્યું હોય તો તેમના નામ ઉમેરો:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={addHastheInput}
+                    onChange={(e) => setAddHastheInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddHasthe();
+                      }
+                    }}
+                    placeholder="દા.ત. ચિ. રોહન દરજી (પુત્ર)"
+                    className="flex-1 px-3 py-1.5 border border-ivory-300 rounded-xl bg-white text-xs focus:outline-none focus:border-saffron-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddHasthe}
+                    className="px-3.5 py-1.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs"
+                  >
+                    + ઉમેરો
+                  </button>
+                </div>
+                {addHastheList.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {addHastheList.map((hName, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 bg-saffron-100 text-saffron-900 font-semibold px-2.5 py-1 rounded-lg border border-saffron-300 text-xs"
+                      >
+                        <span>{hName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveHasthe(idx)}
+                          className="text-saffron-700 hover:text-red-700 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 4: Amount & Presets */}
+              <div className="space-y-1.5">
+                <label className="block font-bold text-charcoal-800">
+                  દાનની રકમ (Donation Amount in ₹) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 font-bold text-forest-800 text-sm">₹</span>
+                  <input
+                    type="number"
+                    value={addAmount}
+                    onChange={(e) => setAddAmount(e.target.value)}
+                    required
+                    min={1}
+                    placeholder="દા.ત. 5100"
+                    className="w-full pl-8 pr-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-mono font-bold text-base text-forest-900"
+                  />
+                </div>
+                {/* Quick Presets */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {PRESET_AMOUNTS.map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setAddAmount(String(amt))}
+                      className="px-2.5 py-1 rounded-lg bg-forest-50 hover:bg-forest-100 border border-forest-200 text-forest-900 font-bold text-[11px] transition-colors"
+                    >
+                      +₹{amt.toLocaleString("en-IN")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Step 5: Purpose & Description */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાનનો હેતુ (Donation Purpose) *
+                  </label>
+                  <select
+                    value={addPurpose}
+                    onChange={(e) => setAddPurpose(e.target.value)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-semibold bg-white"
+                  >
+                    {DONATION_PURPOSES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાનનું વર્ષ (Year) *
+                  </label>
+                  <input
+                    type="text"
+                    value={addYear}
+                    onChange={(e) => setAddYear(e.target.value)}
+                    placeholder="2026"
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-800 mb-1">
+                  વિશેષ હેતુ / સ્મૃતિ નોંધ (Specific Purpose / In Memory Of)
+                </label>
+                <input
+                  type="text"
+                  value={addSpecificPurpose}
+                  onChange={(e) => setAddSpecificPurpose(e.target.value)}
+                  placeholder="દા.ત. સ્વ. પિતાશ્રીની પુણ્યતિથિ નિમિત્તે અથવા નવા ભવન રૂમ અર્થે"
+                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600"
+                />
+              </div>
+
+              {/* Step 6: Date & Payment Method */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાન તારીખ (Date) *
+                  </label>
+                  <input
+                    type="date"
+                    value={addDate}
+                    onChange={(e) => setAddDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    ચુકવણી પદ્ધતિ (Payment Method) *
+                  </label>
+                  <select
+                    value={addPaymentMethod}
+                    onChange={(e) => setAddPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-medium bg-white"
+                  >
+                    {PAYMENT_METHODS.map((pm) => (
+                      <option key={pm} value={pm}>
+                        {pm}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાન સ્થિતિ (Status) *
+                  </label>
+                  <select
+                    value={addStatus}
+                    onChange={(e) => setAddStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-bold bg-white"
+                  >
+                    <option value="approved">માન્ય (Approved - સીધું મંજૂર)</option>
+                    <option value="pending">પેન્ડિંગ (Pending Verification)</option>
+                    <option value="rejected">અસ્વીકાર (Rejected)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-800 mb-1">
+                  રસીદ નંબર / ટ્રાન્ઝેક્શન રેફરન્સ (Receipt / Ref No)
+                </label>
+                <input
+                  type="text"
+                  value={addReceiptNumber}
+                  onChange={(e) => setAddReceiptNumber(e.target.value)}
+                  placeholder="દા.ત. ADS-2026-0042 અથવા UPI Ref"
+                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600 font-mono"
+                />
+              </div>
+
+              {/* Step 7: Image Uploads */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-ivory-200">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાતાનો ફોટો (Donor Photo) - વૈકલ્પિક
+                  </label>
+                  <ImageUploadWithCrop
+                    currentImageUrl={addDonorPhoto}
+                    onImageCropped={(url) => setAddDonorPhoto(url)}
+                    aspectRatio={1}
+                    aspectRatioLabel="૧:૧ (પાસપોર્ટ કદ)"
+                    category="donor-photos"
+                    label="દાતાનો ફોટો અપલોડ કરો"
+                    helperText="વેબસાઇટ પર દાતાઓની યાદીમાં દર્શાવવા માટે."
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    ચુકવણી પ્રૂફ / રસીદ ફોટો - વૈકલ્પિક
+                  </label>
+                  <ImageUploadWithCrop
+                    currentImageUrl={addPaymentProof}
+                    onImageCropped={(url) => setAddPaymentProof(url)}
+                    aspectRatio={1}
+                    aspectRatioLabel="સ્ક્રીનશોટ / રસીદ"
+                    category="payment-proofs"
+                    label="ચુકવણી સ્ક્રીનશોટ / રસીદ અપલોડ કરો"
+                    helperText="ઓનલાઇન ટ્રાન્ઝેક્શન કે બેંક પાવતીનો ફોટો."
+                  />
+                </div>
+              </div>
+
+              {/* Step 8: Remarks & Toggles */}
+              <div>
+                <label className="block font-bold text-charcoal-800 mb-1">
+                  એડમિન શેરો / વિશેષ નોંધ (Admin Remarks)
+                </label>
+                <textarea
+                  value={addAdminRemarks}
+                  onChange={(e) => setAddAdminRemarks(e.target.value)}
+                  rows={2}
+                  placeholder="દા.ત. રોકડ રકમ ખજાનચીશ્રી પાસે જમા થઈ ગઈ છે."
+                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-forest-600"
+                />
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-ivory-200 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-charcoal-800">
+                  <input
+                    type="checkbox"
+                    checked={addPublicConsent}
+                    onChange={(e) => setAddPublicConsent(e.target.checked)}
+                    className="w-4 h-4 text-forest-800 rounded border-ivory-300 focus:ring-forest-500"
+                  />
+                  <span>વેબસાઇટ પર દાતાની યાદીમાં નામ અને રકમ દર્શાવવાની સંમતિ (Public Listing)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-charcoal-800">
+                  <input
+                    type="checkbox"
+                    checked={addIsAnonymous}
+                    onChange={(e) => setAddIsAnonymous(e.target.checked)}
+                    className="w-4 h-4 text-forest-800 rounded border-ivory-300 focus:ring-forest-500"
+                  />
+                  <span>ગુપ્ત દાન (Anonymous Donor - પબ્લિક યાદીમાં નામ ગુપ્ત રાખવું)</span>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-ivory-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-xl bg-white border border-ivory-300 text-charcoal-700 font-bold hover:bg-ivory-100"
+                >
+                  રદ કરો
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>દાન સાચવો (Save Donation)</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: EDIT DONATION DETAILS */}
+      {editingDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-ivory-300 overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="p-5 border-b border-ivory-200 flex items-center justify-between bg-gradient-to-r from-saffron-50 via-amber-50/40 to-ivory-50">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 rounded-xl bg-saffron-600 text-white shadow-xs">
+                  <Pencil className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-base text-charcoal-900">
+                    દાન વિગતો સુધારો (Edit Donation)
+                  </h3>
+                  <p className="text-[11px] text-charcoal-500">
+                    ID: <strong>{editingDonation.donation_id || editingDonation.receipt_number}</strong> ની વિગતો અપડેટ કરો.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingDonation(null)}
+                className="w-8 h-8 rounded-full bg-ivory-200 hover:bg-ivory-300 text-charcoal-600 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditDonationSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાતાનું પૂરું નામ *
+                  </label>
+                  <input
+                    type="text"
+                    value={editDonorName}
+                    onChange={(e) => setEditDonorName(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    મોબાઇલ નંબર
+                  </label>
+                  <input
+                    type="tel"
+                    value={editMobileNumber}
+                    onChange={(e) => setEditMobileNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Edit Hasthe */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-ivory-50 border border-ivory-200">
+                <label className="block font-bold text-saffron-900">
+                  હસ્તે વિગત (On Behalf Of / Managed By)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editHastheInput}
+                    onChange={(e) => setEditHastheInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleEditAddHasthe();
+                      }
+                    }}
+                    placeholder="હસ્તે નામ ઉમેરો..."
+                    className="flex-1 px-3 py-1.5 border border-ivory-300 rounded-xl bg-white text-xs focus:outline-none focus:border-saffron-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleEditAddHasthe}
+                    className="px-3.5 py-1.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs"
+                  >
+                    + ઉમેરો
+                  </button>
+                </div>
+                {editHastheList.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {editHastheList.map((hName, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 bg-saffron-100 text-saffron-900 font-semibold px-2.5 py-1 rounded-lg border border-saffron-300 text-xs"
+                      >
+                        <span>{hName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleEditRemoveHasthe(idx)}
+                          className="text-saffron-700 hover:text-red-700 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-1.5">
+                <label className="block font-bold text-charcoal-800">
+                  દાનની રકમ (₹) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 font-bold text-forest-800 text-sm">₹</span>
+                  <input
+                    type="number"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    required
+                    min={1}
+                    className="w-full pl-8 pr-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-mono font-bold text-base text-forest-900"
+                  />
+                </div>
+              </div>
+
+              {/* Purpose & Year */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાનનો હેતુ *
+                  </label>
+                  <select
+                    value={editPurpose}
+                    onChange={(e) => setEditPurpose(e.target.value)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-semibold bg-white"
+                  >
+                    {DONATION_PURPOSES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાનનું વર્ષ *
+                  </label>
+                  <input
+                    type="text"
+                    value={editYear}
+                    onChange={(e) => setEditYear(e.target.value)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-800 mb-1">
+                  વિશેષ હેતુ / સ્મૃતિ નોંધ
+                </label>
+                <input
+                  type="text"
+                  value={editSpecificPurpose}
+                  onChange={(e) => setEditSpecificPurpose(e.target.value)}
+                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600"
+                />
+              </div>
+
+              {/* Date, Payment Method & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાન તારીખ *
+                  </label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    ચુકવણી પદ્ધતિ *
+                  </label>
+                  <select
+                    value={editPaymentMethod}
+                    onChange={(e) => setEditPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-medium bg-white"
+                  >
+                    {PAYMENT_METHODS.map((pm) => (
+                      <option key={pm} value={pm}>
+                        {pm}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાન સ્થિતિ *
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-bold bg-white"
+                  >
+                    <option value="approved">માન્ય (Approved)</option>
+                    <option value="pending">પેન્ડિંગ (Pending)</option>
+                    <option value="rejected">અસ્વીકાર (Rejected)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-800 mb-1">
+                  રસીદ નંબર / ટ્રાન્ઝેક્શન રેફરન્સ
+                </label>
+                <input
+                  type="text"
+                  value={editReceiptNumber}
+                  onChange={(e) => setEditReceiptNumber(e.target.value)}
+                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600 font-mono"
+                />
+              </div>
+
+              {/* Image Uploads */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-ivory-200">
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    દાતાનો ફોટો (Donor Photo)
+                  </label>
+                  <ImageUploadWithCrop
+                    currentImageUrl={editDonorPhoto}
+                    onImageCropped={(url) => setEditDonorPhoto(url)}
+                    aspectRatio={1}
+                    aspectRatioLabel="૧:૧ (પાસપોર્ટ કદ)"
+                    category="donor-photos"
+                    label="દાતાનો ફોટો અપલોડ કરો"
+                    helperText="વેબસાઇટ પર દાતાઓની યાદીમાં દર્શાવવા માટે."
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-800 mb-1">
+                    ચુકવણી પ્રૂફ / રસીદ ફોટો
+                  </label>
+                  <ImageUploadWithCrop
+                    currentImageUrl={editPaymentProof}
+                    onImageCropped={(url) => setEditPaymentProof(url)}
+                    aspectRatio={1}
+                    aspectRatioLabel="સ્ક્રીનશોટ / રસીદ"
+                    category="payment-proofs"
+                    label="ચુકવણી સ્ક્રીનશોટ / રસીદ અપલોડ કરો"
+                    helperText="ઓનલાઇન ટ્રાન્ઝેક્શન કે બેંક પાવતીનો ફોટો."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-800 mb-1">
+                  એડમિન શેરો / વિશેષ નોંધ (Admin Remarks)
+                </label>
+                <textarea
+                  value={editAdminRemarks}
+                  onChange={(e) => setEditAdminRemarks(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none focus:border-saffron-600"
+                />
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-ivory-200 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-charcoal-800">
+                  <input
+                    type="checkbox"
+                    checked={editPublicConsent}
+                    onChange={(e) => setEditPublicConsent(e.target.checked)}
+                    className="w-4 h-4 text-saffron-600 rounded border-ivory-300 focus:ring-saffron-500"
+                  />
+                  <span>વેબસાઇટ પર દાતાની યાદીમાં નામ અને રકમ દર્શાવવાની સંમતિ (Public Listing)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-charcoal-800">
+                  <input
+                    type="checkbox"
+                    checked={editIsAnonymous}
+                    onChange={(e) => setEditIsAnonymous(e.target.checked)}
+                    className="w-4 h-4 text-saffron-600 rounded border-ivory-300 focus:ring-saffron-500"
+                  />
+                  <span>ગુપ્ત દાન (Anonymous Donor)</span>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-ivory-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingDonation(null)}
+                  className="px-4 py-2 rounded-xl bg-white border border-ivory-300 text-charcoal-700 font-bold hover:bg-ivory-100"
+                >
+                  રદ કરો
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>ફેરફારો સાચવો (Save Changes)</span>
                 </button>
               </div>
             </form>

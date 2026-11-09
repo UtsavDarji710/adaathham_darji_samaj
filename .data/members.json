@@ -187,11 +187,11 @@
     "is_available_for_matrimony": false,
     "matrimony": {
       "is_available": false,
-      "is_public_listing": true,
+      "is_public_listing": false,
       "is_saved": true,
-      "height": "",
+      "height": "5' 8\"",
       "weight": "",
-      "complexion": "",
+      "complexion": "ઘઉંવર્ણ (Wheatish)",
       "subcaste_gotra": "",
       "about_me": "",
       "partner_expectations": "",
@@ -205,23 +205,25 @@
         "show_occupation": true,
         "show_contact": false
       },
-      "updated_at": "2026-11-09T13:27:54.479+00:00"
+      "updated_at": "2026-11-09T13:46:44.438+00:00"
     },
     "gender": "male",
+    "blood_group": "B+",
     "is_deceased": false,
     "role": "admin",
     "is_lifetime_member": false,
     "committee_order": 99,
-    "completeness": 75,
+    "completeness": 95,
     "created_at": "2026-11-09T13:25:10.172184+00:00",
     "privacy": {
-      "phone": "members",
-      "address": "members",
-      "photo": "public",
-      "family": "members",
+      "phone": "private",
+      "address": "private",
+      "photo": "private",
+      "family": "private",
       "business": "public",
-      "employment": "members",
-      "education": "members"
+      "employment": "private",
+      "education": "private",
+      "dob": "public"
     },
     "family_relations": [],
     "employment": {},

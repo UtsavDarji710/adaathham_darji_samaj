@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Member, AdminRole, PrivacySettings } from "@/types";
+import { Member, AdminRole, PrivacySettings, DEFAULT_MEMBER_PRIVACY } from "@/types";
 
 interface AuthContextType {
   currentUser: Member | null;
@@ -406,15 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       is_lifetime_member: false,
       completeness: 75,
       created_at: new Date().toISOString(),
-      privacy: {
-        phone: "members",
-        address: "members",
-        photo: "public",
-        family: "members",
-        business: "public",
-        employment: "members",
-        education: "members",
-      },
+      privacy: { ...DEFAULT_MEMBER_PRIVACY },
       ...data,
     };
     setCurrentUser(newMember);

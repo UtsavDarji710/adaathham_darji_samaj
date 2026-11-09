@@ -109,9 +109,7 @@ export default function AdvertisementsPage() {
       return;
     }
 
-    const defaultBanner =
-      bannerPreview ||
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop&q=80";
+    const defaultBanner = bannerPreview || null;
 
     // Submit for approval (Status: pending)
     addAdvertisement({
@@ -242,11 +240,18 @@ export default function AdvertisementsPage() {
                   <div>
                     {/* Banner Image */}
                     <div className="relative aspect-[16/9] overflow-hidden bg-ivory-200">
-                      <img
-                        src={ad.image_url}
-                        alt={ad.business_name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                      {ad.image_url ? (
+                        <img
+                          src={ad.image_url}
+                          alt={ad.business_name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-saffron-50 via-saffron-100/40 to-ivory-200 flex flex-col items-center justify-center p-4 text-center">
+                          <Megaphone className="w-10 h-10 text-saffron-600/30 mb-1" />
+                          <span className="text-xs font-bold text-saffron-900/60 line-clamp-1">{ad.business_name}</span>
+                        </div>
+                      )}
                       <span className="absolute top-3 left-3 bg-gradient-to-r from-saffron-600 to-saffron-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
                         પ્રાયોજિત જાહેરાત
@@ -362,11 +367,17 @@ export default function AdvertisementsPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={ad.image_url}
-                        alt={ad.business_name}
-                        className="w-14 h-14 rounded-xl object-cover border border-ivory-300"
-                      />
+                      {ad.image_url ? (
+                        <img
+                          src={ad.image_url}
+                          alt={ad.business_name}
+                          className="w-14 h-14 rounded-xl object-cover border border-ivory-300"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-xl bg-saffron-50 border border-saffron-200 flex items-center justify-center text-saffron-600 flex-shrink-0">
+                          <Megaphone className="w-6 h-6 opacity-60" />
+                        </div>
+                      )}
                       <div>
                         <h4 className="font-extrabold text-sm text-charcoal-900">{ad.business_name}</h4>
                         <span className="text-[11px] text-charcoal-500">{ad.category}</span>

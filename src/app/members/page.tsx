@@ -66,19 +66,30 @@ export default function MembersDirectoryPage() {
     });
   }, [members, searchQuery, selectedCity, selectedNative]);
 
-  // Helper to determine phone visibility
+  // Helper to determine phone visibility (default: private)
   const canViewPhone = (member: Member) => {
     if (isAdmin || currentUser?.id === member.id) return true;
-    if (member.privacy.phone === "public") return true;
-    if (member.privacy.phone === "members" && currentUser) return true;
+    const priv = member.privacy?.phone || "private";
+    if (priv === "public") return true;
+    if (priv === "members" && currentUser) return true;
     return false;
   };
 
-  // Helper to determine address visibility
+  // Helper to determine address visibility (default: public)
   const canViewAddress = (member: Member) => {
     if (isAdmin || currentUser?.id === member.id) return true;
-    if (member.privacy.address === "public") return true;
-    if (member.privacy.address === "members" && currentUser) return true;
+    const priv = member.privacy?.address || "public";
+    if (priv === "public") return true;
+    if (priv === "members" && currentUser) return true;
+    return false;
+  };
+
+  // Helper to determine date of birth visibility (default: public)
+  const canViewDob = (member: Member) => {
+    if (isAdmin || currentUser?.id === member.id) return true;
+    const priv = member.privacy?.dob || "public";
+    if (priv === "public") return true;
+    if (priv === "members" && currentUser) return true;
     return false;
   };
 
@@ -415,6 +426,19 @@ export default function MembersDirectoryPage() {
                 <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
                   <span className="text-[11px] text-charcoal-500 block">લગ્ન સ્થિતિ (Married Status):</span>
                   <span className="font-bold text-saffron-800">{activeModalMember.marital_status}</span>
+                </div>
+              )}
+
+              {activeModalMember.dob && (
+                <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
+                  <span className="text-[11px] text-charcoal-500 block">જન્મ તારીખ (Date of Birth):</span>
+                  {canViewDob(activeModalMember) ? (
+                    <span className="font-bold text-charcoal-900">{activeModalMember.dob}</span>
+                  ) : (
+                    <span className="text-charcoal-400 italic flex items-center gap-1 text-[11px]">
+                      <Lock className="w-3 h-3" /> ગોપનીય (ખાનગી રાખેલ છે)
+                    </span>
+                  )}
                 </div>
               )}
 

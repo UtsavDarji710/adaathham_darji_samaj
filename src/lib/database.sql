@@ -62,14 +62,15 @@ CREATE TABLE IF NOT EXISTS members (
     committee_role TEXT,
     committee_order INT DEFAULT 99,
     
-    -- Privacy settings
-    privacy_phone privacy_visibility DEFAULT 'members',
-    privacy_address privacy_visibility DEFAULT 'members',
+    -- Privacy settings (default: phone is private, all other fields public)
+    privacy_phone privacy_visibility DEFAULT 'private',
+    privacy_dob privacy_visibility DEFAULT 'public',
+    privacy_address privacy_visibility DEFAULT 'public',
     privacy_photo privacy_visibility DEFAULT 'public',
-    privacy_family privacy_visibility DEFAULT 'members',
+    privacy_family privacy_visibility DEFAULT 'public',
     privacy_business privacy_visibility DEFAULT 'public',
-    privacy_employment privacy_visibility DEFAULT 'members',
-    privacy_education privacy_visibility DEFAULT 'members',
+    privacy_employment privacy_visibility DEFAULT 'public',
+    privacy_education privacy_visibility DEFAULT 'public',
     
     -- Structured JSONB fields
     family_relations JSONB DEFAULT '[]'::jsonb,
@@ -143,7 +144,7 @@ CREATE TABLE IF NOT EXISTS business_advertisements (
     owner_name TEXT NOT NULL,
     contact_number TEXT NOT NULL,
     address TEXT NOT NULL,
-    image_url TEXT NOT NULL,
+    image_url TEXT,
     website_link TEXT,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
     rejection_remarks TEXT,
@@ -355,3 +356,21 @@ USING (
         OR (auth.jwt() ->> 'role') IN ('president', 'treasurer', 'assistant_treasurer', 'secretary', 'admin')
     )
 );
+
+-- Safe Migration for privacy_dob
+ALTER TABLE members ADD COLUMN IF NOT EXISTS privacy_dob privacy_visibility DEFAULT 'public';
+ALTER TABLE donations ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'રોકડ (Cash)';
+
+-- Safe Migration for default privacy settings: Only mobile number is private ('private'), all other details are public ('public')
+ALTER TABLE members ALTER COLUMN privacy_phone SET DEFAULT 'private';
+ALTER TABLE members ALTER COLUMN privacy_dob SET DEFAULT 'public';
+ALTER TABLE members ALTER COLUMN privacy_address SET DEFAULT 'public';
+ALTER TABLE members ALTER COLUMN privacy_photo SET DEFAULT 'public';
+ALTER TABLE members ALTER COLUMN privacy_family SET DEFAULT 'public';
+ALTER TABLE members ALTER COLUMN privacy_business SET DEFAULT 'public';
+ALTER TABLE members ALTER COLUMN privacy_employment SET DEFAULT 'public';
+ALTER TABLE members ALTER COLUMN privacy_education SET DEFAULT 'public';
+
+-- Safe Migration for advertisements & events nullable images (no dummy images required)
+ALTER TABLE business_advertisements ALTER COLUMN image_url DROP NOT NULL;
+ALTER TABLE events ALTER COLUMN cover_image DROP NOT NULL;

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         owner_name: body.owner_name || "",
         contact_number: body.contact_number || "",
         address: body.address || "",
-        image_url: body.image_url || "",
+        image_url: body.image_url || null,
         website_link: body.website_link || null,
         status: body.status || "pending",
         rejection_remarks: body.rejection_remarks || null,

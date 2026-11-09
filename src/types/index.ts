@@ -8,7 +8,21 @@ export interface PrivacySettings {
   business: PrivacyVisibility;
   employment: PrivacyVisibility;
   education: PrivacyVisibility;
+  dob?: PrivacyVisibility;
 }
+
+export const DEFAULT_MEMBER_PRIVACY: PrivacySettings = {
+  phone: "private",
+  dob: "public",
+  address: "public",
+  photo: "public",
+  family: "public",
+  business: "public",
+  employment: "public",
+  education: "public",
+};
+
+export const DEFAULT_BUSINESS_COVER = "/default-business.svg";
 
 export type AdminRole = "president" | "secretary" | "joint_secretary" | "treasurer" | "assistant_treasurer" | "admin" | "member";
 
@@ -302,8 +316,8 @@ export interface BusinessItem {
   is_email_verified?: boolean;
   email_verified_at?: string;
   website?: string;
-  logo_url?: string;
-  cover_url?: string;
+  logo_url?: string | null;
+  cover_url?: string | null;
   is_featured: boolean;
   is_paid: boolean;
   paid_amount?: number;
@@ -321,7 +335,7 @@ export interface BusinessAdvertisement {
   owner_name: string;
   contact_number: string;
   address: string;
-  image_url: string; // Business Image / Advertisement Banner
+  image_url?: string | null; // Business Image / Advertisement Banner (null if not provided)
   website_link?: string;
   status: "pending" | "approved" | "rejected";
   rejection_remarks?: string;
@@ -357,7 +371,7 @@ export interface CommunityEvent {
   time: string;
   location: string;
   city: string;
-  cover_image: string;
+  cover_image?: string | null;
   gallery: string[];
   video_url?: string;
   status: "upcoming" | "past" | "archived";

@@ -16,6 +16,7 @@ import {
   Share2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
+import { DEFAULT_BUSINESS_COVER } from "@/types";
 
 export default function BusinessDetailPage() {
   const { id } = useParams();
@@ -51,8 +52,15 @@ export default function BusinessDetailPage() {
         {/* Cover Photo */}
         <div className="relative aspect-[21/9] bg-ivory-200">
           <img
-            src={business.cover_url || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200"}
+            src={
+              business.cover_url && !business.cover_url.includes("images.unsplash.com/photo-1558769132")
+                ? business.cover_url
+                : DEFAULT_BUSINESS_COVER
+            }
             alt={business.name}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_BUSINESS_COVER;
+            }}
             className="w-full h-full object-cover"
           />
           {business.is_featured && (

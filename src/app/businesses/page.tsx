@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
-import { BusinessItem } from "@/types";
+import { BusinessItem, DEFAULT_BUSINESS_COVER } from "@/types";
 
 export default function BusinessDirectoryPage() {
   const { businesses, members, addBusiness, addLog } = useData();
@@ -118,9 +118,7 @@ export default function BusinessDirectoryPage() {
       phone: phone || currentUser.phone,
       email: email || undefined,
       website: website || undefined,
-      cover_url:
-        coverUrl ||
-        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop&q=80",
+      cover_url: coverUrl.trim() || null,
       is_featured: isPaidAd,
       is_paid: isPaidAd,
       paid_amount: isPaidAd ? 1500 : 0,
@@ -218,8 +216,15 @@ export default function BusinessDirectoryPage() {
             <div>
               <div className="relative aspect-[16/10] overflow-hidden bg-ivory-200">
                 <img
-                  src={biz.cover_url || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800"}
+                  src={
+                    biz.cover_url && !biz.cover_url.includes("images.unsplash.com/photo-1558769132")
+                      ? biz.cover_url
+                      : DEFAULT_BUSINESS_COVER
+                  }
                   alt={biz.name}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = DEFAULT_BUSINESS_COVER;
+                  }}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 {biz.is_featured && (

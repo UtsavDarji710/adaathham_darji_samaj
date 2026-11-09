@@ -77,6 +77,7 @@ interface DataContextType {
 
   // Donations actions (દાન સંચાલન & ખજાનચી હિસાબ)
   addDonation: (don: Partial<Donation> & { donor_name: string; mobile_number?: string; donation_purpose?: string; amount?: number }) => Donation;
+  updateDonation: (id: string, updates: Partial<Donation>) => void;
   approveDonation: (id: string, approvedBy: string) => void;
   rejectDonation: (id: string, remarks: string, rejectedBy: string) => void;
   deleteDonation: (id: string) => void;
@@ -475,7 +476,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...adv,
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `adv-${Date.now()}`,
       created_at: new Date().toISOString(),
-      status: "pending",
+      status: adv.status || "pending",
+      image_url: adv.image_url || null,
     };
     const updated = [newAdv, ...advertisements];
     setAdvertisements(updated);
@@ -559,6 +561,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newEvent: CommunityEvent = {
       ...event,
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `evt-${Date.now()}`,
+      cover_image: event.cover_image || null,
     };
     const updated = [newEvent, ...events];
     setEvents(updated);
@@ -593,9 +596,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       amount?: number;
     }
   ): Donation => {
+    const isApproved = don.status === "approved";
     const newDonation: Donation = {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `don-${Date.now()}`,
       donation_id: don.donation_id || `DON-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      user_id: don.user_id,
+      donor_id: don.donor_id,
       donor_name: don.donor_name,
       mobile_number: don.mobile_number || "",
       donor_photo: don.donor_photo,
@@ -608,12 +614,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       purpose: don.purpose || don.donation_purpose || "",
       campaign: don.campaign,
       payment_proof: don.payment_proof,
-      status: "pending",
-      payment_status: "pending",
+      status: don.status || "pending",
+      payment_status: isApproved ? "verified" : (don.payment_status || "pending"),
       is_anonymous: !!don.is_anonymous,
       public_consent: don.public_consent !== false,
-      receipt_number: `ADS-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
-      payment_method: don.payment_method || "UPI",
+      receipt_number: don.receipt_number || `ADS-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      payment_method: don.payment_method || "રોકડ (Cash)",
+      approved_by: isApproved ? don.approved_by : undefined,
+      approved_at: isApproved ? (don.approved_at || new Date().toISOString().split("T")[0]) : undefined,
+      admin_remarks: don.admin_remarks,
+      created_at: new Date().toISOString(),
     };
 
     const updated = [newDonation, ...donations];
@@ -630,43 +640,96 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return newDonation;
   };
 
-  const approveDonation = (id: string, approvedBy: string) => {
+  const updateDonation = (id: string, updates: Partial<Donation>) => {
+    const isApproved = updates.status === "approved";
     const updated = donations.map((d) =>
-      d.id === id
+      d.id === id || d.donation_id === id
         ? {
             ...d,
-            status: "approved" as const,
-            payment_status: "verified" as const,
-            approved_by: approvedBy,
-            approved_at: new Date().toISOString().split("T")[0],
+            ...updates,
+            payment_status: isApproved ? ("verified" as const) : (updates.status === "pending" ? ("pending" as const) : (updates.payment_status || d.payment_status)),
+            updated_at: new Date().toISOString(),
           }
         : d
     );
     setDonations(updated);
     sync(STORAGE_KEYS.donations, updated);
+
+    fetch("/api/donations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.warn("[updateDonation error]", err));
+  };
+
+  const approveDonation = (id: string, approvedBy: string) => {
+    const now = new Date().toISOString().split("T")[0];
+    const updated = donations.map((d) =>
+      d.id === id || d.donation_id === id
+        ? {
+            ...d,
+            status: "approved" as const,
+            payment_status: "verified" as const,
+            approved_by: approvedBy,
+            approved_at: now,
+          }
+        : d
+    );
+    setDonations(updated);
+    sync(STORAGE_KEYS.donations, updated);
+
+    fetch("/api/donations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        status: "approved",
+        payment_status: "verified",
+        approved_by: approvedBy,
+        approved_at: now,
+      }),
+    }).catch((err) => console.warn("[approveDonation error]", err));
   };
 
   const rejectDonation = (id: string, remarks: string, rejectedBy: string) => {
+    const now = new Date().toISOString().split("T")[0];
     const updated = donations.map((d) =>
-      d.id === id
+      d.id === id || d.donation_id === id
         ? {
             ...d,
             status: "rejected" as const,
             payment_status: "pending" as const,
             admin_remarks: remarks,
             approved_by: rejectedBy,
-            approved_at: new Date().toISOString().split("T")[0],
+            approved_at: now,
           }
         : d
     );
     setDonations(updated);
     sync(STORAGE_KEYS.donations, updated);
+
+    fetch("/api/donations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        status: "rejected",
+        payment_status: "pending",
+        admin_remarks: remarks,
+        approved_by: rejectedBy,
+        approved_at: now,
+      }),
+    }).catch((err) => console.warn("[rejectDonation error]", err));
   };
 
   const deleteDonation = (id: string) => {
-    const updated = donations.filter((d) => d.id !== id);
+    const updated = donations.filter((d) => d.id !== id && d.donation_id !== id);
     setDonations(updated);
     sync(STORAGE_KEYS.donations, updated);
+
+    fetch(`/api/donations?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => console.warn("[deleteDonation error]", err));
   };
 
   const verifyDonation = (id: string) => {
@@ -776,6 +839,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateEvent,
         deleteEvent,
         addDonation,
+        updateDonation,
         approveDonation,
         rejectDonation,
         deleteDonation,

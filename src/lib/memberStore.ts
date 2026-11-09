@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Member, AdminRole } from "@/types";
+import { Member, AdminRole, DEFAULT_MEMBER_PRIVACY } from "@/types";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -271,15 +271,7 @@ export function ensureSessionUser(sessionVal: string): Member {
     gender: "male",
     completeness: 80,
     created_at: new Date().toISOString(),
-    privacy: {
-      phone: "members",
-      address: "members",
-      photo: "public",
-      family: "members",
-      business: "public",
-      employment: "public",
-      education: "members",
-    },
+    privacy: { ...DEFAULT_MEMBER_PRIVACY },
   };
 
   registerMember(newMember);

@@ -7,7 +7,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   Users,
-  GitFork,
   Briefcase,
   Megaphone,
   Calendar,
@@ -18,6 +17,7 @@ import {
   ChevronRight,
   Info,
   CheckCircle,
+  HeartHandshake,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_CREDENTIALS } from "@/lib/roleCredentials";
@@ -29,11 +29,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const adminNav = [
     { href: "/admin", label: "વહીવટી સમરી", icon: ShieldCheck, exact: true },
     { href: "/admin/members", label: "સભ્યો", icon: Users },
-    { href: "/admin/families", label: "પરિવાર સંબંધો", icon: GitFork },
     { href: "/admin/advertisements", label: "જાહેરાતો", icon: Megaphone },
     { href: "/admin/events", label: "કાર્યક્રમો", icon: Calendar },
     { href: "/admin/donations", label: "દાન & હિસાબ", icon: Heart },
     { href: "/admin/committee", label: "સમિતિ", icon: Award },
+    { href: "/admin/matrimony", label: "મેટ્રિમોની", icon: HeartHandshake },
   ];
 
   // 1. If not logged in at all (Guest)
