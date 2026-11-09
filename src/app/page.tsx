@@ -374,7 +374,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. APPROVED BUSINESS ADVERTISEMENTS CAROUSEL */}
+      {/* Detail Sections: Only visible after login */}
+      {currentUser && (
+        <>
+          {/* 4. APPROVED BUSINESS ADVERTISEMENTS CAROUSEL */}
       {approvedAds.length > 0 && (
         <section
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
@@ -864,6 +867,8 @@ export default function HomePage() {
           </div>
         )}
       />
+        </>
+      )}
       </div>
     </div>
   );

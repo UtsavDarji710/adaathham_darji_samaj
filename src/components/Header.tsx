@@ -157,53 +157,55 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Desktop Navigation Links — All Tabs Managed Cleanly in a Single Row */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 flex-nowrap">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-              return (
+          {/* Desktop Navigation Links — Only visible when logged in */}
+          {currentUser && (
+            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 flex-nowrap">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`relative flex items-center gap-1 px-1.5 xl:px-2.5 py-1.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-150 whitespace-nowrap ${
+                      isActive
+                        ? "text-saffron-700 bg-saffron-50 font-bold"
+                        : "text-charcoal-700 hover:text-saffron-700 hover:bg-ivory-100"
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 xl:w-4 xl:h-4 flex-shrink-0 ${isActive ? "text-saffron-600" : "text-charcoal-400"}`} />
+                    <span>{link.label}</span>
+                    {link.badge && (
+                      <span className="hidden xl:inline text-[9px] bg-gradient-to-r from-saffron-600 to-saffron-700 text-white font-bold px-1.5 py-0.2 rounded-full leading-none">
+                        {link.badge}
+                      </span>
+                    )}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-1.5 right-1.5 h-0.5 bg-saffron-600 rounded-full" />
+                    )}
+                  </Link>
+                );
+              })}
+
+              {/* Admin Link in Navbar */}
+              {isAdmin && (
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`relative flex items-center gap-1 px-1.5 xl:px-2.5 py-1.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-150 whitespace-nowrap ${
-                    isActive
-                      ? "text-saffron-700 bg-saffron-50 font-bold"
-                      : "text-charcoal-700 hover:text-saffron-700 hover:bg-ivory-100"
+                  href="/admin"
+                  className={`relative flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-lg text-xs xl:text-sm font-bold transition-all whitespace-nowrap ml-0.5 ${
+                    pathname.startsWith("/admin")
+                      ? "bg-forest-800 text-white"
+                      : "text-forest-800 bg-forest-50 hover:bg-forest-100 border border-forest-200"
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 xl:w-4 xl:h-4 flex-shrink-0 ${isActive ? "text-saffron-600" : "text-charcoal-400"}`} />
-                  <span>{link.label}</span>
-                  {link.badge && (
-                    <span className="hidden xl:inline text-[9px] bg-gradient-to-r from-saffron-600 to-saffron-700 text-white font-bold px-1.5 py-0.2 rounded-full leading-none">
-                      {link.badge}
-                    </span>
-                  )}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-1.5 right-1.5 h-0.5 bg-saffron-600 rounded-full" />
-                  )}
+                  <ShieldCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 flex-shrink-0 text-forest-700" />
+                  <span>
+                    <span className="xl:hidden">એડમિન</span>
+                    <span className="hidden xl:inline">એડમિન પેનલ</span>
+                  </span>
                 </Link>
-              );
-            })}
-
-            {/* Admin Link in Navbar */}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={`relative flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-lg text-xs xl:text-sm font-bold transition-all whitespace-nowrap ml-0.5 ${
-                  pathname.startsWith("/admin")
-                    ? "bg-forest-800 text-white"
-                    : "text-forest-800 bg-forest-50 hover:bg-forest-100 border border-forest-200"
-                }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 flex-shrink-0 text-forest-700" />
-                <span>
-                  <span className="xl:hidden">એડમિન</span>
-                  <span className="hidden xl:inline">એડમિન પેનલ</span>
-                </span>
-              </Link>
-            )}
-          </nav>
+              )}
+            </nav>
+          )}
 
           {/* Right Action / Profile Button */}
           <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
@@ -255,31 +257,48 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile Menu Toggle Button (< lg) */}
+          {/* Mobile Right Action Buttons (< lg) */}
           <div className="flex lg:hidden items-center gap-2">
-            {currentUser && (
-              <Link href="/profile" className="p-0.5 rounded-full border border-saffron-400">
-                <UserAvatar
-                  src={currentUser.photo_url}
-                  alt={currentUser.name}
-                  shape="circle"
-                  className="w-7 h-7"
-                />
-              </Link>
+            {currentUser ? (
+              <>
+                <Link href="/profile" className="p-0.5 rounded-full border border-saffron-400">
+                  <UserAvatar
+                    src={currentUser.photo_url}
+                    alt={currentUser.name}
+                    shape="circle"
+                    className="w-7 h-7"
+                  />
+                </Link>
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-1.5 rounded-xl text-charcoal-700 hover:text-saffron-700 hover:bg-ivory-100 transition-colors focus:outline-none"
+                  aria-label="મેનુ ખોલો"
+                >
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs">
+                <Link
+                  href="/login"
+                  className="px-2.5 py-1 text-xs font-semibold text-charcoal-800 hover:text-saffron-700 hover:bg-ivory-100 rounded-lg transition-colors border border-ivory-300"
+                >
+                  લોગિન
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-2.5 py-1 text-xs font-bold bg-saffron-600 hover:bg-saffron-700 text-white rounded-lg shadow-2xs transition-colors"
+                >
+                  સભ્ય બનો
+                </Link>
+              </div>
             )}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-xl text-charcoal-700 hover:text-saffron-700 hover:bg-ivory-100 transition-colors focus:outline-none"
-              aria-label="મેનુ ખોલો"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation */}
-      {mobileMenuOpen && (
+      {/* Mobile Drawer Navigation — Only when logged in */}
+      {currentUser && mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-ivory-300 shadow-xl animate-in slide-in-from-top-3 duration-200">
           <div className="px-4 pt-2.5 pb-5 space-y-1 max-h-[80vh] overflow-y-auto">
             {navLinks.map((link) => {
