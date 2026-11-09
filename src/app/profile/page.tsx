@@ -41,6 +41,7 @@ import {
   HeartHandshake,
   ShieldCheck,
   Globe,
+  Pencil,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
@@ -99,6 +100,46 @@ function getInitialFamilyRelations(user: any): FamilyRelationDetail[] {
       !r.id?.startsWith("rel-b") &&
       Boolean(r.name && r.name.trim() !== "દરજી" && r.name.trim() !== "")
   );
+}
+
+function getInitialEducationRecords(member?: Member | null): MemberEducationRecord[] {
+  if (!member || !member.education) return [];
+  const edu = member.education;
+
+  // 1. If modern `degrees` array exists, return it
+  if (Array.isArray(edu.degrees) && edu.degrees.length > 0) {
+    return edu.degrees.filter((d) => d && d.degree);
+  }
+
+  const list: MemberEducationRecord[] = [];
+
+  // 2. Self degrees (split if multiple degrees in comma-separated string)
+  const selfDegreeStr = (edu.education_details || edu.highest_degree || "").trim();
+  if (selfDegreeStr) {
+    const splitDegrees = selfDegreeStr.split(",").map((s) => s.trim()).filter(Boolean);
+    splitDegrees.forEach((deg, idx) => {
+      list.push({
+        id: `edu-self-${idx}`,
+        member_id: "self",
+        member_name: member.name || "પોતે (Self)",
+        degree: deg,
+        field_of_study: edu.education_category || edu.field_of_study || SAMITI_EDUCATION_CATEGORIES[0],
+        institution: edu.institution || "",
+        passing_year: edu.passing_year || "",
+      });
+    });
+  }
+
+  // 3. Family members education
+  if (Array.isArray(edu.family_education)) {
+    edu.family_education.forEach((fRec) => {
+      if (fRec && fRec.degree) {
+        list.push(fRec);
+      }
+    });
+  }
+
+  return list;
 }
 
 export default function ProfilePage() {
@@ -512,114 +553,138 @@ export default function ProfilePage() {
   const [jobExperience, setJobExperience] = useState(currentUser?.employment?.experience_years || "");
   const [jobIsPublic, setJobIsPublic] = useState<boolean>(currentUser?.employment?.is_public ?? true);
 
-  // Education (Simplified to TWO fields: 1. શિક્ષણ વિભાગ (Category), 2. શું અભ્યાસ કર્યો છે? (Details))
-  const [eduCategory, setEduCategory] = useState<string>(
-    currentUser?.education?.education_category || SAMITI_EDUCATION_CATEGORIES[0]
-  );
-  const [eduDetails, setEduDetails] = useState<string>(
-    currentUser?.education?.education_details || currentUser?.education?.highest_degree || ""
-  );
-  const [familyEducationList, setFamilyEducationList] = useState<MemberEducationRecord[]>(
-    () => currentUser?.education?.family_education || []
+  // Education Multiple Degrees State (એક વ્યક્તિ બહુવિધ ડિગ્રીઓ ઉમેરી શકે છે)
+  const [educationRecords, setEducationRecords] = useState<MemberEducationRecord[]>(
+    () => getInitialEducationRecords(currentUser)
   );
   const [selectedEduMemberId, setSelectedEduMemberId] = useState<string>("self");
+  const [eduCategory, setEduCategory] = useState<string>(SAMITI_EDUCATION_CATEGORIES[0]);
+  const [eduDegreeInput, setEduDegreeInput] = useState<string>("");
+  const [editingDegreeId, setEditingDegreeId] = useState<string | null>(null);
 
   const handleSelectEduMember = (memberId: string) => {
     setSelectedEduMemberId(memberId);
-    if (memberId === "self") {
-      setEduCategory(currentUser?.education?.education_category || SAMITI_EDUCATION_CATEGORIES[0]);
-      setEduDetails(currentUser?.education?.education_details || currentUser?.education?.highest_degree || "");
-    } else {
-      const existing = familyEducationList.find((e) => e.member_id === memberId);
-      if (existing) {
-        setEduCategory(existing.field_of_study || existing.institution || SAMITI_EDUCATION_CATEGORIES[0]);
-        setEduDetails(existing.degree || "");
-      } else {
-        setEduCategory(SAMITI_EDUCATION_CATEGORIES[0]);
-        setEduDetails("");
-      }
+    setEditingDegreeId(null);
+    setEduDegreeInput("");
+  };
+
+  const persistEducation = (records: MemberEducationRecord[]) => {
+    const selfRecords = records.filter((r) => r.member_id === "self");
+    const familyRecords = records.filter((r) => r.member_id !== "self");
+
+    // All self degrees comma-joined for backward compatibility across all directories
+    const selfDegreesJoined = selfRecords.map((r) => r.degree).join(", ");
+    const latestSelfCategory =
+      selfRecords.length > 0
+        ? selfRecords[selfRecords.length - 1].field_of_study || SAMITI_EDUCATION_CATEGORIES[0]
+        : SAMITI_EDUCATION_CATEGORIES[0];
+    const latestSelfDegree =
+      selfRecords.length > 0 ? selfRecords[selfRecords.length - 1].degree : "";
+
+    const eduUpdate = {
+      education: {
+        highest_degree: latestSelfDegree || selfDegreesJoined,
+        education_category: latestSelfCategory,
+        education_details: selfDegreesJoined,
+        institution: effectiveMember?.education?.institution || "",
+        field_of_study: latestSelfCategory,
+        passing_year: effectiveMember?.education?.passing_year || "",
+        degrees: records, // All multiple degrees stored here
+        family_education: familyRecords, // Family degrees preserved for legacy
+      },
+    };
+
+    if (effectiveMember) {
+      updateMember(effectiveMember.id, eduUpdate);
+    }
+    if (currentUser && effectiveMember?.id === currentUser.id) {
+      updateCurrentUserProfile(eduUpdate);
     }
   };
 
   const handleSaveEducationRecord = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eduDetails.trim()) {
-      alert("કૃપા કરીને શું અભ્યાસ કર્યો છે તે દાખલ કરો (દા.ત. B.Com, MBA).");
+    if (!eduDegreeInput.trim()) {
+      alert("કૃપા કરીને ડિગ્રી / અભ્યાસનું નામ દાખલ કરો (દા.ત. B.Com, MBA, B.Tech).");
       return;
     }
 
-    if (selectedEduMemberId === "self") {
-      const eduUpdate = {
-        education: {
-          highest_degree: eduDetails.trim(),
-          education_category: eduCategory,
-          education_details: eduDetails.trim(),
-          institution: effectiveMember?.education?.institution || "",
-          field_of_study: eduCategory,
-          passing_year: effectiveMember?.education?.passing_year || "",
-          family_education: familyEducationList,
-        },
-      };
-      if (effectiveMember) {
-        updateMember(effectiveMember.id, eduUpdate);
-      }
-      if (currentUser && effectiveMember?.id === currentUser.id) {
-        updateCurrentUserProfile(eduUpdate);
-      }
-      showToast("શૈક્ષણિક વિગતો સાચવાઈ!");
-    } else {
-      const memberObj = familyRelations.find((r) => r.id === selectedEduMemberId);
-      const memberName = memberObj ? `${memberObj.name} (${memberObj.relation})` : "પરિવાર સભ્ય";
+    let memberName = currentUser?.name || name || "મુખ્ય સભ્ય";
+    if (selectedEduMemberId !== "self") {
+      const rel = familyRelations.find((r) => r.id === selectedEduMemberId);
+      memberName = rel ? `${rel.name} (${rel.relation})` : "પરિવાર સભ્ય";
+    }
 
-      const updatedList = familyEducationList.filter((e) => e.member_id !== selectedEduMemberId);
+    let updatedRecords: MemberEducationRecord[];
+
+    if (editingDegreeId) {
+      // Update existing degree
+      updatedRecords = educationRecords.map((rec) =>
+        rec.id === editingDegreeId
+          ? {
+              ...rec,
+              member_id: selectedEduMemberId,
+              member_name: memberName,
+              degree: eduDegreeInput.trim(),
+              field_of_study: eduCategory,
+            }
+          : rec
+      );
+      setEditingDegreeId(null);
+      showToast(`${memberName} ની ડિગ્રી વિગત સફળતાપૂર્વક સુધારી!`);
+    } else {
+      // Add new degree (allows multiple degrees per person!)
       const newRecord: MemberEducationRecord = {
-        id: `edu-${selectedEduMemberId}`,
+        id: `deg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         member_id: selectedEduMemberId,
         member_name: memberName,
-        degree: eduDetails.trim(),
-        institution: eduCategory,
+        degree: eduDegreeInput.trim(),
         field_of_study: eduCategory,
+        institution: "",
         passing_year: "",
       };
-      const finalEduList = [...updatedList, newRecord];
-      setFamilyEducationList(finalEduList);
-
-      const eduUpdate = {
-        education: {
-          highest_degree: effectiveMember?.education?.highest_degree || eduDetails.trim(),
-          education_category: effectiveMember?.education?.education_category || eduCategory,
-          education_details: effectiveMember?.education?.education_details || eduDetails.trim(),
-          institution: effectiveMember?.education?.institution || "",
-          field_of_study: effectiveMember?.education?.field_of_study || eduCategory,
-          passing_year: effectiveMember?.education?.passing_year || "",
-          family_education: finalEduList,
-        },
-      };
-      if (effectiveMember) {
-        updateMember(effectiveMember.id, eduUpdate);
-      }
-      if (currentUser && effectiveMember?.id === currentUser.id) {
-        updateCurrentUserProfile(eduUpdate);
-      }
-      showToast(`${memberName} ની શૈક્ષણિક વિગતો સાચવાઈ!`);
+      updatedRecords = [...educationRecords, newRecord];
+      showToast(`${memberName} માટે નવી ડિગ્રી (${eduDegreeInput.trim()}) સફળતાપૂર્વક ઉમેરાઈ!`);
     }
+
+    setEducationRecords(updatedRecords);
+    setEduDegreeInput(""); // Clear degree input ready to add next degree!
+    persistEducation(updatedRecords);
   };
 
   const handleRemoveEducationRecord = (id: string) => {
-    const updated = familyEducationList.filter((e) => e.id !== id);
-    setFamilyEducationList(updated);
-    updateCurrentUserProfile({
-      education: {
-        highest_degree: currentUser?.education?.highest_degree || eduDetails,
-        education_category: currentUser?.education?.education_category || eduCategory,
-        education_details: currentUser?.education?.education_details || eduDetails,
-        institution: currentUser?.education?.institution || "",
-        field_of_study: currentUser?.education?.field_of_study || eduCategory,
-        passing_year: currentUser?.education?.passing_year || "",
-        family_education: updated,
-      },
-    });
-    showToast("શૈક્ષણિક વિગત યાદીમાંથી દૂર કરવામાં આવી.");
+    const rec = educationRecords.find((r) => r.id === id);
+    if (!rec) return;
+
+    if (
+      typeof window !== "undefined" &&
+      window.confirm(`શું આપ ${rec.member_name} ની "${rec.degree}" ડિગ્રી કાઢી નાખવા માંગો છો?`)
+    ) {
+      const updated = educationRecords.filter((r) => r.id !== id);
+      setEducationRecords(updated);
+      if (editingDegreeId === id) {
+        setEditingDegreeId(null);
+        setEduDegreeInput("");
+      }
+      persistEducation(updated);
+      showToast(`ડિગ્રી "${rec.degree}" સફળતાપૂર્વક દૂર કરવામાં આવી.`);
+    }
+  };
+
+  const handleEditEducationDegree = (rec: MemberEducationRecord) => {
+    setSelectedEduMemberId(rec.member_id);
+    setEduCategory(rec.field_of_study || SAMITI_EDUCATION_CATEGORIES[0]);
+    setEduDegreeInput(rec.degree);
+    setEditingDegreeId(rec.id);
+    const formElem = document.getElementById("education-form");
+    if (formElem) {
+      formElem.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleCancelEditDegree = () => {
+    setEditingDegreeId(null);
+    setEduDegreeInput("");
   };
 
   // Privacy Settings state
@@ -962,9 +1027,10 @@ export default function ProfilePage() {
       setJobIndustry(effectiveMember.employment?.industry || "");
       setJobExperience(effectiveMember.employment?.experience_years || "");
       setJobIsPublic(effectiveMember.employment?.is_public ?? true);
+      setEducationRecords(getInitialEducationRecords(effectiveMember));
       setEduCategory(effectiveMember.education?.education_category || SAMITI_EDUCATION_CATEGORIES[0]);
-      setEduDetails(effectiveMember.education?.education_details || effectiveMember.education?.highest_degree || "");
-      setFamilyEducationList(effectiveMember.education?.family_education || []);
+      setEduDegreeInput("");
+      setEditingDegreeId(null);
 
       // Matrimony fields
       setIsAvailableForMatrimony(effectiveMember.is_available_for_matrimony || effectiveMember.matrimony?.is_available || false);
@@ -3039,10 +3105,14 @@ export default function ProfilePage() {
         </form>
       )}
 
-      {/* TAB 3: EDUCATION FOR SELF & FAMILY MEMBERS (Requirement 6) */}
+      {/* TAB 3: EDUCATION FOR SELF & FAMILY MEMBERS (Multiple Degrees Support) */}
       {activeTab === "education" && (
         <div className="space-y-8">
-          <form onSubmit={handleSaveEducationRecord} className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6">
+          <form
+            id="education-form"
+            onSubmit={handleSaveEducationRecord}
+            className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-6"
+          >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-ivory-200">
               <div className="flex items-center gap-3">
                 <span className="p-2.5 rounded-2xl bg-gradient-to-br from-saffron-500 to-amber-600 text-white shadow-sm">
@@ -3053,17 +3123,24 @@ export default function ProfilePage() {
                     શિક્ષણ & શૈક્ષણિક વિગતો (Education Details)
                   </h3>
                   <p className="text-xs text-charcoal-500">
-                    પોતાની તથા સામાન્ય માહિતીમાં ઉમેરેલા પરિવારના સભ્યોની શૈક્ષણિક વિગતો ઉમેરો.
+                    પોતાની તથા પરિવારના સભ્યોની શૈક્ષણિક વિગતો ઉમેરો. એક જ વ્યક્તિ માટે એક કરતાં વધુ ડિગ્રીઓ (Multiple Degrees) પણ ઉમેરી શકાય છે.
                   </p>
                 </div>
               </div>
+
+              {editingDegreeId && (
+                <span className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1 self-start sm:self-auto">
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>ડિગ્રી સુધારો મોડ</span>
+                </span>
+              )}
             </div>
 
             {/* Member Selection Dropdown */}
             <div className="p-4 rounded-2xl bg-saffron-50/70 border border-saffron-200 space-y-2">
               <label className="block text-xs font-bold text-saffron-950 flex items-center gap-1.5">
                 <User className="w-4 h-4 text-saffron-700" />
-                <span>સભ્ય પસંદ કરો (Select Family Member) *</span>
+                <span>સભ્ય પસંદ કરો (Select Member) *</span>
               </label>
               <select
                 value={selectedEduMemberId}
@@ -3080,11 +3157,11 @@ export default function ProfilePage() {
                 ))}
               </select>
               <p className="text-[11px] text-saffron-800">
-                💡 સામાન્ય માહિતી ટેબમાં ઉમેરેલા તમામ પરિવારજનો અહીં આપોઆપ ઉપલબ્ધ થાય છે.
+                💡 જે સભ્ય માટે ડિગ્રી ઉમેરવી હોય તેમને પસંદ કરો. એક જ સભ્ય માટે એકથી વધુ ડિગ્રીઓ (દા.ત. B.Com, MBA) ઉમેરી શકો છો.
               </p>
             </div>
 
-            {/* Education Inputs - EXACTLY TWO FIELDS */}
+            {/* Education Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-charcoal-700 mb-1">
@@ -3105,118 +3182,172 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૨. શું અભ્યાસ કર્યો છે? (Education Details) *
+                  ૨. શું અભ્યાસ કર્યો છે? / ડિગ્રીનું નામ (Degree / Course Name) *
                 </label>
                 <input
                   type="text"
-                  value={eduDetails}
-                  onChange={(e) => setEduDetails(e.target.value)}
-                  placeholder="જેમ કે B.Com, MBA, B.Tech, M.A., ITI વગેરે"
+                  value={eduDegreeInput}
+                  onChange={(e) => setEduDegreeInput(e.target.value)}
+                  placeholder="જેમ કે B.Com, MBA, B.Tech, M.A., ITI, Ph.D. વગેરે"
                   required
                   className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-900"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-ivory-200">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-ivory-200">
+              {editingDegreeId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditDegree}
+                  className="px-4 py-2 border border-ivory-300 text-charcoal-700 hover:bg-ivory-100 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  રદ કરો (Cancel)
+                </button>
+              )}
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2"
+                className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <Save className="w-4 h-4" />
-                <span>શૈક્ષણિક વિગત સાચવો</span>
+                {editingDegreeId ? (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>ડિગ્રી સુધારો (Update Degree)</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>+ ડિગ્રી ઉમેરો (Add Degree)</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
 
           {/* Saved Family Education Summary List */}
-          <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-4">
+          <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-ivory-200">
               <div className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-forest-700" />
                 <h3 className="font-bold text-sm text-charcoal-900">
-                  નોંધાયેલ શૈક્ષણિક વિગતોની સૂચિ
+                  નોંધાયેલ શૈક્ષણિક ડિગ્રીઓની સૂચિ (Registered Education & Degrees)
                 </h3>
               </div>
               <span className="text-[11px] font-bold text-forest-800 bg-forest-50 px-2.5 py-0.5 rounded-full border border-forest-200">
-                કુલ: {(eduDetails ? 1 : 0) + familyEducationList.length}
+                કુલ ડિગ્રીઓ: {educationRecords.length}
               </span>
             </div>
 
-            <div className="space-y-3">
-              {/* Self record */}
-              {eduDetails && (
-                <div className="p-4 rounded-2xl bg-ivory-50 border border-ivory-200 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-xs text-charcoal-900">{currentUser?.name || name}</h4>
-                      <span className="text-[10px] font-bold bg-saffron-100 text-saffron-800 px-2 py-0.2 rounded-full border border-saffron-200">
-                        પોતે (Self)
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-charcoal-600 mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-charcoal-900 text-xs">{eduDetails}</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-saffron-50 text-saffron-800 border border-saffron-200">
-                        {eduCategory}
-                      </span>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectEduMember("self")}
-                    className="text-xs font-bold text-saffron-700 hover:underline cursor-pointer"
-                  >
-                    સુધારો
-                  </button>
-                </div>
-              )}
+            {educationRecords.length === 0 ? (
+              <div className="text-center py-8 text-xs text-charcoal-400 border border-dashed border-ivory-300 rounded-2xl space-y-2">
+                <GraduationCap className="w-8 h-8 text-charcoal-300 mx-auto" />
+                <p className="font-bold text-charcoal-700">હજુ સુધી કોઈ શૈક્ષણિક ડિગ્રી નોંધાયેલ નથી.</p>
+                <p className="text-[11px] text-charcoal-500">ઉપરના ફોર્મમાંથી સભ્ય પસંદ કરી ડિગ્રી ઉમેરો.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Group degrees by member so multiple degrees per person are clearly organized */}
+                {Array.from(new Set(educationRecords.map((r) => r.member_id))).map((mId) => {
+                  const mRecords = educationRecords.filter((r) => r.member_id === mId);
+                  const isSelf = mId === "self";
+                  const memberDisplayName = isSelf
+                    ? (currentUser?.name || name || "પોતે (Self)")
+                    : mRecords[0]?.member_name;
 
-              {/* Family members records */}
-              {familyEducationList.map((rec) => (
-                <div
-                  key={rec.id}
-                  className="p-4 rounded-2xl bg-ivory-50 border border-ivory-200 flex items-center justify-between"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-xs text-charcoal-900">{rec.member_name}</h4>
-                      <span className="text-[10px] font-bold bg-forest-100 text-forest-800 px-2 py-0.2 rounded-full border border-forest-200">
-                        પરિવાર સભ્ય
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-charcoal-600 mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-charcoal-900 text-xs">{rec.degree}</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-forest-50 text-forest-800 border border-forest-200">
-                        {rec.field_of_study || rec.institution || "શિક્ષણ"}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectEduMember(rec.member_id)}
-                      className="text-xs font-bold text-saffron-700 hover:underline cursor-pointer"
+                  return (
+                    <div
+                      key={mId}
+                      className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-ivory-50/80 to-white border border-ivory-200 shadow-2xs space-y-3"
                     >
-                      સુધારો
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveEducationRecord(rec.id)}
-                      className="p-1.5 text-charcoal-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                      title="દૂર કરો"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-ivory-200">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`p-1.5 rounded-xl text-white ${
+                              isSelf ? "bg-saffron-600" : "bg-forest-700"
+                            }`}
+                          >
+                            <User className="w-3.5 h-3.5" />
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-extrabold text-xs sm:text-sm text-charcoal-900">
+                                {memberDisplayName}
+                              </h4>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  isSelf
+                                    ? "bg-saffron-50 text-saffron-800 border-saffron-200"
+                                    : "bg-forest-50 text-forest-800 border-forest-200"
+                                }`}
+                              >
+                                {isSelf ? "પોતે (Self)" : "પરિવાર સભ્ય"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
 
-              {!eduDetails && familyEducationList.length === 0 && (
-                <div className="text-center py-6 text-xs text-charcoal-400 border border-dashed border-ivory-300 rounded-2xl">
-                  હજુ સુધી કોઈ શૈક્ષણિક વિગત નોંધાયેલ નથી. ઉપરના ફોર્મમાંથી સભ્ય પસંદ કરી સાચવો.
-                </div>
-              )}
-            </div>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <span className="text-[11px] font-bold text-charcoal-600 bg-white px-2.5 py-0.5 rounded-full border border-ivory-300 shadow-2xs">
+                            {mRecords.length} ડિગ્રી
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedEduMemberId(mId);
+                              setEduDegreeInput("");
+                              setEditingDegreeId(null);
+                              document.getElementById("education-form")?.scrollIntoView({ behavior: "smooth" });
+                            }}
+                            className="text-[11px] font-bold text-saffron-700 hover:text-saffron-900 hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ વધુ ડિગ્રી ઉમેરો</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* List of degrees for this person */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {mRecords.map((deg) => (
+                          <div
+                            key={deg.id}
+                            className="p-3 rounded-xl bg-white border border-ivory-300 shadow-2xs flex items-center justify-between gap-2 hover:border-saffron-300 transition-colors"
+                          >
+                            <div className="min-w-0">
+                              <span className="block font-extrabold text-xs text-charcoal-900 truncate">
+                                🎓 {deg.degree}
+                              </span>
+                              <span className="inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-ivory-100 text-charcoal-700 border border-ivory-200">
+                                {deg.field_of_study || "શિક્ષણ"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleEditEducationDegree(deg)}
+                                className="p-1.5 text-charcoal-500 hover:text-saffron-700 hover:bg-saffron-50 rounded-lg transition-colors cursor-pointer"
+                                title="ડિગ્રી સુધારો"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEducationRecord(deg.id)}
+                                className="p-1.5 text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="ડિગ્રી દૂર કરો"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

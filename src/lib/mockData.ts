@@ -35,11 +35,11 @@ export const INITIAL_LOGS: ActivityLog[] = [];
  */
 export const INITIAL_BANK_DETAILS: SamitiBankDetails = {
   account_holder: "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા",
-  bank_name: "State Bank of India (SBI)",
-  account_number: "38920194820",
-  ifsc_code: "SBIN0000428",
+  bank_name: "Bank of Baroda (BOB)",
+  account_number: "07210100050191",
+  ifsc_code: "BARB0MODASA",
   branch_name: "મોડાસા મુખ્ય શાખા (Modasa Main Branch)",
-  upi_id: "adaathamdarjisamiti@sbi",
+  upi_id: "shri9825191@barodampay",
   qr_code_url: "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=adaathamdarjisamiti@sbi&pn=Adaatham%20Darji%20Seva%20Samiti&cu=INR",
   updated_at: "2026-01-15",
 };

@@ -65,6 +65,7 @@ export interface EducationDetail {
   education_details?: string; // શું અભ્યાસ કર્યો છે? દા.ત. B.Com, MBA
   children?: ChildEducation[];
   family_education?: MemberEducationRecord[];
+  degrees?: MemberEducationRecord[]; // એક જ વ્યક્તિની બહુવિધ ડિગ્રીઓની યાદી (Multiple degrees per member)
 }
 
 export interface MatrimonyPrivacySettings {
