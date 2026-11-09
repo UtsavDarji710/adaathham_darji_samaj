@@ -1,7 +1,7 @@
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { Member, PrivacySettings, MatrimonyProfile, MatrimonyPrivacySettings } from "@/types";
 import { hashPassword, verifyPassword } from "@/lib/passwordUtils";
-import { deleteMemberRecord } from "@/lib/memberStore";
+import { deleteMemberRecord, getMemberByIdOrSession } from "@/lib/memberStore";
 
 const DEFAULT_PRIVACY: PrivacySettings = {
   phone: "members",
@@ -843,6 +843,27 @@ export async function deleteSupabaseMember(
       photoUrl = row.photo_url;
     }
 
+    // 1.1 Also check local memberStore if not yet resolved in Supabase
+    if (!memberId) {
+      const localMem = getMemberByIdOrSession(clean);
+      if (localMem) {
+        if (!memberEmail && localMem.email) memberEmail = localMem.email;
+        if (!authUserId && localMem.auth_user_id) authUserId = localMem.auth_user_id;
+        if (localMem.email) {
+          const { data: byEmail } = await supabaseAdmin
+            .from("members")
+            .select("id, auth_user_id, email, username, photo_url")
+            .ilike("email", localMem.email)
+            .maybeSingle();
+          if (byEmail) {
+            memberId = byEmail.id;
+            if (!authUserId) authUserId = byEmail.auth_user_id;
+            if (!photoUrl) photoUrl = byEmail.photo_url;
+          }
+        }
+      }
+    }
+
     // 2. Also check auth.users if authUserId is not yet found
     if (!authUserId) {
       const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
@@ -880,7 +901,21 @@ export async function deleteSupabaseMember(
       }
     }
 
-    // 4. Delete row from public.members table
+    // 4. Delete related child records first to satisfy foreign keys
+    if (memberId) {
+      try {
+        await supabaseAdmin.from("member_matrimony").delete().eq("member_id", memberId);
+      } catch (err: any) {
+        console.warn("[deleteSupabaseMember matrimony delete warning]", err.message);
+      }
+      try {
+        await supabaseAdmin.from("family_relationships").delete().or(`from_member_id.eq.${memberId},to_member_id.eq.${memberId}`);
+      } catch (err: any) {
+        console.warn("[deleteSupabaseMember family_relationships delete warning]", err.message);
+      }
+    }
+
+    // 4.1 Delete row from public.members table
     if (memberId || authUserId || clean.includes("@")) {
       let deleteQuery = supabaseAdmin.from("members").delete();
       if (memberId) {
@@ -904,10 +939,12 @@ export async function deleteSupabaseMember(
       }
     }
 
-    // 6. Delete from local memberStore
+    // 6. Delete from local memberStore across all alias keys
     deleteMemberRecord(identifier);
+    if (clean) deleteMemberRecord(clean);
     if (memberEmail) deleteMemberRecord(memberEmail);
     if (authUserId) deleteMemberRecord(authUserId);
+    if (memberId) deleteMemberRecord(memberId);
 
     return {
       success: true,

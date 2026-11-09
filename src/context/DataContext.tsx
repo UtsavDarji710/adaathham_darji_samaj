@@ -46,7 +46,7 @@ interface DataContextType {
   // Member actions
   addMember: (member: Member) => void;
   updateMember: (id: string, updates: Partial<Member>) => void;
-  deleteMember: (id: string) => void;
+  deleteMember: (id: string) => Promise<boolean> | void;
 
   // Family relationships actions
   addRelationship: (rel: Omit<FamilyRelationship, "id" | "created_at">) => void;
@@ -337,10 +337,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const deleteMember = (id: string) => {
+  const deleteMember = async (id: string): Promise<boolean> => {
+    // 1. Instantly update UI and localStorage
     const updated = members.filter((m) => m.id !== id);
     setMembers(updated);
     sync(STORAGE_KEYS.members, updated);
+
+    // Also remove relationships referencing this member
+    const updatedRels = relationships.filter(
+      (r) => r.from_member_id !== id && r.to_member_id !== id
+    );
+    setRelationships(updatedRels);
+    sync(STORAGE_KEYS.relationships, updatedRels);
+
+    // Clean current user cached state if deleted
+    if (typeof window !== "undefined") {
+      const savedAuth = localStorage.getItem("ad8_auth_user_id");
+      if (savedAuth === id) {
+        localStorage.removeItem("ad8_auth_user_id");
+        localStorage.removeItem("ad8_current_user");
+      }
+    }
+
+    // 2. Call backend DELETE endpoint to remove from Supabase DB, Auth, Storage & server store
+    try {
+      const res = await fetch(`/api/members?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        return true;
+      }
+
+      // Fallback: try admin delete-user route
+      const fallbackRes = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: id }),
+      });
+      const fallbackData = await fallbackRes.json().catch(() => null);
+      return Boolean(fallbackData?.success);
+    } catch (err) {
+      console.warn("[DataContext] Failed to delete member on backend:", err);
+      return false;
+    }
   };
 
   const addRelationship = (rel: Omit<FamilyRelationship, "id" | "created_at">) => {

@@ -35,6 +35,8 @@ export default function AdminMembersPage() {
 
   const [search, setSearch] = useState("");
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const filtered = members.filter(
@@ -61,6 +63,28 @@ export default function AdminMembersPage() {
     setEditingMember(null);
     setSuccessToast("સભ્યની તમામ વિગતો સફળતાપૂર્વક અપડેટ થઈ ગઈ!");
     setTimeout(() => setSuccessToast(null), 3500);
+  };
+
+  const handleDeleteMember = async () => {
+    if (!memberToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteMember(memberToDelete.id);
+      addLog(
+        "સભ્ય ખાતું કાઢી નાખ્યું",
+        memberToDelete.name,
+        `મોબાઇલ: ${memberToDelete.phone}, ભૂમિકા: ${memberToDelete.role}`,
+        currentUser?.name || "એડમિન",
+        currentUser?.role || "secretary"
+      );
+      setSuccessToast(`સભ્ય "${memberToDelete.name}" નું ખાતું સફળતાપૂર્વક કાઢી નાખવામાં આવ્યું.`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } catch (err: any) {
+      alert("સભ્ય ખાતું કાઢી નાખવામાં ક્ષતિ આવી. ફરી પ્રયાસ કરો.");
+    } finally {
+      setIsDeleting(false);
+      setMemberToDelete(null);
+    }
   };
 
   return (
@@ -205,17 +229,36 @@ export default function AdminMembersPage() {
                   </Link>
 
                   {/* Delete */}
-                  <button
-                    onClick={() => {
-                      if (confirm(`શું તમે ${m.name} નું ખાતું દૂર કરવા માંગો છો?`)) {
-                        deleteMember(m.id);
-                      }
-                    }}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block align-middle"
-                    title="ખાતું કાઢી નાખો"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {(() => {
+                    const isSelf = Boolean(
+                      currentUser &&
+                        (m.id === currentUser.id ||
+                          (m.email && currentUser.email && m.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+                          (m.phone && currentUser.phone && m.phone.replace(/\D/g, "") === currentUser.phone.replace(/\D/g, "")) ||
+                          (m.username && currentUser.username && m.username.toLowerCase() === currentUser.username.toLowerCase()))
+                    );
+
+                    return (
+                      <button
+                        onClick={() => {
+                          if (isSelf) {
+                            alert("તમે તમારું પોતાનું લૉગિન થયેલ એડમિન ખાતું કાઢી શકતા નથી.");
+                            return;
+                          }
+                          setMemberToDelete(m);
+                        }}
+                        disabled={isSelf}
+                        className={`p-1.5 rounded-lg transition-colors inline-block align-middle ${
+                          isSelf
+                            ? "text-gray-300 cursor-not-allowed opacity-30"
+                            : "text-red-600 hover:bg-red-50 cursor-pointer"
+                        }`}
+                        title={isSelf ? "પોતાનું ખાતું કાઢી શકાતું નથી" : "ખાતું કાઢી નાખો"}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    );
+                  })()}
                 </td>
               </tr>
             ))}
@@ -716,6 +759,65 @@ export default function AdminMembersPage() {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Member Confirmation Modal */}
+      {memberToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-red-200 p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-3 bg-red-100 rounded-2xl">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base sm:text-lg text-charcoal-900">
+                  સભ્ય ખાતું કાયમ માટે કાઢી નાખો?
+                </h3>
+                <p className="text-xs text-charcoal-500">
+                  Delete Member Confirmation
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-red-50/70 border border-red-100 rounded-2xl text-xs text-charcoal-700 space-y-2">
+              <p>
+                શું તમે ખરેખર સભ્ય <strong className="text-red-900 font-bold">{memberToDelete.name}</strong> ({memberToDelete.phone}) નું ખાતું કાયમ માટે દૂર કરવા માંગો છો?
+              </p>
+              <p className="text-red-700 text-[11px] font-medium leading-relaxed">
+                ⚠️ ચેતવણી: આ સભ્યની પ્રોફાઇલ, શિક્ષણ, વ્યવસાય, પારિવારિક સંબંધો અને લૉગિન ઓળખ તમામ ડેટાબેઝમાંથી કાયમ માટે હટાવી દેવામાં આવશે. આ પ્રક્રિયા પૂર્વવત કરી શકાતી નથી.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setMemberToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 text-xs font-bold text-charcoal-700 hover:bg-ivory-100 rounded-xl transition-colors cursor-pointer"
+              >
+                રદ કરો (Cancel)
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteMember}
+                disabled={isDeleting}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-md shadow-red-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>કાઢી રહ્યા છીએ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>હા, ખાતું કાઢી નાખો</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

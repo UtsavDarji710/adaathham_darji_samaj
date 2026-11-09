@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
-import { dbRowToMember, memberToDbRow } from "@/lib/supabaseMembers";
-import { getAllMembers, registerMember } from "@/lib/memberStore";
+import { dbRowToMember, memberToDbRow, deleteSupabaseMember } from "@/lib/supabaseMembers";
+import { getAllMembers, registerMember, deleteMemberRecord } from "@/lib/memberStore";
 import { Member } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -98,5 +98,46 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("[/api/members POST error]", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await request.json();
+        id = body?.id || body?.memberId || body?.identifier;
+      } catch {
+        // body parsing optional
+      }
+    }
+
+    if (!id || typeof id !== "string") {
+      return NextResponse.json(
+        { success: false, message: "Member ID is required for deletion" },
+        { status: 400 }
+      );
+    }
+
+    // Call deleteSupabaseMember to remove from Supabase DB, Auth, Storage and local store
+    const result = await deleteSupabaseMember(id, { deleteStoragePhoto: true });
+
+    // Explicitly ensure local store is cleaned
+    deleteMemberRecord(id);
+
+    return NextResponse.json({
+      success: true,
+      message: result.message || "સભ્ય સફળતાપૂર્વક કાઢી નાખવામાં આવ્યા.",
+      details: result,
+    });
+  } catch (error: any) {
+    console.error("[/api/members DELETE error]", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "સભ્ય કાઢી નાખવામાં ક્ષતિ આવી." },
+      { status: 500 }
+    );
   }
 }

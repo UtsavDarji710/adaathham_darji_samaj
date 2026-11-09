@@ -8,7 +8,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { DataProvider } from "@/context/DataContext";
 
 const notoSansGujarati = Noto_Sans_Gujarati({
-  subsets: ["gujarati", "latin"],
+  subsets: ["gujarati"],
   weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--font-gujarati",
   display: "swap",
