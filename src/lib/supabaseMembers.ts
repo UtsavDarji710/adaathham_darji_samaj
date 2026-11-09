@@ -104,6 +104,10 @@ export function dbRowToMember(row: any, matRow?: any): Member {
     gender: row.gender || "male",
     dob: row.dob || undefined,
     blood_group: row.blood_group || undefined,
+    jati: row.jati || (row.education && row.education.jati) || undefined,
+    caste: row.caste || row.jati || (row.education && row.education.jati) || undefined,
+    dod: row.dod || (row.education && row.education.dod) || undefined,
+    is_deceased: !!row.is_deceased || !!row.dod || !!(row.education && row.education.dod),
     role: row.role || "member",
     is_lifetime_member: !!row.is_lifetime_member,
     committee_role: row.committee_role || undefined,
@@ -171,7 +175,13 @@ export function memberToDbRow(m: Partial<Member>): Record<string, any> {
   if (m.completeness !== undefined) row.completeness = m.completeness;
   if (m.family_relations !== undefined) row.family_relations = m.family_relations;
   if (m.employment !== undefined) row.employment = m.employment;
-  if (m.education !== undefined) row.education = m.education;
+  if (m.education !== undefined || m.jati !== undefined || m.dod !== undefined) {
+    row.education = {
+      ...(m.education || {}),
+      ...(m.jati !== undefined ? { jati: m.jati } : {}),
+      ...(m.dod !== undefined ? { dod: m.dod } : {}),
+    };
+  }
 
   if (m.privacy) {
     if (m.privacy.phone) row.privacy_phone = m.privacy.phone;

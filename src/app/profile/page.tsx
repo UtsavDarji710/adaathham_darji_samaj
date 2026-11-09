@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   User,
   Shield,
@@ -23,6 +24,7 @@ import {
   UserPlus,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Building,
   Phone,
   Users,
@@ -161,19 +163,29 @@ export default function ProfilePage() {
     deleteAdvertisement,
   } = useData();
 
+  const router = useRouter();
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [isAddingNewMember, setIsAddingNewMember] = useState<boolean>(false);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const mId = params.get("memberId");
-      if (mId) {
+      const action = params.get("action");
+      if (action === "new") {
+        setIsAddingNewMember(true);
+        setSelectedMemberId("");
+      } else if (mId) {
         setSelectedMemberId(mId);
+        setIsAddingNewMember(false);
       }
     }
   }, []);
 
   const effectiveMember = React.useMemo(() => {
+    if (isAdmin && isAddingNewMember) {
+      return null;
+    }
     if (isAdmin && selectedMemberId) {
       return members.find((m) => m.id === selectedMemberId) || currentUser;
     }
@@ -189,7 +201,7 @@ export default function ProfilePage() {
       }
     }
     return currentUser;
-  }, [isAdmin, selectedMemberId, members, currentUser]);
+  }, [isAdmin, isAddingNewMember, selectedMemberId, members, currentUser]);
 
   const [activeTab, setActiveTab] = useState<
     "general" | "privacy" | "employment" | "education" | "donations" | "matrimony"
@@ -221,6 +233,9 @@ export default function ProfilePage() {
   const [maritalStatus, setMaritalStatus] = useState(currentUser?.marital_status || "પરણિત (Married)");
   const [bloodGroup, setBloodGroup] = useState(currentUser?.blood_group || "B+");
   const [photoUrl, setPhotoUrl] = useState(currentUser?.photo_url || "");
+  const [jati, setJati] = useState<string>(currentUser?.jati || "અડાઆઠમ દરજી");
+  const [dod, setDod] = useState<string>(currentUser?.dod || "");
+  const [dob, setDob] = useState<string>(currentUser?.dob || "");
   const [showProfilePhotoCropModal, setShowProfilePhotoCropModal] = useState(false);
 
   // Matrimony states
@@ -300,6 +315,8 @@ export default function ProfilePage() {
   const [newMemberIsPublic, setNewMemberIsPublic] = useState(false);
   const [newMemberMaritalStatus, setNewMemberMaritalStatus] = useState("પરણિત (Married)");
   const [newMemberBloodGroup, setNewMemberBloodGroup] = useState("B+");
+  const [newMemberJati, setNewMemberJati] = useState("અડાઆઠમ દરજી");
+  const [newMemberDod, setNewMemberDod] = useState("");
   const [newMemberAddress, setNewMemberAddress] = useState("");
   const [newMemberGender, setNewMemberGender] = useState<"male" | "female" | "other">("male");
 
@@ -451,6 +468,10 @@ export default function ProfilePage() {
       gender: newMemberGender,
       blood_group: newMemberBloodGroup || "B+",
       marital_status: newMemberMaritalStatus || "પરણિત (Married)",
+      jati: newMemberJati.trim() || "અડાઆઠમ દરજી",
+      caste: newMemberJati.trim() || "અડાઆઠમ દરજી",
+      dod: newMemberDod || undefined,
+      is_deceased: Boolean(newMemberDod),
       role: "member",
       is_lifetime_member: false,
       completeness: 85,
@@ -506,6 +527,9 @@ export default function ProfilePage() {
       piyar_name: createdMember.piyar_name,
       is_public: newMemberIsPublic,
       gender: createdMember.gender,
+      jati: createdMember.jati,
+      dod: createdMember.dod,
+      is_deceased: createdMember.is_deceased,
       is_registered: true,
       member_id: newId,
     };
@@ -513,6 +537,8 @@ export default function ProfilePage() {
     setFamilyRelations((prev) => [...prev, relationItem]);
     setShowNewMemberCard(false);
     setNewMemberEmail("");
+    setNewMemberDod("");
+    setNewMemberJati("અડાઆઠમ દરજી");
     showToast(`નવા સભ્ય "${createdMember.name}" સફળતાપૂર્વક ઉમેરાયા!`);
   };
 
@@ -764,6 +790,11 @@ export default function ProfilePage() {
       marital_status: maritalStatus,
       blood_group: bloodGroup,
       photo_url: photoUrl,
+      jati: jati.trim() || "અડાઆઠમ દરજી",
+      caste: jati.trim() || "અડાઆઠમ દરજી",
+      dod: dod || undefined,
+      dob: dob || undefined,
+      is_deceased: Boolean(dod),
       completeness: 95,
       is_available_for_matrimony: isUnmarried ? isAvailableForMatrimony : false,
       matrimony: {
@@ -779,8 +810,61 @@ export default function ProfilePage() {
       },
     };
 
+    if (isAddingNewMember) {
+      const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `mem-${Date.now()}`;
+      const newMember: Member = {
+        ...updates,
+        id: newId,
+        gender: "male",
+        role: "member",
+        is_lifetime_member: false,
+        created_at: new Date().toISOString(),
+        completeness: 85,
+        privacy: {
+          phone: "members",
+          address: "members",
+          photo: "public",
+          family: "members",
+          business: "public",
+          employment: "members",
+          education: "members",
+        },
+      } as Member;
+
+      addMember(newMember);
+
+      // Persist to backend /api/members
+      fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMember),
+      }).catch((err) => console.warn("[addMember error]", err));
+
+      if (addLog && currentUser) {
+        addLog(
+          "એડમિન દ્વારા નવા સભ્યની નોંધણી",
+          name,
+          `યુઝરનેમ: ${cleanUsername}, ફોન: ${phone}`,
+          currentUser.name,
+          currentUser.role || "admin"
+        );
+      }
+
+      showToast(`નવા સભ્ય "${name}" સફળતાપૂર્વક ઉમેરાયા!`);
+      setTimeout(() => {
+        router.push("/admin/members");
+      }, 1500);
+      return;
+    }
+
     if (effectiveMember) {
       updateMember(effectiveMember.id, updates);
+      // Sync to backend /api/profile
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: effectiveMember.id, updates }),
+      }).catch((err) => console.warn("[profile sync error]", err));
     }
     if (currentUser && effectiveMember?.id === currentUser.id) {
       updateCurrentUserProfile(updates);
@@ -1053,6 +1137,55 @@ export default function ProfilePage() {
 
   // Automatically update form fields when user logs in, switches role, or admin selects another member
   React.useEffect(() => {
+    if (isAddingNewMember) {
+      setUsername("");
+      setUsernameError(null);
+      setName("");
+      setEmail("");
+      setPhone("");
+      setAddress("");
+      setCity("મોડાસા");
+      setNativePlace(SAMITI_NATIVE_PLACES[0]);
+      setSasriName("");
+      setPiyarName("");
+      setFamilyRelations([]);
+      setMaritalStatus("પરણિત (Married)");
+      setBloodGroup("B+");
+      setPhotoUrl("");
+      setJati("અડાઆઠમ દરજી");
+      setDod("");
+      setDob("");
+
+      setBusinessOwnerName("");
+      setBusinessName("");
+      setBusinessCategory("");
+      setBusinessRole("Owner");
+      setBusinessCity("મોડાસા");
+      setBusinessPhone("");
+      setBusinessAddress("");
+      setBusinessBannerUrl("");
+      setBusinessIsPublic(true);
+
+      setJobFullName("");
+      setJobSector("ખાનગી ક્ષેત્ર (Private Sector)");
+      setJobCompany("");
+      setJobTitle("");
+      setJobCity("મોડાસા");
+      setJobPhone("");
+      setJobIndustry("");
+      setJobExperience("");
+      setJobIsPublic(true);
+
+      setEducationRecords([]);
+      setEduCategory(SAMITI_EDUCATION_CATEGORIES[0]);
+      setEduDegreeInput("");
+      setEditingDegreeId(null);
+
+      setIsAvailableForMatrimony(false);
+      setIsPublicListing(false);
+      return;
+    }
+
     if (effectiveMember) {
       setUsername(effectiveMember.username || "");
       setUsernameError(null);
@@ -1068,6 +1201,9 @@ export default function ProfilePage() {
       setMaritalStatus(effectiveMember.marital_status || "પરણિત (Married)");
       setBloodGroup(effectiveMember.blood_group || "B+");
       setPhotoUrl(effectiveMember.photo_url || "");
+      setJati(effectiveMember.jati || "અડાઆઠમ દરજી");
+      setDod(effectiveMember.dod || "");
+      setDob(effectiveMember.dob || "");
 
       // Business fields (ઉપર બિઝનેસ)
       setBusinessOwnerName(effectiveMember.business?.owner_name || effectiveMember.name || "");
@@ -1258,16 +1394,20 @@ export default function ProfilePage() {
               <ShieldCheck className="w-5 h-5" />
             </span>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-saffron-300">
-                  વહીવટી સભ્ય પ્રોફાઇલ સંપાદન (Admin Full Edit Access)
+                  {isAddingNewMember
+                    ? "✨ એડમિન દ્વારા નવા સભ્યની નોંધણી (Admin Add Member Flow)"
+                    : "🛡️ વહીવટી સભ્ય પ્રોફાઇલ સંપાદન (Admin Full Edit Access)"}
                 </span>
                 <span className="text-[10px] bg-forest-800 text-emerald-300 px-2 py-0.5 rounded-full border border-forest-600 font-bold">
                   બધા અધિકાર સમાન (Equal Rights)
                 </span>
               </div>
               <p className="text-xs text-charcoal-300 mt-0.5">
-                {effectiveMember?.id === currentUser?.id ? (
+                {isAddingNewMember ? (
+                  <span>તમે એડમિન તરીકે નવા સભ્યની તમામ વિગતો દાખલ કરી રહ્યા છો. નીચેનું ફોર્મ ભરીને સાચવો.</span>
+                ) : effectiveMember?.id === currentUser?.id ? (
                   <span>તમે હાલ <strong>તમારી પોતાની પ્રોફાઇલ</strong> સંપાદિત કરી રહ્યા છો. કોઈપણ સભ્યની વિગતો બદલવા માટે ડ્રોપડાઉનમાંથી પસંદ કરો.</span>
                 ) : (
                   <span>તમે હાલ સભ્ય <strong className="text-white">{effectiveMember?.name}</strong> ({effectiveMember?.id}) ની વિગતો જોઈ અને સંપાદિત કરી રહ્યા છો.</span>
@@ -1277,26 +1417,48 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              href="/admin/members"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ivory-100 hover:bg-white text-charcoal-900 text-xs font-bold rounded-xl shadow-xs transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>← સભ્ય સંચાલન પર પાછા જાઓ</span>
+            </Link>
+
             <div className="flex items-center gap-2 bg-charcoal-800/90 px-3 py-1.5 rounded-xl border border-charcoal-700">
               <label className="text-[11px] text-charcoal-300 font-bold whitespace-nowrap">સભ્ય પસંદ કરો:</label>
               <select
-                value={selectedMemberId || currentUser?.id || ""}
+                value={isAddingNewMember ? "__new__" : (selectedMemberId || currentUser?.id || "")}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setSelectedMemberId(val);
-                  if (typeof window !== "undefined") {
-                    const url = new URL(window.location.href);
-                    if (val === currentUser?.id) {
+                  if (val === "__new__") {
+                    setIsAddingNewMember(true);
+                    setSelectedMemberId("");
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
                       url.searchParams.delete("memberId");
-                    } else {
-                      url.searchParams.set("memberId", val);
+                      url.searchParams.set("action", "new");
+                      window.history.replaceState({}, "", url.toString());
                     }
-                    window.history.replaceState({}, "", url.toString());
+                  } else {
+                    setIsAddingNewMember(false);
+                    setSelectedMemberId(val);
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete("action");
+                      if (val === currentUser?.id) {
+                        url.searchParams.delete("memberId");
+                      } else {
+                        url.searchParams.set("memberId", val);
+                      }
+                      window.history.replaceState({}, "", url.toString());
+                    }
                   }
                 }}
                 className="bg-charcoal-900 text-white text-xs px-2.5 py-1 rounded-lg border border-charcoal-600 font-bold focus:outline-none max-w-[200px] truncate"
               >
                 <option value={currentUser?.id}>મારી પોતાની પ્રોફાઇલ ({currentUser?.name})</option>
+                <option value="__new__">+ નવો સભ્ય ઉમેરો (Add New Member)</option>
                 <optgroup label="સમાજના તમામ સભ્યો">
                   {members
                     .filter((m) => m.id !== currentUser?.id)
@@ -1309,14 +1471,16 @@ export default function ProfilePage() {
               </select>
             </div>
 
-            {effectiveMember?.id !== currentUser?.id && (
+            {(isAddingNewMember || effectiveMember?.id !== currentUser?.id) && (
               <button
                 type="button"
                 onClick={() => {
+                  setIsAddingNewMember(false);
                   setSelectedMemberId(currentUser?.id || "");
                   if (typeof window !== "undefined") {
                     const url = new URL(window.location.href);
                     url.searchParams.delete("memberId");
+                    url.searchParams.delete("action");
                     window.history.replaceState({}, "", url.toString());
                   }
                 }}
@@ -1391,16 +1555,26 @@ export default function ProfilePage() {
 
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-charcoal-900">{effectiveMember?.name || currentUser.name}</h1>
-              {(effectiveMember?.username || currentUser?.username) && (
+              <h1 className="text-2xl font-bold text-charcoal-900">
+                {isAddingNewMember
+                  ? name || "નવા સભ્યનું નામ (New Member)"
+                  : effectiveMember?.name || currentUser.name}
+              </h1>
+              {(username || effectiveMember?.username || currentUser?.username) && (
                 <span className="text-xs bg-ivory-200 text-charcoal-700 font-mono font-semibold px-2 py-0.5 rounded-full border border-ivory-300">
-                  @{effectiveMember?.username || currentUser.username}
+                  @{username || effectiveMember?.username || currentUser.username}
                 </span>
               )}
-              <span className="text-xs bg-saffron-100 text-saffron-800 font-bold px-2.5 py-0.5 rounded-full border border-saffron-200">
-                {effectiveMember?.committee_role || currentUser.committee_role || "સમાજ સભ્ય"}
-              </span>
-              {(effectiveMember?.is_lifetime_member ?? currentUser.is_lifetime_member) && (
+              {isAddingNewMember ? (
+                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  + નવો સભ્ય
+                </span>
+              ) : (
+                <span className="text-xs bg-saffron-100 text-saffron-800 font-bold px-2.5 py-0.5 rounded-full border border-saffron-200">
+                  {effectiveMember?.committee_role || currentUser.committee_role || "સમાજ સભ્ય"}
+                </span>
+              )}
+              {!isAddingNewMember && (effectiveMember?.is_lifetime_member ?? currentUser.is_lifetime_member) && (
                 <span className="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
                   ★ આજીવન સભ્ય
                 </span>
@@ -1408,7 +1582,7 @@ export default function ProfilePage() {
             </div>
 
             <p className="text-xs text-charcoal-500">
-              મૂળ વતન: <strong>{effectiveMember?.native_place || currentUser.native_place}</strong> • હાલ: <strong>{effectiveMember?.city || currentUser.city}</strong> • મોબાઈલ: <strong>{effectiveMember?.phone || currentUser.phone}</strong>
+              મૂળ વતન: <strong>{nativePlace || effectiveMember?.native_place || currentUser.native_place}</strong> • હાલ: <strong>{city || effectiveMember?.city || currentUser.city}</strong> • મોબાઈલ: <strong>{phone || effectiveMember?.phone || currentUser.phone}</strong> • જાતિ: <strong>{jati || "અડાઆઠમ દરજી"}</strong>
             </p>
 
             {/* Profile Completeness Bar */}
@@ -1707,6 +1881,48 @@ export default function ProfilePage() {
                 <option value="AB+">AB+</option>
                 <option value="AB-">AB-</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                જાતિ (Jati / Caste) *
+              </label>
+              <input
+                type="text"
+                value={jati}
+                onChange={(e) => setJati(e.target.value)}
+                placeholder="દા.ત. અડાઆઠમ દરજી, દરજી, શ્રીમાળી"
+                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                જન્મ તારીખ (DOB)
+              </label>
+              <input
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                અવસાન તારીખ (Date of Death - જો સ્વર્ગસ્થ હોય)
+              </label>
+              <input
+                type="date"
+                value={dod}
+                onChange={(e) => setDod(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
+              />
+              {dod && (
+                <span className="text-[10px] text-rose-600 font-bold block mt-1">
+                  ✓ સ્વર્ગસ્થ તરીકે નોંધણી થશે
+                </span>
+              )}
             </div>
 
             <div className="sm:col-span-2">
@@ -2278,7 +2494,34 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* ૧૧. પ્રાઇવસી સેટિંગ (Requirement 11) */}
+              {/* ૧૧. જાતિ (Jati) */}
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૧૧. જાતિ (Jati / Caste)
+                </label>
+                <input
+                  type="text"
+                  value={newMemberJati}
+                  onChange={(e) => setNewMemberJati(e.target.value)}
+                  placeholder="દા.ત. અડાઆઠમ દરજી"
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+
+              {/* ૧૨. અવસાન તારીખ (DOD - જો સ્વર્ગસ્થ હોય) */}
+              <div>
+                <label className="block text-xs font-bold text-charcoal-700 mb-1">
+                  ૧૨. અવસાન તારીખ (DOD - જો સ્વર્ગસ્થ હોય)
+                </label>
+                <input
+                  type="date"
+                  value={newMemberDod}
+                  onChange={(e) => setNewMemberDod(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
+                />
+              </div>
+
+              {/* ૧૩. પ્રાઇવસી સેટિંગ (Requirement 11) */}
               <div className="sm:col-span-2 p-3.5 rounded-2xl bg-forest-50/60 border border-forest-200">
                 <label className="block text-xs font-bold text-charcoal-900 mb-1 flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5 text-forest-700" />

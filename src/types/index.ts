@@ -195,6 +195,9 @@ export interface FamilyRelationDetail {
   is_public?: boolean; // જાહેર પ્રદર્શન સંમતિ (Show publicly? default: false)
   gender?: "male" | "female" | "other";
   marital_status?: string;
+  jati?: string; // જાતિ (Jati / Caste)
+  dod?: string; // અવસાન તારીખ (Date of Death)
+  is_deceased?: boolean; // સ્વર્ગસ્થ
   is_registered?: boolean;
   member_id?: string;
   photo_url?: string | null;
@@ -215,6 +218,10 @@ export interface Member {
   district?: string;
   native_place: string; // વતન
   pincode?: string;
+  jati?: string; // જાતિ (Jati / Caste, e.g. અડાઆઠમ દરજી)
+  caste?: string;
+  dod?: string; // અવસાન તારીખ / સ્વર્ગવાસ તારીખ (Date of Death)
+  is_deceased?: boolean; // સ્વર્ગસ્થ / હયાત
   father_name?: string; // પિતાનું પૂરું નામ
   grandfather_name?: string; // દાદાનું પૂરું નામ
   maternal_uncle_name?: string; // મામાનું પૂરું નામ

@@ -21,6 +21,7 @@ import {
   Briefcase,
   GraduationCap,
   HeartHandshake,
+  UserPlus,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -71,13 +72,22 @@ export default function AdminMembersPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link
           href="/admin"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-saffron-700 hover:text-saffron-800 group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span>એડમિન ડેશબોર્ડ પર પાછા જાઓ</span>
+        </Link>
+
+        {/* Add Member Button (Admin Add Member Flow) */}
+        <Link
+          href="/profile?action=new"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-saffron-600 to-amber-600 hover:from-saffron-700 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition-all self-start sm:self-auto cursor-pointer"
+        >
+          <UserPlus className="w-4 h-4" />
+          <span>+ સભ્ય ઉમેરો (Add Member)</span>
         </Link>
       </div>
 
@@ -128,8 +138,17 @@ export default function AdminMembersPage() {
                       className="w-9 h-9 rounded-xl border border-ivory-300"
                     />
                     <div>
-                      <span className="font-bold text-charcoal-900 block">{m.name}</span>
-                      <span className="text-[11px] text-charcoal-400">{m.marital_status || "લગ્ન સ્થિતિ નથી"}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-charcoal-900">{m.name}</span>
+                        {m.dod && (
+                          <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 font-bold px-1.5 py-0.5 rounded">
+                            સ્વર્ગસ્થ
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-charcoal-400 block">
+                        {m.marital_status || "લગ્ન સ્થિતિ નથી"} {m.jati ? `• ${m.jati}` : ""}
+                      </span>
                     </div>
                   </div>
                 </td>
@@ -167,23 +186,23 @@ export default function AdminMembersPage() {
                   )}
                 </td>
                 <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                  {/* Full Profile Editor Link */}
+                  {/* Edit User via Full Profile Flow (Admin Edit Flow) */}
                   <Link
                     href={`/profile?memberId=${m.id}`}
-                    className="p-1.5 text-forest-700 hover:bg-forest-50 rounded-lg transition-colors inline-block align-middle"
-                    title="સંપૂર્ણ પ્રોફાઇલ ખોલો અને બદલો"
+                    className="p-1.5 text-saffron-700 hover:bg-saffron-50 rounded-lg transition-colors inline-block align-middle cursor-pointer"
+                    title="સંપૂર્ણ પ્રોફાઇલ ખોલો અને સુધારો (Full Profile Edit Flow)"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </Link>
+
+                  {/* View Details */}
+                  <Link
+                    href={`/profile?memberId=${m.id}`}
+                    className="p-1.5 text-forest-700 hover:bg-forest-50 rounded-lg transition-colors inline-block align-middle cursor-pointer"
+                    title="પ્રોફાઇલ જુઓ"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </Link>
-
-                  {/* Quick In-Page Edit Modal */}
-                  <button
-                    onClick={() => setEditingMember({ ...m })}
-                    className="p-1.5 text-saffron-700 hover:bg-saffron-50 rounded-lg transition-colors inline-block align-middle"
-                    title="વિગતો સુધારો (Full Edit)"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
 
                   {/* Delete */}
                   <button
@@ -277,7 +296,7 @@ export default function AdminMembersPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-charcoal-700 mb-1">જાતિ (Gender)</label>
+                    <label className="block font-bold text-charcoal-700 mb-1">લિંગ (Gender)</label>
                     <select
                       value={editingMember.gender}
                       onChange={(e) => setEditingMember({ ...editingMember, gender: e.target.value as any })}
@@ -290,11 +309,32 @@ export default function AdminMembersPage() {
                   </div>
 
                   <div>
+                    <label className="block font-bold text-charcoal-700 mb-1">જાતિ (Jati / Caste)</label>
+                    <input
+                      type="text"
+                      value={editingMember.jati || "અડાઆઠમ દરજી"}
+                      onChange={(e) => setEditingMember({ ...editingMember, jati: e.target.value })}
+                      placeholder="દા.ત. અડાઆઠમ દરજી / દરજી"
+                      className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block font-bold text-charcoal-700 mb-1">જન્મ તારીખ (DOB)</label>
                     <input
                       type="date"
                       value={editingMember.dob || ""}
                       onChange={(e) => setEditingMember({ ...editingMember, dob: e.target.value })}
+                      className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-charcoal-700 mb-1">અવસાન તારીખ (DOD - જો સ્વર્ગસ્થ હોય)</label>
+                    <input
+                      type="date"
+                      value={editingMember.dod || ""}
+                      onChange={(e) => setEditingMember({ ...editingMember, dod: e.target.value, is_deceased: !!e.target.value })}
                       className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none"
                     />
                   </div>

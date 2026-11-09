@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
-import { dbRowToMember } from "@/lib/supabaseMembers";
-import { getAllMembers } from "@/lib/memberStore";
+import { dbRowToMember, memberToDbRow } from "@/lib/supabaseMembers";
+import { getAllMembers, registerMember } from "@/lib/memberStore";
 import { Member } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -67,5 +67,36 @@ export async function GET() {
       },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const member = body as Member;
+    if (!member || !member.name || !member.phone) {
+      return NextResponse.json({ success: false, message: "Name and phone are required" }, { status: 400 });
+    }
+
+    // 1. Save to Supabase if configured
+    if (isSupabaseConfigured() && supabaseAdmin) {
+      const dbRow = memberToDbRow(member);
+      const { data, error } = await supabaseAdmin.from("members").insert(dbRow).select().single();
+      if (!error && data) {
+        member.id = data.id;
+      }
+    }
+
+    // 2. Register in server store
+    registerMember(member);
+
+    return NextResponse.json({
+      success: true,
+      message: "Member created successfully",
+      member,
+    });
+  } catch (error: any) {
+    console.error("[/api/members POST error]", error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
