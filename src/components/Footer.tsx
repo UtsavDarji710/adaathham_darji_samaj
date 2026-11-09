@@ -7,23 +7,16 @@ import {
   Phone,
   Mail,
   Heart,
-  Shield,
-  FileText,
-  ExternalLink,
-  ChevronRight,
-  Globe,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
 
 export default function Footer() {
-  const { currentUser } = useAuth();
   return (
     <footer className="bg-charcoal-900 text-ivory-100 border-t-4 border-saffron-600">
       {/* Upper Footer with Community Highlights */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16 items-start">
           {/* Col 1: About Society */}
-          <div className="space-y-4">
+          <div className="space-y-4 max-w-lg">
             <div className="flex items-center gap-3">
               <img
                 src="/logo.png"
@@ -53,96 +46,8 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Col 2: Quick Links */}
-          <div>
-            <h4 className="font-bold text-sm text-white mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-saffron-500 rounded-full"></span>
-              ઝડપી લિંક્સ
-            </h4>
-            <ul className="space-y-2.5 text-xs text-charcoal-300">
-              <li>
-                <Link href="/" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                  મુખ્ય પૃષ્ઠ (Home)
-                </Link>
-              </li>
-              {currentUser && (
-                <li>
-                  <Link href="/family-tree" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                    <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                    પરિવાર વૃક્ષ (Family Tree)
-                  </Link>
-                </li>
-              )}
-              <li>
-                <Link href="/members" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                  સભ્યોની ડિરેક્ટરી
-                </Link>
-              </li>
-              <li>
-                <Link href="/businesses" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                  સમાજના વ્યવસાયો
-                </Link>
-              </li>
-              <li>
-                <Link href="/events" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                  વાર્ષિક કાર્યક્રમો & ઉત્સવો
-                </Link>
-              </li>
-              <li>
-                <Link href="/donations" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-saffron-500" />
-                  દાન & દાતાશ્રીઓની યાદી (Donation)
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 3: Community & Policies */}
-          <div>
-            <h4 className="font-bold text-sm text-white mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-forest-500 rounded-full"></span>
-              સંચાલન & નીતિ
-            </h4>
-            <ul className="space-y-2.5 text-xs text-charcoal-300">
-              <li>
-                <Link href="/committee" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-forest-500" />
-                  હોદ્દેદારો & કારોબારી સમિતિ
-                </Link>
-              </li>
-              <li>
-                <Link href="/committee#lifetime" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-forest-500" />
-                  આજીવન સભ્યોની યાદી
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-forest-500" />
-                  ગોપનીયતા નીતિ (Privacy Policy)
-                </Link>
-              </li>
-              <li>
-                <Link href="/admin" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-forest-500" />
-                  એડમિન પેનલ (સત્તાવાર લોગિન)
-                </Link>
-              </li>
-              <li>
-                <Link href="/register" className="hover:text-saffron-400 flex items-center gap-1.5 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5 text-forest-500" />
-                  નવા પરિવાર સભ્યની નોંધણી
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 4: Contact & Office */}
-          <div>
+          {/* Col 2: Contact & Office */}
+          <div className="space-y-3">
             <h4 className="font-bold text-sm text-white mb-4 flex items-center gap-2">
               <span className="w-1.5 h-4 bg-saffron-500 rounded-full"></span>
               સંપર્ક & કાર્યાલય
