@@ -94,10 +94,18 @@ export default function HomePage() {
   const totalFamilies = relationships.length > 0 
     ? new Set(relationships.map((r) => r.from_member_id)).size 
     : totalMembers;
-  const totalBusinesses = businesses.filter((b) => b.status === "active").length;
+  const activeBusinesses = businesses.filter((b) => {
+    if (b.status !== "active" || b.is_public === false) return false;
+    if (b.owner_id) {
+      const ownerMember = members.find((m) => m.id === b.owner_id);
+      if (ownerMember?.business && ownerMember.business.is_public === false) {
+        return false;
+      }
+    }
+    return true;
+  });
+  const totalBusinesses = activeBusinesses.length;
   const totalEvents = events.length;
-
-  const activeBusinesses = businesses.filter((b) => b.status === "active");
   const upcomingEvents = events.filter((e) => e.status === "upcoming");
 
   // Filter approved donors for Donors List (Section 1)

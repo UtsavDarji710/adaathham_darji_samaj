@@ -21,6 +21,7 @@ export interface EmploymentDetail {
   full_name?: string;
   job_type?: string; // સરકારી / ખાનગી ક્ષેત્ર
   phone?: string;
+  is_public?: boolean; // સાર્વજનિક નોકરી ડિરેક્ટરીમાં પ્રદર્શન નિયંત્રણ (Show publicly in Nokri tab)
 }
 
 export interface MemberBusinessDetail {
@@ -33,6 +34,7 @@ export interface MemberBusinessDetail {
   address?: string; // પેઢીનું સરનામું
   banner_url?: string; // બિઝનેસનું બેનર / ફોટો
   description?: string;
+  is_public?: boolean; // સાર્વજનિક બિઝનેસ ડિરેક્ટરી અને હોમપેજ પ્રદર્શન નિયંત્રણ (Show publicly in Business directory)
 }
 
 export interface ChildEducation {
@@ -298,7 +300,8 @@ export interface BusinessItem {
   is_paid: boolean;
   paid_amount?: number;
   valid_until?: string;
-  status: "active" | "pending" | "rejected" | "expired";
+  status: "active" | "pending" | "rejected" | "expired" | "hidden";
+  is_public?: boolean;
   created_at: string;
 }
 

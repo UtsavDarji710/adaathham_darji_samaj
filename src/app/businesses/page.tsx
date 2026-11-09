@@ -25,7 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import { BusinessItem } from "@/types";
 
 export default function BusinessDirectoryPage() {
-  const { businesses, addBusiness, addLog } = useData();
+  const { businesses, members, addBusiness, addLog } = useData();
   const { currentUser, isAdmin } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +61,17 @@ export default function BusinessDirectoryPage() {
 
   const filteredBusinesses = useMemo(() => {
     return businesses.filter((b) => {
+      // 1. Privacy filter: exclude any business marked non-public or inactive
+      if (b.is_public === false || b.status !== "active") return false;
+
+      // 2. Cross-check owning member's profile privacy preference if linked to a member
+      if (b.owner_id) {
+        const ownerMember = members.find((m) => m.id === b.owner_id);
+        if (ownerMember?.business && ownerMember.business.is_public === false) {
+          return false;
+        }
+      }
+
       const matchSearch =
         searchQuery.trim() === "" ||
         b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,11 +80,10 @@ export default function BusinessDirectoryPage() {
         b.owner_name.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchCat = selectedCategory === "all" || b.category === selectedCategory;
-      const matchStatus = b.status === "active";
 
-      return matchSearch && matchCat && matchStatus;
+      return matchSearch && matchCat;
     });
-  }, [businesses, searchQuery, selectedCategory]);
+  }, [businesses, members, searchQuery, selectedCategory]);
 
   const handleAddBusinessSubmit = (e: React.FormEvent) => {
     e.preventDefault();

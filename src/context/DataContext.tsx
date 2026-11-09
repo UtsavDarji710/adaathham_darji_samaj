@@ -457,6 +457,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updated = advertisements.filter((a) => a.id !== id);
     setAdvertisements(updated);
     sync(STORAGE_KEYS.advertisements, updated);
+    fetch(`/api/advertisements?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
   };
 
   // Job Postings methods

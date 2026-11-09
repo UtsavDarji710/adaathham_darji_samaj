@@ -45,5 +45,107 @@
     },
     "created_at": "2026-11-08T21:24:41.519Z",
     "updated_at": "2026-11-08T21:24:41.519Z"
+  },
+  {
+    "id": "86b7b1da-e0ba-476d-a87e-7b8fb20405bd",
+    "auth_user_id": "86b7b1da-e0ba-476d-a87e-7b8fb20405bd",
+    "username": "utsav710",
+    "name": "Utsav Darji",
+    "phone": "+916354906794",
+    "email": "utsavdarji102001@gmail.com",
+    "is_email_verified": true,
+    "email_verified_at": "2026-11-08T21:15:33.66+00:00",
+    "photo_url": "https://opshugwobopselcmgsko.supabase.co/storage/v1/object/public/member-photos/1794172701838-kj3rem8.jpg",
+    "address": "Devbhumi society\nDeep ma",
+    "city": "મોડાસા",
+    "district": "અરવલ્લી",
+    "native_place": "કુણોલ",
+    "pincode": "383315",
+    "father_name": "Hasmukhbhai Hirabhai Darji",
+    "grandfather_name": "",
+    "maternal_uncle_name": "",
+    "maternal_grandfather_name": "",
+    "sasri_name": "",
+    "piyar_name": "",
+    "is_public_in_family": false,
+    "marital_status": "પરણિત (Married)",
+    "is_available_for_matrimony": false,
+    "matrimony": {
+      "is_available": false,
+      "is_public_listing": false,
+      "is_saved": true,
+      "height": "5' 8\"",
+      "weight": "",
+      "complexion": "ઘઉંવર્ણ (Wheatish)",
+      "subcaste_gotra": "",
+      "about_me": "overall good",
+      "partner_expectations": "Graduate",
+      "hobbies": "",
+      "privacy": {
+        "show_name": true,
+        "show_photo": true,
+        "show_age": false,
+        "show_native_place": true,
+        "show_education": true,
+        "show_occupation": true,
+        "show_contact": true
+      },
+      "updated_at": "2026-11-09T11:44:14.681+00:00"
+    },
+    "gender": "male",
+    "blood_group": "B+",
+    "role": "member",
+    "is_lifetime_member": false,
+    "committee_order": 99,
+    "completeness": 95,
+    "created_at": "2026-11-08T21:15:34.860177+00:00",
+    "privacy": {
+      "phone": "members",
+      "address": "members",
+      "photo": "public",
+      "family": "members",
+      "business": "public",
+      "employment": "members",
+      "education": "members"
+    },
+    "family_relations": [
+      {
+        "id": "rel-1794172585633-pzcm",
+        "name": "Hasmukhbhai Hirabhai Darji",
+        "phone": "9316045416",
+        "relation": "પિતા (Father)"
+      },
+      {
+        "id": "rel-1794172629540-d630",
+        "name": "Sangeetaben Hasmukhbhai Darji",
+        "phone": "9427848417",
+        "relation": "માતા (Mother)"
+      }
+    ],
+    "employment": {
+      "full_name": "Utsav Darji",
+      "job_type": "ખાનગી ક્ષેત્ર (Private Sector)",
+      "company": "Zignuts Technolabs",
+      "job_title": "SDE-2",
+      "city": "Gandhinagar",
+      "phone": "+916354906794",
+      "industry": "IT",
+      "experience_years": "3 years",
+      "is_public": true
+    },
+    "education": {},
+    "password_hash": "a855099bc0d6de797584ed52dfa327445675da2b37611f1e22c49ffd4cd8dc8e61f5009ed5c542d82076fe9b892a1882f3490633d80618ba6b533a304818a4f0",
+    "salt": "4a978097c3352a4304e69efe73a4dbff",
+    "business": {
+      "owner_name": "Utsav Darji",
+      "business_name": "",
+      "category": "",
+      "role": "Owner",
+      "city": "મોડાસા",
+      "phone": "+916354906794",
+      "address": "",
+      "banner_url": "",
+      "is_public": false
+    }
   }
 ]

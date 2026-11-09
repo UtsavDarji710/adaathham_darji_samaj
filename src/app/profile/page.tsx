@@ -40,6 +40,7 @@ import {
   Mail,
   HeartHandshake,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
@@ -113,7 +114,9 @@ export default function ProfilePage() {
     addLog,
     members,
     donations,
+    advertisements,
     addAdvertisement,
+    deleteAdvertisement,
   } = useData();
 
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
@@ -480,6 +483,7 @@ export default function ProfilePage() {
   const [businessPhone, setBusinessPhone] = useState(currentUser?.business?.phone || currentUser?.phone || "");
   const [businessAddress, setBusinessAddress] = useState(currentUser?.business?.address || "");
   const [businessBannerUrl, setBusinessBannerUrl] = useState(currentUser?.business?.banner_url || "");
+  const [businessIsPublic, setBusinessIsPublic] = useState<boolean>(currentUser?.business?.is_public ?? true);
 
   const handleBusinessPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -506,6 +510,7 @@ export default function ProfilePage() {
   const [jobPhone, setJobPhone] = useState(currentUser?.employment?.phone || currentUser?.phone || "");
   const [jobIndustry, setJobIndustry] = useState(currentUser?.employment?.industry || "");
   const [jobExperience, setJobExperience] = useState(currentUser?.employment?.experience_years || "");
+  const [jobIsPublic, setJobIsPublic] = useState<boolean>(currentUser?.employment?.is_public ?? true);
 
   // Education (Simplified to TWO fields: 1. શિક્ષણ વિભાગ (Category), 2. શું અભ્યાસ કર્યો છે? (Details))
   const [eduCategory, setEduCategory] = useState<string>(
@@ -850,6 +855,7 @@ export default function ProfilePage() {
         phone: businessPhone,
         address: businessAddress,
         banner_url: businessBannerUrl,
+        is_public: businessIsPublic,
       },
       employment: {
         full_name: jobFullName,
@@ -860,6 +866,7 @@ export default function ProfilePage() {
         phone: jobPhone,
         industry: jobIndustry,
         experience_years: jobExperience,
+        is_public: jobIsPublic,
       },
     };
 
@@ -870,34 +877,41 @@ export default function ProfilePage() {
       updateCurrentUserProfile(empUpdates);
     }
 
-    // Auto-sync business with Community Business directory if business name provided
+    // Auto-sync business with Community Business directory
     const targetUser = effectiveMember || currentUser;
-    if (businessName.trim() && targetUser) {
+    if (targetUser) {
       const existing = businesses.find((b) => b.owner_id === targetUser.id);
-      if (existing) {
-        updateBusiness(existing.id, {
-          name: businessName,
-          category: businessCategory || "સામાન્ય વેપાર",
-          city: businessCity || targetUser.city || "મોડાસા",
-          address: businessAddress || targetUser.address || "",
-          phone: businessPhone || targetUser.phone || "",
-          cover_url: businessBannerUrl || existing.cover_url,
-        });
-      } else {
-        addBusiness({
-          owner_id: targetUser.id,
-          owner_name: businessOwnerName || targetUser.name,
-          name: businessName,
-          category: businessCategory || "સામાન્ય વેપાર",
-          description: `${businessRole ? businessRole + " તરીકે સંચાલિત." : ""} ${businessName}`,
-          city: businessCity || targetUser.city || "મોડાસા",
-          address: businessAddress || targetUser.address || "",
-          phone: businessPhone || targetUser.phone || "",
-          cover_url: businessBannerUrl || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800",
-          is_featured: false,
-          is_paid: false,
-          status: "active",
-        });
+      if (businessName.trim()) {
+        if (existing) {
+          updateBusiness(existing.id, {
+            name: businessName,
+            category: businessCategory || "સામાન્ય વેપાર",
+            city: businessCity || targetUser.city || "મોડાસા",
+            address: businessAddress || targetUser.address || "",
+            phone: businessPhone || targetUser.phone || "",
+            cover_url: businessBannerUrl || existing.cover_url,
+            status: businessIsPublic ? "active" : "hidden",
+            is_public: businessIsPublic,
+          });
+        } else if (businessIsPublic) {
+          addBusiness({
+            owner_id: targetUser.id,
+            owner_name: businessOwnerName || targetUser.name,
+            name: businessName,
+            category: businessCategory || "સામાન્ય વેપાર",
+            description: `${businessRole ? businessRole + " તરીકે સંચાલિત." : ""} ${businessName}`,
+            city: businessCity || targetUser.city || "મોડાસા",
+            address: businessAddress || targetUser.address || "",
+            phone: businessPhone || targetUser.phone || "",
+            cover_url: businessBannerUrl || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800",
+            is_featured: false,
+            is_paid: false,
+            status: "active",
+            is_public: true,
+          });
+        }
+      } else if (existing) {
+        updateBusiness(existing.id, { status: "hidden", is_public: false });
       }
     }
 
@@ -936,6 +950,7 @@ export default function ProfilePage() {
       setBusinessPhone(effectiveMember.business?.phone || effectiveMember.phone || "");
       setBusinessAddress(effectiveMember.business?.address || "");
       setBusinessBannerUrl(effectiveMember.business?.banner_url || "");
+      setBusinessIsPublic(effectiveMember.business?.is_public ?? true);
 
       // Job / Employment fields (નીચે નોકરી)
       setJobFullName(effectiveMember.employment?.full_name || effectiveMember.name || "");
@@ -946,6 +961,7 @@ export default function ProfilePage() {
       setJobPhone(effectiveMember.employment?.phone || effectiveMember.phone || "");
       setJobIndustry(effectiveMember.employment?.industry || "");
       setJobExperience(effectiveMember.employment?.experience_years || "");
+      setJobIsPublic(effectiveMember.employment?.is_public ?? true);
       setEduCategory(effectiveMember.education?.education_category || SAMITI_EDUCATION_CATEGORIES[0]);
       setEduDetails(effectiveMember.education?.education_details || effectiveMember.education?.highest_degree || "");
       setFamilyEducationList(effectiveMember.education?.family_education || []);
@@ -969,6 +985,29 @@ export default function ProfilePage() {
         (r) => r.from_member_id === currentUser.id || r.to_member_id === currentUser.id
       ).length
     : 0;
+
+  // Filter requested advertisements for the current/selected user
+  const myAds = React.useMemo(() => {
+    const targetId = effectiveMember?.id || currentUser?.id;
+    const targetName = (effectiveMember?.name || currentUser?.name || "").trim().toLowerCase();
+    const targetPhone = (effectiveMember?.phone || currentUser?.phone || "").trim();
+    const targetBizName = (effectiveMember?.business?.business_name || businessName || "").trim().toLowerCase();
+
+    return advertisements.filter((ad) => {
+      if (ad.submitted_by && targetId && ad.submitted_by === targetId) return true;
+      if (ad.owner_name && targetName && ad.owner_name.trim().toLowerCase() === targetName) return true;
+      if (ad.contact_number && targetPhone && ad.contact_number.trim() === targetPhone) return true;
+      if (ad.business_name && targetBizName && ad.business_name.trim().toLowerCase() === targetBizName) return true;
+      return false;
+    });
+  }, [advertisements, effectiveMember, currentUser, businessName]);
+
+  const handleDeleteAd = (adId: string, adName: string) => {
+    if (typeof window !== "undefined" && window.confirm(`શું આપ "${adName}" જાહેરાતની વિનંતી રદ કરવા / કાઢી નાખવા માંગો છો?`)) {
+      deleteAdvertisement(adId);
+      showToast("જાહેરાત સફળતાપૂર્વક કાઢી નાખવામાં આવી!");
+    }
+  };
 
   const visibilityOptions: { value: PrivacyVisibility; label: string }[] = [
     { value: "public", label: "જાહેર (કોઈપણ જોઈ શકે)" },
@@ -1824,10 +1863,10 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-ivory-200">
-            <button
-              type="button"
-              onClick={handleOpenNewMemberCard}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-ivory-200">
+              <button
+                type="button"
+                onClick={handleOpenNewMemberCard}
               className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
             >
               <UserPlus className="w-4 h-4" />
@@ -2495,7 +2534,279 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
+
+              {/* ૯. બિઝનેસ સાર્વજનિક પ્રદર્શન પસંદગી (Business Visibility Privacy Control) */}
+              <div className="sm:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-amber-50/80 via-ivory-50 to-amber-50/50 border border-amber-200/80 shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-amber-500 text-white">
+                      <Globe className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-extrabold text-xs text-charcoal-900">
+                        ૯. બિઝનેસ સાર્વજનિક પ્રદર્શન પસંદગી (Business Directory & Homepage Visibility)
+                      </h4>
+                      <p className="text-[11px] text-charcoal-600">
+                        શું આપ આપના વ્યવસાયની વિગતો સમાજના તમામ સભ્યોને સાર્વજનિક બિઝનેસ ડિરેક્ટરી અને હોમપેજ પર દર્શાવવા માંગો છો?
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
+                      businessIsPublic
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                        : "bg-charcoal-100 text-charcoal-700 border-charcoal-300"
+                    }`}
+                  >
+                    {businessIsPublic ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Lock className="w-3.5 h-3.5 text-charcoal-500" />
+                    )}
+                    <span>{businessIsPublic ? "સાર્વજનિક લિસ્ટેડ (Public)" : "ખાનગી / છુપો (Private)"}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      businessIsPublic
+                        ? "bg-white border-saffron-500 shadow-sm ring-1 ring-saffron-500"
+                        : "bg-white/60 border-ivory-300 hover:bg-white"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="businessIsPublic"
+                      checked={businessIsPublic}
+                      onChange={() => setBusinessIsPublic(true)}
+                      className="mt-0.5 text-saffron-600 focus:ring-saffron-500"
+                    />
+                    <div>
+                      <span className="block font-bold text-xs text-charcoal-900">
+                        ✓ હા, તમામ સભ્યોને બિઝનેસ ડિરેક્ટરી અને હોમપેજ પર દર્શાવો
+                      </span>
+                      <span className="block text-[11px] text-charcoal-500 mt-0.5">
+                        આપનો વ્યવસાય વેબસાઇટની વ્યવસાય યાદી અને હોમપેજ સ્લાઇડરમાં પ્રદર્શિત થશે.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      !businessIsPublic
+                        ? "bg-white border-charcoal-500 shadow-sm ring-1 ring-charcoal-500"
+                        : "bg-white/60 border-ivory-300 hover:bg-white"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="businessIsPublic"
+                      checked={!businessIsPublic}
+                      onChange={() => setBusinessIsPublic(false)}
+                      className="mt-0.5 text-charcoal-600 focus:ring-charcoal-500"
+                    />
+                    <div>
+                      <span className="block font-bold text-xs text-charcoal-900">
+                        ✕ ના, સાર્વજનિક લિસ્ટિંગમાંથી છુપાવો (માત્ર પ્રોફાઇલમાં રાખો)
+                      </span>
+                      <span className="block text-[11px] text-charcoal-500 mt-0.5">
+                        આપનો વ્યવસાય માત્ર આપના પ્રોફાઇલમાં રહેશે, જાહેર ડિરેક્ટરીમાં નહીં દેખાય.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* મારી વ્યવસાય જાહેરાતોની વિનંતીઓ (My Requested Advertisements List) */}
+          <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-ivory-200">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-gradient-to-br from-amber-500 to-saffron-600 text-white shadow-sm">
+                  <Megaphone className="w-5 h-5" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-base text-charcoal-900">
+                      મારી વિનંતી કરેલ જાહેરાતો (My Requested Advertisements)
+                    </h3>
+                    <span className="text-[11px] font-bold bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200">
+                      {myAds.length} જાહેરાત
+                    </span>
+                  </div>
+                  <p className="text-xs text-charcoal-500">
+                    આપે વેબસાઇટ માટે વિનંતી કરેલી જાહેરાતો, તેની મંજૂરી સ્થિતિ (Status) અને વિગતો અહીં જોઈ શકાય છે.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAdBusinessName(businessName || "");
+                  setAdCategory(businessCategory || "");
+                  setAdDescription("");
+                  setAdOwnerName(businessOwnerName || currentUser?.name || "");
+                  setAdPhone(businessPhone || currentUser?.phone || "");
+                  setAdAddress(businessAddress || currentUser?.address || "");
+                  setAdImageUrl(businessBannerUrl || "");
+                  setAdWebsite("");
+                  setIsAdModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-saffron-600 to-amber-600 hover:from-saffron-700 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ નવી જાહેરાત વિનંતી કરો</span>
+              </button>
+            </div>
+
+            {myAds.length === 0 ? (
+              <div className="text-center py-8 px-4 rounded-2xl bg-ivory-50/70 border border-dashed border-ivory-300 space-y-3">
+                <Megaphone className="w-8 h-8 text-amber-500/60 mx-auto" />
+                <p className="text-xs font-bold text-charcoal-700">
+                  આપે હજુ સુધી કોઈ જાહેરાત માટે વિનંતી કરી નથી.
+                </p>
+                <p className="text-[11px] text-charcoal-500 max-w-md mx-auto">
+                  આપના વ્યવસાયની જાહેરાત વેબસાઇટના હોમપેજ અને જાહેરાત સ્લાઇડરમાં પ્રદર્શિત કરવા માટે ઉપરના &quot;+ નવી જાહેરાત વિનંતી કરો&quot; બટન પર ક્લિક કરો.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {myAds.map((ad) => {
+                  const isApproved = ad.status === "approved";
+                  const isRejected = ad.status === "rejected";
+                  const isPending = !isApproved && !isRejected;
+
+                  return (
+                    <div
+                      key={ad.id}
+                      className="rounded-2xl border border-ivory-300 p-4 bg-gradient-to-br from-white to-ivory-50/40 shadow-2xs hover:shadow-card transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-3">
+                        {/* Banner preview if available */}
+                        {ad.image_url && (
+                          <div className="relative w-full h-32 rounded-xl overflow-hidden bg-ivory-200 border border-ivory-300">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={ad.image_url}
+                              alt={ad.business_name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 right-2">
+                              <span
+                                className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 ${
+                                  isApproved
+                                    ? "bg-emerald-600 text-white"
+                                    : isRejected
+                                    ? "bg-rose-600 text-white"
+                                    : "bg-amber-500 text-white"
+                                }`}
+                              >
+                                {isApproved && <CheckCircle className="w-3 h-3" />}
+                                {isRejected && <X className="w-3 h-3" />}
+                                {isPending && <Clock className="w-3 h-3" />}
+                                <span>
+                                  {isApproved
+                                    ? "મંજૂર (Approved)"
+                                    : isRejected
+                                    ? "અસ્વીકૃત (Rejected)"
+                                    : "ચકાસણી હેઠળ (Pending)"}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="font-extrabold text-sm text-charcoal-900">
+                              {ad.business_name}
+                            </h4>
+                            <span className="text-[11px] font-semibold text-saffron-700 bg-saffron-50 px-2 py-0.5 rounded-md border border-saffron-200 inline-block mt-1">
+                              {ad.category}
+                            </span>
+                          </div>
+                          {!ad.image_url && (
+                            <span
+                              className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1 ${
+                                isApproved
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
+                                  : isRejected
+                                  ? "bg-rose-50 text-rose-800 border border-rose-300"
+                                  : "bg-amber-50 text-amber-800 border border-amber-300"
+                              }`}
+                            >
+                              {isApproved && <CheckCircle className="w-3 h-3 text-emerald-600" />}
+                              {isRejected && <X className="w-3 h-3 text-rose-600" />}
+                              {isPending && <Clock className="w-3 h-3 text-amber-600" />}
+                              <span>
+                                {isApproved
+                                  ? "મંજૂર (Approved)"
+                                  : isRejected
+                                  ? "અસ્વીકૃત (Rejected)"
+                                  : "ચકાસણી હેઠળ (Pending)"}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+
+                        {ad.description && (
+                          <p className="text-xs text-charcoal-600 line-clamp-2 leading-relaxed">
+                            {ad.description}
+                          </p>
+                        )}
+
+                        <div className="text-[11px] text-charcoal-500 space-y-1 pt-1 border-t border-ivory-200">
+                          <div className="flex items-center justify-between">
+                            <span>
+                              સંપર્ક: <strong className="text-charcoal-800">{ad.contact_number}</strong>
+                            </span>
+                            <span>
+                              ઓનર: <strong className="text-charcoal-800">{ad.owner_name}</strong>
+                            </span>
+                          </div>
+                          {ad.created_at && (
+                            <div className="text-[10px] text-charcoal-400">
+                              વિનંતી તારીખ: {new Date(ad.created_at).toLocaleDateString("gu-IN")}
+                            </div>
+                          )}
+                          {isRejected && ad.rejection_remarks && (
+                            <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-[11px]">
+                              <strong>અસ્વીકૃતિનું કારણ:</strong> {ad.rejection_remarks}
+                            </div>
+                          )}
+                          {isApproved && (
+                            <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] flex items-center gap-1.5">
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <span>આ જાહેરાત સક્રિય છે અને વેબસાઇટ પર પ્રદર્શિત થઈ રહી છે.</span>
+                            </div>
+                          )}
+                          {isPending && (
+                            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                              <span>સમિતિના એડમિન દ્વારા ચકાસણી પ્રક્રિયા પૂર્ણ થયા બાદ પ્રદર્શિત થશે.</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end pt-2 border-t border-ivory-200">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAd(ad.id, ad.business_name)}
+                          className="px-3 py-1 text-[11px] font-bold text-rose-700 hover:text-white hover:bg-rose-600 rounded-lg border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>વિનંતી રદ કરો (Cancel)</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* ૨. નીચલો વિભાગ: નોકરી / રોજગારની વિગતો (Job & Employment Details) */}
@@ -2625,6 +2936,89 @@ export default function ProfilePage() {
                   placeholder="દા.ત. ૧૫ વર્ષ, ૫ વર્ષ"
                   className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
                 />
+              </div>
+
+              {/* ૯. નોકરી સાર્વજનિક પ્રદર્શન પસંદગી (Nokri Visibility Privacy Control) */}
+              <div className="sm:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-forest-50/80 via-ivory-50 to-forest-50/50 border border-forest-200/80 shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-forest-700 text-white">
+                      <Building className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-extrabold text-xs text-charcoal-900">
+                        ૯. નોકરી / રોજગાર સાર્વજનિક પ્રદર્શન પસંદગી (Nokri Tab Directory Visibility)
+                      </h4>
+                      <p className="text-[11px] text-charcoal-600">
+                        શું આપ આપની નોકરી / રોજગારની વિગતો સમાજના તમામ સભ્યોને નોકરી ડિરેક્ટરી (Nokri Tab) માં દર્શાવવા માંગો છો?
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
+                      jobIsPublic
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                        : "bg-charcoal-100 text-charcoal-700 border-charcoal-300"
+                    }`}
+                  >
+                    {jobIsPublic ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Lock className="w-3.5 h-3.5 text-charcoal-500" />
+                    )}
+                    <span>{jobIsPublic ? "સાર્વજનિક લિસ્ટેડ (Public)" : "ખાનગી / છુપો (Private)"}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      jobIsPublic
+                        ? "bg-white border-forest-600 shadow-sm ring-1 ring-forest-600"
+                        : "bg-white/60 border-ivory-300 hover:bg-white"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="jobIsPublic"
+                      checked={jobIsPublic}
+                      onChange={() => setJobIsPublic(true)}
+                      className="mt-0.5 text-forest-700 focus:ring-forest-600"
+                    />
+                    <div>
+                      <span className="block font-bold text-xs text-charcoal-900">
+                        ✓ હા, મારી નોકરીની વિગતો નોકરી ડિરેક્ટરીમાં દર્શાવો
+                      </span>
+                      <span className="block text-[11px] text-charcoal-500 mt-0.5">
+                        સમાજના યુવાનો અને સભ્યોને માર્ગદર્શન તથા નેટવર્કિંગ માટે નોકરી ટેબમાં દર્શાવાશે.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      !jobIsPublic
+                        ? "bg-white border-charcoal-500 shadow-sm ring-1 ring-charcoal-500"
+                        : "bg-white/60 border-ivory-300 hover:bg-white"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="jobIsPublic"
+                      checked={!jobIsPublic}
+                      onChange={() => setJobIsPublic(false)}
+                      className="mt-0.5 text-charcoal-600 focus:ring-charcoal-500"
+                    />
+                    <div>
+                      <span className="block font-bold text-xs text-charcoal-900">
+                        ✕ ના, નોકરી ડિરેક્ટરીમાંથી છુપાવો (માત્ર પ્રોફાઇલમાં રાખો)
+                      </span>
+                      <span className="block text-[11px] text-charcoal-500 mt-0.5">
+                        આપની નોકરીની વિગત માત્ર આપના પ્રોફાઇલમાં રહેશે, જાહેર નોકરી યાદીમાં નહીં દેખાય.
+                      </span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
