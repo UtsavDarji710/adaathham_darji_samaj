@@ -26,6 +26,7 @@ import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { Member, AdminRole, SAMITI_NATIVE_PLACES, SAMITI_EDUCATION_CATEGORIES } from "@/types";
 import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function AdminMembersPage() {
   const { members, updateMember, deleteMember, addLog } = useData();
@@ -121,10 +122,10 @@ export default function AdminMembersPage() {
               <tr key={m.id} className="hover:bg-ivory-50/60 transition-colors">
                 <td className="py-3.5 px-4">
                   <div className="flex items-center gap-3">
-                    <img
+                    <UserAvatar
                       src={m.photo_url}
                       alt={m.name}
-                      className="w-9 h-9 rounded-xl object-cover border border-ivory-300"
+                      className="w-9 h-9 rounded-xl border border-ivory-300"
                     />
                     <div>
                       <span className="font-bold text-charcoal-900 block">{m.name}</span>
@@ -331,7 +332,7 @@ export default function AdminMembersPage() {
                       સભ્ય પ્રોફાઇલ ફોટો (Crop &amp; Upload)
                     </label>
                     <ImageUploadWithCrop
-                      currentImageUrl={editingMember.photo_url}
+                      currentImageUrl={editingMember.photo_url || undefined}
                       onImageCropped={(url) => setEditingMember({ ...editingMember, photo_url: url })}
                       aspectRatio={1}
                       aspectRatioLabel="૧:૧ (અવતાર)"

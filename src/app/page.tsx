@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Users,
   Briefcase,
@@ -21,10 +22,19 @@ import {
   ExternalLink,
   Award,
   BadgeCheck,
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  LogIn,
+  UserPlus,
+  LogOut,
+  AlertCircle,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { AutoScrollSlider } from "@/components/AutoScrollSlider";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Donation, Announcement, Circular, BusinessItem, CommunityEvent, CommitteeMember } from "@/types";
 
 export default function HomePage() {
@@ -39,7 +49,45 @@ export default function HomePage() {
     advertisements,
     donations,
   } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, loginWithPassword, logout } = useAuth();
+  const router = useRouter();
+
+  // Quick Login State for Hero Section
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
+
+  const handleQuickLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginSuccess(null);
+
+    const cleanUser = loginUsername.trim().toLowerCase();
+    if (!cleanUser) {
+      setLoginError("કૃપા કરીને આપનું યુઝરનેમ (Username) દાખલ કરો.");
+      return;
+    }
+    if (!loginPassword) {
+      setLoginError("કૃપા કરીને આપનો પાસવર્ડ (Password) દાખલ કરો.");
+      return;
+    }
+
+    setLoginLoading(true);
+    const result = await loginWithPassword(cleanUser, loginPassword);
+    setLoginLoading(false);
+
+    if (result.success) {
+      setLoginSuccess(result.message || "લૉગિન સફળ!");
+      if (result.user?.role && result.user.role !== "member") {
+        router.push("/admin");
+      }
+    } else {
+      setLoginError(result.message || "યુઝરનેમ અથવા પાસવર્ડ અમાન્ય છે.");
+    }
+  };
 
   // Statistics calculated dynamically from live state
   const totalMembers = members.length;
@@ -103,25 +151,145 @@ export default function HomePage() {
             અડાઆઠમ દરજી સેવા સમિતિના તમામ પરિવારોને જોડતું સત્તાવાર ડિજિટલ પોર્ટલ. પરિવાર વિગતો શોધો, સભ્યો સાથે જોડાઓ અને સમાજના વ્યવસાયોને પ્રોત્સાહન આપો.
           </p>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Link
-              href="/family-tree"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 group hover:scale-[1.02]"
-            >
-              <GitFork className="w-4 h-4" />
-              <span>પરિવાર શોધો</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </Link>
+          {/* Quick Login / Auth Card or Logged-in Profile */}
+          {!currentUser ? (
+            <div className="max-w-xl mx-auto pt-2">
+              <form
+                onSubmit={handleQuickLogin}
+                className="bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-3xl border border-saffron-200 shadow-xl transition-all"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                  <div>
+                    <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                      યુઝરનેમ (Username)
+                    </label>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={loginUsername}
+                        onChange={(e) => setLoginUsername(e.target.value)}
+                        placeholder="યુઝરનેમ દાખલ કરો"
+                        className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-ivory-300 focus:border-saffron-500 focus:ring-2 focus:ring-saffron-200 outline-none transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
 
-            <Link
-              href="/register"
-              className="px-6 py-3 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 hover:scale-[1.02]"
-            >
-              <Users className="w-4 h-4" />
-              <span>સમાજ સાથે જોડાઓ</span>
-            </Link>
-          </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-charcoal-700 mb-1">
+                      પાસવર્ડ (Password)
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showLoginPassword ? "text" : "password"}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="પાસવર્ડ દાખલ કરો"
+                        className="w-full pl-9 pr-9 py-2 text-xs sm:text-sm rounded-xl border border-ivory-300 focus:border-saffron-500 focus:ring-2 focus:ring-saffron-200 outline-none transition-all"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700"
+                        title={showLoginPassword ? "પાસવર્ડ છુપાવો" : "પાસવર્ડ જુઓ"}
+                      >
+                        {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div className="mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 text-left">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                {loginSuccess && (
+                  <div className="mt-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 text-left">
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{loginSuccess}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 mt-1 border-t border-ivory-200">
+                  <Link
+                    href="/login"
+                    className="text-[11px] text-saffron-700 hover:text-saffron-900 font-semibold underline order-2 sm:order-1"
+                  >
+                    પાસવર્ડ ભૂલી ગયા છો?
+                  </Link>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2">
+                    <button
+                      type="submit"
+                      disabled={loginLoading}
+                      className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02]"
+                    >
+                      {loginLoading ? (
+                        <span className="inline-block animate-spin">⏳</span>
+                      ) : (
+                        <LogIn className="w-4 h-4" />
+                      )}
+                      <span>લૉગિન</span>
+                    </button>
+
+                    <Link
+                      href="/register"
+                      className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1.5 hover:scale-[1.02]"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>રજીસ્ટ્રેશન (Register)</span>
+                    </Link>
+                  </div>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div className="max-w-xl mx-auto pt-2">
+              <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-3xl border border-saffron-200 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <UserAvatar
+                    src={currentUser.photo_url}
+                    alt={currentUser.name}
+                    className="w-12 h-12 rounded-2xl border-2 border-saffron-400 shadow-xs flex-shrink-0"
+                  />
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-charcoal-900">{currentUser.name}</h3>
+                      <span className="text-[10px] font-extrabold bg-saffron-100 text-saffron-800 px-2 py-0.5 rounded-full">
+                        {currentUser.role === "admin" ? "એડમિન" : currentUser.role === "president" ? "પ્રમુખ" : "સભ્ય"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-charcoal-500">
+                      {currentUser.phone ? `મોબાઈલ: ${currentUser.phone}` : "સ્વાગત છે આપનું ડિજિટલ પોર્ટલમાં"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <Link
+                    href="/profile"
+                    className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5"
+                  >
+                    <span>પ્રોફાઇલ જુઓ</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="p-2 text-charcoal-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-ivory-300"
+                    title="લોગઆઉટ"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Trust Indicators */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-charcoal-500 font-medium">
@@ -137,69 +305,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. REQUIREMENT 16: OFFICE BEARERS SECTION (Continuous Horizontal Auto-Scroll) */}
-      <section className="bg-ivory-50 border-y border-ivory-300 py-8 sm:py-10">
-        <AutoScrollSlider<CommitteeMember>
-          items={committee}
-          speedSeconds={26}
-          direction="left"
-          icon={<Award className="w-5 h-5 text-saffron-600" />}
-          title="શ્રી અડાઆઠમ દરજી સેવા સમિતિ હોદ્દેદારો"
-          subtitle="સમાજ કલ્યાણ, સેવા અને પ્રગતિ માટે સમર્પિત કાર્યકારી કારોબારી સમિતિ (સતત ઓટો-સ્ક્રોલિંગ)"
-          headerRight={
-            <Link
-              href="/committee"
-              className="px-3.5 py-1.5 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 text-xs font-bold rounded-xl border border-saffron-200 transition-colors flex items-center gap-1 shadow-2xs"
-            >
-              <span>સંપૂર્ણ સમિતિ ({committee.length})</span>
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-          }
-          renderItem={(member) => (
-            <div className="w-[170px] sm:w-[190px] bg-white rounded-2xl border border-ivory-300 p-3.5 text-center shadow-card hover:shadow-hover hover:border-saffron-300 transition-all flex flex-col items-center justify-between h-[185px] group">
-              <div className="relative mx-auto w-16 h-16 sm:w-18 sm:h-18 mb-2">
-                <img
-                  src={member.photo_url || "/default-avatar.svg"}
-                  alt={member.name}
-                  onError={(e) => {
-                    e.currentTarget.src = "/default-avatar.svg";
-                  }}
-                  className="w-full h-full rounded-2xl object-cover border-2 border-ivory-300 shadow-2xs group-hover:scale-105 transition-transform"
-                />
-                {member.is_lifetime_member && (
-                  <span
-                    className="absolute -bottom-1 -right-1 bg-amber-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-2xs border-2 border-white"
-                    title="આજીવન સભ્ય"
-                  >
-                    ★
-                  </span>
-                )}
-              </div>
-              <div className="w-full">
-                <h3 className="font-bold text-xs text-charcoal-900 truncate group-hover:text-saffron-700 transition-colors" title={member.name}>
-                  {member.name.split(" ")[0]} {member.name.split(" ")[1] || ""}
-                </h3>
-                <span className="inline-block mt-1 text-[10px] font-bold text-saffron-800 bg-saffron-50 px-2 py-0.5 rounded-md border border-saffron-200 truncate max-w-full">
-                  {member.designation}
-                </span>
-              </div>
-            </div>
-          )}
-        />
-
-        <div className="mt-5 text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/committee"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-white border border-ivory-300 hover:border-saffron-500 text-charcoal-800 hover:text-saffron-700 text-xs font-bold shadow-2xs transition-colors"
-          >
-            <span>સંપૂર્ણ સમિતિ અને આજીવન સભ્યોની યાદી જુઓ</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </section>
-
       {/* Subsequent Sections with Consistent Vertical Rhythm */}
-      <div className="space-y-12 sm:space-y-16 mt-12 sm:mt-16">
+      <div className="space-y-10 sm:space-y-14 mt-6 sm:mt-8">
         {/* 3. COMMUNITY DATA / STATISTICS SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-3xl border border-ivory-300 shadow-md p-4 sm:p-5">
@@ -473,21 +580,13 @@ export default function HomePage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-rose-100 border-2 border-rose-200 flex-shrink-0 shadow-2xs">
-                  {donor.donor_photo ? (
-                    <img
-                      src={donor.donor_photo}
-                      alt={donor.donor_name}
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-avatar.svg";
-                      }}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-rose-700 text-base">
-                      {donor.donor_name.charAt(0)}
-                    </div>
-                  )}
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-rose-200 flex-shrink-0 shadow-2xs">
+                  <UserAvatar
+                    src={donor.donor_photo}
+                    alt={donor.donor_name}
+                    fallbackName={donor.donor_name}
+                    className="w-full h-full rounded-2xl"
+                  />
                 </div>
 
                 <div className="min-w-0 flex-1">

@@ -16,6 +16,7 @@ import {
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { CommitteeMember, AdminRole } from "@/types";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function AdminCommitteePage() {
   const { committee, addLog } = useData();
@@ -71,10 +72,10 @@ export default function AdminCommitteePage() {
                 <td className="py-3.5 px-4 font-bold text-charcoal-500">{c.order}</td>
                 <td className="py-3.5 px-4">
                   <div className="flex items-center gap-2.5">
-                    <img
+                    <UserAvatar
                       src={c.photo_url}
                       alt={c.name}
-                      className="w-8 h-8 rounded-lg object-cover border border-ivory-300"
+                      className="w-8 h-8 rounded-lg border border-ivory-300"
                     />
                     <span className="font-bold text-charcoal-900">{c.name}</span>
                   </div>

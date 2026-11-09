@@ -57,6 +57,7 @@ import {
   isMemberEligibleForPublicMatrimony,
 } from "@/types";
 import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const RELATION_OPTIONS = [
   "પિતા (Father)",
@@ -388,15 +389,11 @@ export default function ProfilePage() {
     }
 
     const newId = `mem-${Date.now()}`;
-    const defaultPhoto =
-      newMemberGender === "female"
-        ? "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80"
-        : "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80";
 
     const createdMember: Member = {
       id: newId,
       name: newMemberName.trim(),
-      photo_url: defaultPhoto,
+      photo_url: null,
       phone: newMemberPhone.trim() || "",
       email: newMemberEmail.trim() || undefined,
       address: newMemberAddress.trim() || currentUser?.address || "",
@@ -1168,13 +1165,10 @@ export default function ProfilePage() {
       <div className="bg-white rounded-3xl border border-ivory-300 p-6 sm:p-8 shadow-card mb-8">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <div className="relative">
-            <img
-              src={photoUrl || effectiveMember?.photo_url || currentUser.photo_url || "/default-avatar.svg"}
+            <UserAvatar
+              src={photoUrl || effectiveMember?.photo_url || currentUser.photo_url}
               alt={effectiveMember?.name || currentUser.name}
-              onError={(e) => {
-                e.currentTarget.src = "/default-avatar.svg";
-              }}
-              className="w-28 h-28 rounded-3xl object-cover border-4 border-saffron-500 shadow-md"
+              className="w-28 h-28 rounded-3xl border-4 border-saffron-500 shadow-md"
             />
             <button
               type="button"
@@ -1204,7 +1198,7 @@ export default function ProfilePage() {
                   </button>
                 </div>
                 <ImageUploadWithCrop
-                  currentImageUrl={photoUrl || effectiveMember?.photo_url || currentUser.photo_url}
+                  currentImageUrl={photoUrl || effectiveMember?.photo_url || currentUser.photo_url || undefined}
                   onImageCropped={(url) => {
                     setPhotoUrl(url);
                     const targetId = effectiveMember?.id || currentUser?.id;
@@ -4009,20 +4003,17 @@ export default function ProfilePage() {
             <div className="p-6 overflow-y-auto space-y-5">
               <div className="flex items-center gap-4 pb-4 border-b border-ivory-200">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-rose-200 bg-rose-50 flex-shrink-0 shadow-sm">
-                  {selectedCandidateModal.matrimony?.privacy?.show_photo !== false ? (
-                    <img
-                      src={selectedCandidateModal.photo_url || "/default-avatar.svg"}
-                      alt={selectedCandidateModal.name}
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-avatar.svg";
-                      }}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
+                  {selectedCandidateModal.matrimony?.privacy?.show_photo === false ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-rose-700">
                       <Lock className="w-6 h-6 mb-1" />
                       <span className="text-[10px] font-bold">ફોટો ગોપનીય</span>
                     </div>
+                  ) : (
+                    <UserAvatar
+                      src={selectedCandidateModal.photo_url}
+                      alt={selectedCandidateModal.name}
+                      className="w-full h-full rounded-2xl"
+                    />
                   )}
                 </div>
 

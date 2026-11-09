@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function CommitteePage() {
   const { committee, members } = useData();
@@ -96,13 +97,10 @@ export default function CommitteePage() {
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="relative">
-                    <img
-                      src={member.photo_url || "/default-avatar.svg"}
+                    <UserAvatar
+                      src={member.photo_url}
                       alt={member.name}
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-avatar.svg";
-                      }}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-ivory-300 group-hover:border-saffron-400 transition-colors shadow-xs"
+                      className="w-16 h-16 rounded-2xl border-2 border-ivory-300 group-hover:border-saffron-400 transition-colors shadow-xs"
                     />
                     {member.is_lifetime_member && (
                       <span
@@ -188,13 +186,10 @@ export default function CommitteePage() {
                 className="bg-white rounded-3xl border border-ivory-300 p-5 shadow-card hover:shadow-hover transition-all flex items-center gap-4"
               >
                 <div className="relative">
-                  <img
-                    src={m.photo_url || "/default-avatar.svg"}
+                  <UserAvatar
+                    src={m.photo_url}
                     alt={m.name}
-                    onError={(e) => {
-                      e.currentTarget.src = "/default-avatar.svg";
-                    }}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-xs"
+                    className="w-16 h-16 rounded-2xl border-2 border-amber-400 shadow-xs"
                   />
                   <span className="absolute -top-1 -left-1 bg-amber-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs">
                     ★

@@ -140,8 +140,7 @@ export async function POST(request: Request) {
       salt: passwordSalt,
       is_email_verified: true,
       email_verified_at: new Date().toISOString(),
-      photo_url:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80",
+      photo_url: body.photo_url || null,
       address: address.trim(),
       city: city.trim(),
       district: "અરવલ્લી",

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Member, RelationshipType } from "@/types";
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
@@ -58,7 +59,7 @@ interface DisplayFamilyRelation {
   name: string;
   relationLabel: string;
   phone?: string;
-  photo_url: string;
+  photo_url?: string | null;
   isRegisteredMember: boolean;
   member?: Member;
   native_place?: string;
@@ -137,7 +138,7 @@ export default function FamilyTreePage() {
             name: cleanName,
             relationLabel: rel.relation || "સંબંધી (Relative)",
             phone: rel.phone || (matchedMember ? matchedMember.phone : undefined),
-            photo_url: matchedMember?.photo_url || "/default-avatar.svg",
+            photo_url: matchedMember?.photo_url || null,
             isRegisteredMember: !!matchedMember,
             member: matchedMember,
             native_place: rel.native_place || matchedMember?.native_place,
@@ -158,7 +159,7 @@ export default function FamilyTreePage() {
           name: fName,
           relationLabel: "પિતા (Father)",
           phone: matched?.phone,
-          photo_url: matched?.photo_url || "/default-avatar.svg",
+          photo_url: matched?.photo_url || null,
           isRegisteredMember: !!matched,
           member: matched,
           native_place: matched?.native_place || targetMember.native_place,
@@ -193,7 +194,7 @@ export default function FamilyTreePage() {
           name: otherMember.name.trim(),
           relationLabel,
           phone: otherMember.phone,
-          photo_url: otherMember.photo_url || "/default-avatar.svg",
+          photo_url: otherMember.photo_url || null,
           isRegisteredMember: true,
           member: otherMember,
           native_place: otherMember.native_place,

@@ -259,7 +259,7 @@ export function ensureSessionUser(sessionVal: string): Member {
     name: displayName,
     email: isEmail ? clean : "member@adaadhamsamaj.org",
     phone: isPhone ? clean : "98250 00000",
-    photo_url: "/default-avatar.svg",
+    photo_url: null,
     role: "member",
     is_lifetime_member: false,
     address: "મોડાસા",

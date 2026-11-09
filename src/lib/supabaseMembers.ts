@@ -85,9 +85,7 @@ export function dbRowToMember(row: any, matRow?: any): Member {
     email: row.email ? String(row.email).toLowerCase().trim() : undefined,
     is_email_verified: !!row.is_email_verified,
     email_verified_at: row.email_verified_at || undefined,
-    photo_url:
-      row.photo_url ||
-      "/default-avatar.svg",
+    photo_url: row.photo_url || null,
     address: row.address || "",
     city: row.city || "મોડાસા",
     district: row.district || "અરવલ્લી",
@@ -148,7 +146,7 @@ export function memberToDbRow(m: Partial<Member>): Record<string, any> {
   if (m.salt !== undefined) row.salt = m.salt;
   if (m.is_email_verified !== undefined) row.is_email_verified = m.is_email_verified;
   if (m.email_verified_at !== undefined) row.email_verified_at = m.email_verified_at;
-  if (m.photo_url !== undefined) row.photo_url = m.photo_url;
+  if (m.photo_url !== undefined) row.photo_url = m.photo_url || null;
   if (m.address !== undefined) row.address = m.address;
   if (m.city !== undefined) row.city = m.city;
   if (m.district !== undefined) row.district = m.district;
@@ -418,8 +416,7 @@ export async function authenticateSupabase(
       phone: meta.phone || "98250 12345",
       role: meta.role || "member",
       is_lifetime_member: false,
-      photo_url:
-        "/default-avatar.svg",
+      photo_url: meta.photo_url || null,
       address: "મોડાસા",
       city: "મોડાસા",
       district: "અરવલ્લી",

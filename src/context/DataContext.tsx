@@ -136,7 +136,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: m.id,
           name: m.name,
           designation: m.committee_role || (m.role === "admin" ? "સિસ્ટમ એડમિનિસ્ટ્રેટર" : String(m.role)),
-          photo_url: m.photo_url || "/default-avatar.svg",
+          photo_url: m.photo_url || null,
           phone: m.phone,
           city: m.city || "મોડાસા",
           term: "૨૦૨૩ - ૨૦૨૬",

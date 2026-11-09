@@ -384,7 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newMember: Member = {
       id: `mem-${Date.now()}`,
       name: data.name || "નવા સભ્ય",
-      photo_url: data.photo_url || "/default-avatar.svg",
+      photo_url: data.photo_url || null,
       phone: data.phone || "",
       email: data.email || "",
       is_email_verified: true,

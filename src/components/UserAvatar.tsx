@@ -25,16 +25,26 @@ export function UserAvatar({
   const [hasError, setHasError] = useState(false);
 
   const cleanSrc = src && typeof src === "string" ? src.trim() : "";
-  const isUnsplashDummy = cleanSrc.includes("images.unsplash.com/photo-1535713875002");
-  const isBrokenOrEmpty = !cleanSrc || cleanSrc === "undefined" || cleanSrc === "null" || isUnsplashDummy || hasError;
+  const isUnsplashDummy =
+    cleanSrc.includes("images.unsplash.com/photo-1535713875002") ||
+    cleanSrc.includes("images.unsplash.com/photo-1544005313") ||
+    cleanSrc.includes("images.unsplash.com/photo-1506794778202");
+  const isBrokenOrEmpty =
+    !cleanSrc ||
+    cleanSrc === "undefined" ||
+    cleanSrc === "null" ||
+    cleanSrc === "/default-avatar.svg" ||
+    isUnsplashDummy ||
+    hasError;
 
-  const shapeClass = shape === "circle" ? "rounded-full" : "rounded-2xl";
+  const hasCustomRadius = className.includes("rounded-");
+  const shapeClass = hasCustomRadius ? "" : (shape === "circle" ? "rounded-full" : "rounded-2xl");
 
   if (isBrokenOrEmpty) {
     return (
       <div
         onClick={onClick}
-        className={`flex items-center justify-center bg-gradient-to-br from-amber-50 to-saffron-100 border border-saffron-200 text-saffron-700 flex-shrink-0 select-none ${shapeClass} ${className}`}
+        className={`flex items-center justify-center bg-gradient-to-br from-amber-50 to-saffron-100 border border-saffron-200 text-saffron-700 flex-shrink-0 select-none overflow-hidden ${shapeClass} ${className}`}
         title={alt || fallbackName || "સભ્ય પ્રોફાઇલ"}
       >
         <User className="w-1/2 h-1/2 text-saffron-600 stroke-[2.2]" />

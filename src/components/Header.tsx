@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AdminRole } from "@/types";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Header() {
   const pathname = usePathname();
@@ -216,13 +217,11 @@ export default function Header() {
                       : "bg-white border-ivory-300 hover:border-saffron-400 text-charcoal-800 shadow-2xs"
                   }`}
                 >
-                  <img
-                    src={currentUser.photo_url || "/default-avatar.svg"}
+                  <UserAvatar
+                    src={currentUser.photo_url}
                     alt={currentUser.name}
-                    onError={(e) => {
-                      e.currentTarget.src = "/default-avatar.svg";
-                    }}
-                    className="w-6 h-6 rounded-full object-cover border border-saffron-400 flex-shrink-0"
+                    shape="circle"
+                    className="w-6 h-6 border border-saffron-400 flex-shrink-0"
                   />
                   <div className="text-left text-xs leading-none">
                     <span className="font-bold text-[11px] block">{currentUser.name.split(" ")[0]}</span>
@@ -260,13 +259,11 @@ export default function Header() {
           <div className="flex lg:hidden items-center gap-2">
             {currentUser && (
               <Link href="/profile" className="p-0.5 rounded-full border border-saffron-400">
-                <img
-                  src={currentUser.photo_url || "/default-avatar.svg"}
+                <UserAvatar
+                  src={currentUser.photo_url}
                   alt={currentUser.name}
-                  onError={(e) => {
-                    e.currentTarget.src = "/default-avatar.svg";
-                  }}
-                  className="w-7 h-7 rounded-full object-cover"
+                  shape="circle"
+                  className="w-7 h-7"
                 />
               </Link>
             )}

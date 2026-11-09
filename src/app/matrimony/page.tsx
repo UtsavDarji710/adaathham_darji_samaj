@@ -31,6 +31,7 @@ import {
   SAMITI_EDUCATION_CATEGORIES,
   isMemberEligibleForPublicMatrimony,
 } from "@/types";
+import { UserAvatar } from "@/components/UserAvatar";
 
 function calculateAge(dob?: string): number | null {
   if (!dob) return null;
@@ -428,17 +429,17 @@ export default function PublicMatrimonyPage() {
                     {/* Header: Photo + Gender Badge + Name */}
                     <div className="flex items-start gap-3.5 mb-3.5 pt-1">
                       <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-ivory-200 bg-ivory-100 flex-shrink-0 shadow-xs">
-                        {displayPhoto ? (
-                          <img
-                            src={displayPhoto}
-                            alt={displayName}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
+                        {priv.show_photo === false ? (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-50 to-pink-100 text-rose-700">
                             <Lock className="w-6 h-6 mb-1" />
                             <span className="text-[9px] font-bold">ફોટો ગોપનીય</span>
                           </div>
+                        ) : (
+                          <UserAvatar
+                            src={candidate.photo_url}
+                            alt={displayName}
+                            className="w-full h-full rounded-2xl group-hover:scale-105 transition-transform duration-300"
+                          />
                         )}
                       </div>
 
@@ -619,17 +620,17 @@ export default function PublicMatrimonyPage() {
             <div className="p-6 overflow-y-auto space-y-5">
               <div className="flex items-center gap-4 pb-4 border-b border-ivory-200">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-rose-200 bg-rose-50 flex-shrink-0 shadow-sm">
-                  {selectedCandidate.matrimony?.privacy?.show_photo !== false ? (
-                    <img
-                      src={selectedCandidate.photo_url}
-                      alt={selectedCandidate.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
+                  {selectedCandidate.matrimony?.privacy?.show_photo === false ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-rose-700">
                       <Lock className="w-6 h-6 mb-1" />
                       <span className="text-[10px] font-bold">ફોટો ગોપનીય</span>
                     </div>
+                  ) : (
+                    <UserAvatar
+                      src={selectedCandidate.photo_url}
+                      alt={selectedCandidate.name}
+                      className="w-full h-full rounded-2xl"
+                    />
                   )}
                 </div>
 

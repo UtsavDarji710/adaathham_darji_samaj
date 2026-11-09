@@ -17,11 +17,11 @@ for (const line of envText.split('\n')) {
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 async function main() {
-  const { data: allMat, error: allMatErr } = await supabase
-    .from('member_matrimony')
-    .select('*');
-  console.log('All Matrimony count:', allMat?.length);
-  console.log('Rows in member_matrimony:', JSON.stringify(allMat, null, 2));
+  const { data: members, error } = await supabase
+    .from('members')
+    .select('id, name, username, photo_url');
+  console.log('Members count:', members?.length);
+  console.log('Members photo_url:', JSON.stringify(members, null, 2));
 }
 
 main();

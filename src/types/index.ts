@@ -194,6 +194,7 @@ export interface FamilyRelationDetail {
   marital_status?: string;
   is_registered?: boolean;
   member_id?: string;
+  photo_url?: string | null;
 }
 
 export interface Member {
@@ -201,7 +202,7 @@ export interface Member {
   auth_user_id?: string; // Supabase auth.users UUID reference
   username?: string; // યુઝરનેમ (Unique Alphanumeric Login Identifier)
   name: string;
-  photo_url: string;
+  photo_url?: string | null;
   phone: string;
   email?: string;
   is_email_verified?: boolean;
@@ -421,7 +422,7 @@ export interface CommitteeMember {
   id: string;
   name: string;
   designation: string; // પ્રમુખ, મંત્રી, સહમંત્રી, ખજાનચી, ટ્રસ્ટી, કારોબારી સભ્ય
-  photo_url: string;
+  photo_url?: string | null;
   phone: string;
   city: string;
   term: string;
