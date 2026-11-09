@@ -151,7 +151,7 @@ export default function CommitteePage() {
 
                 {currentUser ? (
                   <Link
-                    href="/family-tree"
+                    href={`/family-tree?memberId=${member.id}`}
                     className="font-bold text-saffron-700 hover:underline text-xs"
                   >
                     પરિવાર વૃક્ષ →

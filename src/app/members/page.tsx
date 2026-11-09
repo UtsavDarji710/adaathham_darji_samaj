@@ -14,6 +14,7 @@ import {
   Lock,
   Filter,
   UserPlus,
+  GitFork,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -293,7 +294,7 @@ export default function MembersDirectoryPage() {
               <div className="pt-3 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs">
                 {currentUser ? (
                   <Link
-                    href={`/family-tree`}
+                    href={`/family-tree?memberId=${member.id}`}
                     className="text-forest-700 font-bold hover:underline"
                   >
                     પરિવાર વૃક્ષ →
@@ -503,7 +504,16 @@ export default function MembersDirectoryPage() {
               )}
             </div>
 
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="mt-6 flex items-center justify-end gap-2">
+              {currentUser && (
+                <Link
+                  href={`/family-tree?memberId=${activeModalMember.id}`}
+                  className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors flex items-center gap-1.5"
+                >
+                  <GitFork className="w-3.5 h-3.5" />
+                  <span>પરિવાર વૃક્ષ જુઓ</span>
+                </Link>
+              )}
               <button
                 onClick={() => setActiveModalMember(null)}
                 className="px-4 py-2 border border-ivory-300 text-charcoal-700 rounded-xl text-xs font-semibold hover:bg-ivory-100"

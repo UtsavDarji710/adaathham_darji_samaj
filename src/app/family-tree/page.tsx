@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Users,
@@ -25,6 +26,7 @@ import {
   Eye,
   EyeOff,
   Filter,
+  GitFork,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -67,12 +69,50 @@ interface DisplayFamilyRelation {
 }
 
 export default function FamilyTreePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 py-16 text-center text-charcoal-500 text-sm">
+          પરિવાર વૃક્ષ લોડ થઈ રહ્યું છે...
+        </div>
+      }
+    >
+      <FamilyTreeContent />
+    </Suspense>
+  );
+}
+
+function FamilyTreeContent() {
   const { members, relationships, businesses } = useData();
   const { currentUser, isAdmin } = useAuth();
+  const searchParams = useSearchParams();
+  const urlMemberId = searchParams.get("memberId") || searchParams.get("id");
 
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVillage, setSelectedVillage] = useState("all");
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+
+  // Sync with URL query parameter
+  useEffect(() => {
+    if (urlMemberId) {
+      setActiveMemberId(urlMemberId);
+      setExpandedMemberId(urlMemberId);
+    }
+  }, [urlMemberId]);
+
+  // Determine active member:
+  // Priority: activeMemberId state -> urlMemberId -> currentUser
+  const activeMember = useMemo(() => {
+    const targetId = activeMemberId || urlMemberId;
+    if (targetId) {
+      const found = members.find((m) => m.id === targetId);
+      if (found) return found;
+    }
+    return currentUser || null;
+  }, [activeMemberId, urlMemberId, members, currentUser]);
+
+  const isViewingSelf = Boolean(currentUser && activeMember && currentUser.id === activeMember.id);
 
   // Unique native places for quick filter
   const nativePlaces = useMemo(() => {
@@ -308,130 +348,125 @@ export default function FamilyTreePage() {
         </div>
       </div>
 
-      {/* REQUIREMENT 5: INITIAL STATE (Do not display complete database publicly by default) */}
+      {/* REQUIREMENT 5: INITIAL STATE */}
       {!isSearchActive && (
-        <div className="space-y-8">
-          <div className="bg-white rounded-3xl border border-ivory-300 p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-4 shadow-card">
-            <div className="w-14 h-14 rounded-3xl bg-saffron-100 text-saffron-800 flex items-center justify-center mx-auto shadow-xs">
-              <Search className="w-7 h-7" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-lg text-charcoal-900">
-                પરિવાર વિગતો શોધવા માટે નામ દાખલ કરો
-              </h3>
-              <p className="text-xs sm:text-sm text-charcoal-600 mt-2 leading-relaxed">
-                સમાજના સભ્યોની અંગત સુરક્ષા અને ગોપનીયતા જાળવવા માટે સંપૂર્ણ ડેટાબેઝ જાહેરમાં પ્રદર્શિત થતો નથી. કૃપા કરીને ઉપરના સર્ચ બોક્સમાં સભ્યનું નામ અથવા ગામ શોધો.
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={() => setSearchQuery("અડાઆઠમ")}
-                className="px-5 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span>અડાઆઠમના પરિવારો શોધો</span>
-              </button>
-
-              {!currentUser && (
-                <Link
-                  href="/login"
-                  className="px-5 py-2.5 rounded-xl bg-ivory-100 hover:bg-ivory-200 text-charcoal-800 font-bold text-xs transition-colors flex items-center gap-1.5"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>સભ્ય લૉગિન કરો</span>
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* If Logged In: Show Quick Shortcut to Logged-in User's Family */}
-          {currentUser && (
+        <div className="space-y-6">
+          {/* If an active member is selected (either from URL or state) AND it's NOT self:
+              Show the selected member's family card prominently at the TOP! */}
+          {activeMember && !isViewingSelf && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-base text-charcoal-900 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-saffron-600 fill-saffron-600" />
-                  <span>તમારો પરિવાર (Your Family Profile)</span>
-                </h3>
-                <Link
-                  href="/profile"
-                  className="text-xs font-bold text-saffron-700 hover:underline"
-                >
-                  પ્રોફાઇલ / પરિવાર સંપાદિત કરો →
-                </Link>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-extrabold text-base sm:text-lg text-charcoal-900 flex items-center gap-2">
+                    <GitFork className="w-5 h-5 text-saffron-600" />
+                    <span>{activeMember.name} નો પરિવાર (Family Profile)</span>
+                  </h3>
+                  <p className="text-xs text-charcoal-500 mt-0.5">
+                    સભ્ય ડિરેક્ટરીમાંથી પસંદ કરેલ સભ્યની પારિવારિક વિગતો
+                  </p>
+                </div>
+
+                {currentUser && (
+                  <button
+                    onClick={() => {
+                      setActiveMemberId(currentUser.id);
+                      setExpandedMemberId(currentUser.id);
+                    }}
+                    className="px-3.5 py-1.5 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 text-xs font-bold rounded-xl border border-saffron-200 transition-colors flex items-center gap-1.5 shadow-2xs self-start sm:self-auto"
+                  >
+                    <Heart className="w-3.5 h-3.5 text-saffron-600 fill-saffron-600" />
+                    <span>મારો પરિવાર જુઓ</span>
+                  </button>
+                )}
               </div>
 
-              <div className="bg-white rounded-3xl border border-saffron-200 p-6 shadow-card space-y-4">
+              {/* Selected Member Card */}
+              <div className="bg-white rounded-3xl border-2 border-saffron-400 p-6 shadow-card space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <img
-                      src={currentUser.photo_url || "/default-avatar.svg"}
-                      alt={currentUser.name}
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-avatar.svg";
-                      }}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-saffron-400 shadow-sm"
+                    <UserAvatar
+                      src={activeMember.photo_url}
+                      alt={activeMember.name}
+                      className="w-16 h-16 rounded-2xl border-2 border-saffron-400 shadow-sm flex-shrink-0"
                     />
                     <div>
-                      <h4 className="font-extrabold text-base text-charcoal-900">
-                        {currentUser.name}
-                      </h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-extrabold text-base sm:text-lg text-charcoal-900">
+                          {activeMember.name}
+                        </h4>
+                        {activeMember.role !== "member" && (
+                          <span className="text-[10px] font-bold bg-saffron-100 text-saffron-800 px-2 py-0.5 rounded-full">
+                            {activeMember.committee_role || activeMember.role}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-charcoal-600 flex items-center gap-2 mt-0.5">
                         <MapPin className="w-3.5 h-3.5 text-forest-700" />
-                        <span>મૂળ વતન: <strong>{currentUser.native_place}</strong> | હાલ: {currentUser.city}</span>
+                        <span>મૂળ વતન: <strong>{activeMember.native_place}</strong> | હાલ: {activeMember.city}</span>
                       </p>
-                      {currentUser.sasri_name && (
-                        <p className="text-[11px] text-saffron-800 font-semibold mt-0.5">
-                          સાસરીનું નામ: {currentUser.sasri_name}
-                        </p>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px]">
+                        {activeMember.sasri_name && (
+                          <span className="text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            સાસરી: {activeMember.sasri_name}
+                          </span>
+                        )}
+                        {activeMember.piyar_name && (
+                          <span className="text-rose-800 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                            પિયર: {activeMember.piyar_name}
+                          </span>
+                        )}
+                        {activeMember.phone && (
+                          <a
+                            href={`tel:${activeMember.phone}`}
+                            className="font-mono text-forest-700 font-bold hover:underline flex items-center gap-1"
+                          >
+                            <Phone className="w-3 h-3 text-forest-600" />
+                            <span>{activeMember.phone}</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => setExpandedMemberId(expandedMemberId === currentUser.id ? null : currentUser.id)}
+                    onClick={() =>
+                      setExpandedMemberId(
+                        expandedMemberId === activeMember.id ? null : activeMember.id
+                      )
+                    }
                     className="px-4 py-2 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 font-bold text-xs rounded-xl border border-saffron-200 transition-colors w-max"
                   >
-                    {expandedMemberId === currentUser.id ? "વિગતો સંકેલો" : "પરિવાર વિગત જુઓ"}
+                    {expandedMemberId === activeMember.id ? "વિગતો સંકેલો" : "પરિવાર વિગત જુઓ"}
                   </button>
                 </div>
 
-                {/* Expanded Family Details for currentUser */}
-                {expandedMemberId === currentUser.id && (
+                {/* Relatives of Selected Member */}
+                {expandedMemberId === activeMember.id && (
                   <div className="pt-4 border-t border-ivory-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <h5 className="font-bold text-xs text-charcoal-800">
-                        પરિવારના સંબંધીઓની યાદી (Family Relations):
+                        {activeMember.name} ના પરિવારના સંબંધીઓ (Family Relations):
                       </h5>
                       <span className="text-[11px] text-charcoal-500 font-medium">
-                        કુલ: {getFamilyMembers(currentUser.id).length} સભ્યો
+                        કુલ: {getFamilyMembers(activeMember.id).length} સભ્યો
                       </span>
                     </div>
 
-                    {getFamilyMembers(currentUser.id).length === 0 ? (
+                    {getFamilyMembers(activeMember.id).length === 0 ? (
                       <div className="p-4 rounded-2xl bg-ivory-50 border border-ivory-200 text-center text-xs text-charcoal-600">
-                        <p>હજુ સુધી કોઈ પારિવારિક સંબંધીઓ ઉમેરેલ નથી.</p>
-                        <Link
-                          href="/profile"
-                          className="inline-flex items-center gap-1 mt-2 text-saffron-700 font-bold hover:underline"
-                        >
-                          <span>પ્રોફાઇલમાં પરિવારના સભ્યો ઉમેરો →</span>
-                        </Link>
+                        આ સભ્ય માટે હજુ સુધી કોઈ પારિવારિક સંબંધીઓ નોંધાયેલ નથી.
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {getFamilyMembers(currentUser.id).map((rel) => (
+                        {getFamilyMembers(activeMember.id).map((rel) => (
                           <div
                             key={rel.id}
                             className="p-3.5 rounded-2xl bg-ivory-50 border border-ivory-200 flex items-center gap-3 text-xs shadow-2xs hover:border-saffron-300 transition-colors"
                           >
-                            <img
-                              src={rel.photo_url || "/default-avatar.svg"}
+                            <UserAvatar
+                              src={rel.photo_url}
                               alt={rel.name}
-                              onError={(e) => {
-                                e.currentTarget.src = "/default-avatar.svg";
-                              }}
-                              className="w-11 h-11 rounded-xl object-cover border border-ivory-300 flex-shrink-0"
+                              className="w-11 h-11 rounded-xl border border-ivory-300 flex-shrink-0"
                             />
                             <div className="overflow-hidden min-w-0 flex-1">
                               <span className="font-extrabold text-charcoal-900 block truncate">
@@ -451,6 +486,18 @@ export default function FamilyTreePage() {
                                   </a>
                                 )}
                               </div>
+                              {rel.isRegisteredMember && rel.member && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMemberId(rel.member!.id);
+                                    setExpandedMemberId(rel.member!.id);
+                                  }}
+                                  className="text-[10px] text-forest-700 font-bold hover:underline block mt-1"
+                                >
+                                  આ સભ્યનો પરિવાર જુઓ →
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -460,6 +507,161 @@ export default function FamilyTreePage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* If viewing own profile OR no selected member */}
+          {(!activeMember || isViewingSelf) && (
+            <>
+              {/* Search prompt card */}
+              <div className="bg-white rounded-3xl border border-ivory-300 p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-4 shadow-card">
+                <div className="w-14 h-14 rounded-3xl bg-saffron-100 text-saffron-800 flex items-center justify-center mx-auto shadow-xs">
+                  <Search className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-charcoal-900">
+                    પરિવાર વિગતો શોધવા માટે નામ દાખલ કરો
+                  </h3>
+                  <p className="text-xs sm:text-sm text-charcoal-600 mt-2 leading-relaxed">
+                    સમાજના સભ્યોની અંગત સુરક્ષા અને ગોપનીયતા જાળવવા માટે સંપૂર્ણ ડેટાબેઝ જાહેરમાં પ્રદર્શિત થતો નથી. કૃપા કરીને ઉપરના સર્ચ બોક્સમાં સભ્યનું નામ અથવા ગામ શોધો.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={() => setSearchQuery("અડાઆઠમ")}
+                    className="px-5 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>અડાઆઠમના પરિવારો શોધો</span>
+                  </button>
+
+                  {!currentUser && (
+                    <Link
+                      href="/login"
+                      className="px-5 py-2.5 rounded-xl bg-ivory-100 hover:bg-ivory-200 text-charcoal-800 font-bold text-xs transition-colors flex items-center gap-1.5"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>સભ્ય લૉગિન કરો</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Logged in User's Own Family Profile */}
+              {currentUser && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-extrabold text-base text-charcoal-900 flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-saffron-600 fill-saffron-600" />
+                      <span>તમારો પરિવાર (Your Family Profile)</span>
+                    </h3>
+                    <Link
+                      href="/profile"
+                      className="text-xs font-bold text-saffron-700 hover:underline"
+                    >
+                      પ્રોફાઇલ / પરિવાર સંપાદિત કરો →
+                    </Link>
+                  </div>
+
+                  <div className="bg-white rounded-3xl border border-saffron-200 p-6 shadow-card space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <UserAvatar
+                          src={currentUser.photo_url}
+                          alt={currentUser.name}
+                          className="w-16 h-16 rounded-2xl border-2 border-saffron-400 shadow-sm flex-shrink-0"
+                        />
+                        <div>
+                          <h4 className="font-extrabold text-base text-charcoal-900">
+                            {currentUser.name}
+                          </h4>
+                          <p className="text-xs text-charcoal-600 flex items-center gap-2 mt-0.5">
+                            <MapPin className="w-3.5 h-3.5 text-forest-700" />
+                            <span>મૂળ વતન: <strong>{currentUser.native_place}</strong> | હાલ: {currentUser.city}</span>
+                          </p>
+                          {currentUser.sasri_name && (
+                            <p className="text-[11px] text-saffron-800 font-semibold mt-0.5">
+                              સાસરીનું નામ: {currentUser.sasri_name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setExpandedMemberId(
+                            expandedMemberId === currentUser.id ? null : currentUser.id
+                          )
+                        }
+                        className="px-4 py-2 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 font-bold text-xs rounded-xl border border-saffron-200 transition-colors w-max"
+                      >
+                        {expandedMemberId === currentUser.id ? "વિગતો સંકેલો" : "પરિવાર વિગત જુઓ"}
+                      </button>
+                    </div>
+
+                    {/* Relatives for currentUser */}
+                    {expandedMemberId === currentUser.id && (
+                      <div className="pt-4 border-t border-ivory-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h5 className="font-bold text-xs text-charcoal-800">
+                            પરિવારના સંબંધીઓની યાદી (Family Relations):
+                          </h5>
+                          <span className="text-[11px] text-charcoal-500 font-medium">
+                            કુલ: {getFamilyMembers(currentUser.id).length} સભ્યો
+                          </span>
+                        </div>
+
+                        {getFamilyMembers(currentUser.id).length === 0 ? (
+                          <div className="p-4 rounded-2xl bg-ivory-50 border border-ivory-200 text-center text-xs text-charcoal-600">
+                            <p>હજુ સુધી કોઈ પારિવારિક સંબંધીઓ ઉમેરેલ નથી.</p>
+                            <Link
+                              href="/profile"
+                              className="inline-flex items-center gap-1 mt-2 text-saffron-700 font-bold hover:underline"
+                            >
+                              <span>પ્રોફાઇલમાં પરિવારના સભ્યો ઉમેરો →</span>
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {getFamilyMembers(currentUser.id).map((rel) => (
+                              <div
+                                key={rel.id}
+                                className="p-3.5 rounded-2xl bg-ivory-50 border border-ivory-200 flex items-center gap-3 text-xs shadow-2xs hover:border-saffron-300 transition-colors"
+                              >
+                                <UserAvatar
+                                  src={rel.photo_url}
+                                  alt={rel.name}
+                                  className="w-11 h-11 rounded-xl border border-ivory-300 flex-shrink-0"
+                                />
+                                <div className="overflow-hidden min-w-0 flex-1">
+                                  <span className="font-extrabold text-charcoal-900 block truncate">
+                                    {rel.name}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <span className="text-[10px] font-bold text-saffron-800 bg-saffron-50 px-2 py-0.5 rounded border border-saffron-200">
+                                      {rel.relationLabel}
+                                    </span>
+                                    {rel.phone && (
+                                      <a
+                                        href={`tel:${rel.phone}`}
+                                        className="text-[11px] font-mono text-charcoal-600 hover:text-forest-700 flex items-center gap-1"
+                                      >
+                                        <Phone className="w-3 h-3 text-forest-600" />
+                                        <span>{rel.phone}</span>
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -504,13 +706,10 @@ export default function FamilyTreePage() {
                       {/* Member Info */}
                       <div className="flex items-start sm:items-center gap-4">
                         <div className="relative">
-                          <img
-                            src={member.photo_url || "/default-avatar.svg"}
+                          <UserAvatar
+                            src={member.photo_url}
                             alt={member.name}
-                            onError={(e) => {
-                              e.currentTarget.src = "/default-avatar.svg";
-                            }}
-                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-ivory-300 shadow-2xs flex-shrink-0"
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-ivory-300 shadow-2xs flex-shrink-0"
                           />
                           {member.is_lifetime_member && (
                             <span
@@ -621,13 +820,10 @@ export default function FamilyTreePage() {
                                   key={rel.id}
                                   className="bg-white p-3.5 rounded-2xl border border-ivory-200 shadow-2xs flex items-center gap-3 text-xs"
                                 >
-                                  <img
-                                    src={rel.photo_url || "/default-avatar.svg"}
+                                  <UserAvatar
+                                    src={rel.photo_url}
                                     alt={rel.name}
-                                    onError={(e) => {
-                                      e.currentTarget.src = "/default-avatar.svg";
-                                    }}
-                                    className="w-12 h-12 rounded-xl object-cover border border-ivory-300 flex-shrink-0"
+                                    className="w-12 h-12 rounded-xl border border-ivory-300 flex-shrink-0"
                                   />
                                   <div className="overflow-hidden space-y-0.5 min-w-0 flex-1">
                                     <span className="font-extrabold text-charcoal-900 block truncate">
