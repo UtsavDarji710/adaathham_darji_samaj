@@ -62,7 +62,7 @@ export default function BusinessDirectoryPage() {
   const filteredBusinesses = useMemo(() => {
     return businesses.filter((b) => {
       // 1. Privacy filter: exclude any business marked non-public or inactive
-      if (b.is_public === false || b.status !== "active") return false;
+      if (b.status !== "active" || b.is_public === false) return false;
 
       // 2. Cross-check owning member's profile privacy preference if linked to a member
       const cleanPhone = b.phone ? b.phone.replace(/\D/g, "") : "";
@@ -72,12 +72,15 @@ export default function BusinessDirectoryPage() {
           (cleanPhone && m.phone && m.phone.replace(/\D/g, "") === cleanPhone)
       );
       if (ownerMember) {
-        // If owner removed business or set business to private, do not show in directory
+        // If owner explicitly cleared their business or set to private in profile
         if (
-          !ownerMember.business ||
-          !ownerMember.business.business_name?.trim() ||
-          ownerMember.business.is_public === false
+          ownerMember.business &&
+          (!ownerMember.business.business_name?.trim() || ownerMember.business.is_public === false)
         ) {
+          return false;
+        }
+        // If owner set their overall business privacy to private
+        if (ownerMember.privacy?.business === "private") {
           return false;
         }
       }

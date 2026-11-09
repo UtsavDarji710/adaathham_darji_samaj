@@ -14,9 +14,13 @@ export async function GET() {
         .order("created_at", { ascending: false });
 
       if (!error && Array.isArray(data)) {
+        const enriched = data.map((b) => ({
+          ...b,
+          is_public: b.is_public !== undefined ? b.is_public : b.status === "active",
+        }));
         return NextResponse.json({
           success: true,
-          businesses: data as BusinessItem[],
+          businesses: enriched as BusinessItem[],
         });
       }
     }
@@ -49,13 +53,16 @@ export async function POST(request: Request) {
         cover_url: body.cover_url || null,
         is_featured: !!body.is_featured,
         is_paid: !!body.is_paid,
-        status: body.status || "active",
+        status: body.is_public === false ? "hidden" : (body.status || "active"),
         created_at: new Date().toISOString(),
       };
 
       const { data, error } = await supabaseAdmin.from("businesses").insert(row).select().single();
       if (!error && data) {
-        return NextResponse.json({ success: true, business: data });
+        return NextResponse.json({
+          success: true,
+          business: { ...data, is_public: data.status === "active" },
+        });
       }
     }
     return NextResponse.json({ success: true, business: body });
@@ -68,19 +75,27 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id, is_public, ...updates } = body;
     if (!id) {
       return NextResponse.json({ success: false, message: "Business ID is required" }, { status: 400 });
     }
     if (isSupabaseConfigured() && supabaseAdmin) {
+      const dbUpdates: Record<string, any> = { ...updates };
+      if (is_public !== undefined) {
+        dbUpdates.status = is_public ? "active" : "hidden";
+      }
+
       const { data, error } = await supabaseAdmin
         .from("businesses")
-        .update(updates)
+        .update(dbUpdates)
         .eq("id", id)
         .select()
         .single();
       if (!error && data) {
-        return NextResponse.json({ success: true, business: data });
+        return NextResponse.json({
+          success: true,
+          business: { ...data, is_public: data.status === "active" },
+        });
       }
     }
     return NextResponse.json({ success: true, business: body });

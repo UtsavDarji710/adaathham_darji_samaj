@@ -1206,15 +1206,27 @@ export default function ProfilePage() {
       setDob(effectiveMember.dob || "");
 
       // Business fields (ઉપર બિઝનેસ)
-      setBusinessOwnerName(effectiveMember.business?.owner_name || effectiveMember.name || "");
-      setBusinessName(effectiveMember.business?.business_name || "");
-      setBusinessCategory(effectiveMember.business?.category || "");
+      const linkedBiz = businesses.find(
+        (b) =>
+          (effectiveMember.id && b.owner_id === effectiveMember.id) ||
+          ((effectiveMember as any).auth_user_id && b.owner_id === (effectiveMember as any).auth_user_id) ||
+          (effectiveMember.phone && b.phone && b.phone.replace(/\D/g, "") === effectiveMember.phone.replace(/\D/g, ""))
+      );
+      setBusinessOwnerName(effectiveMember.business?.owner_name || linkedBiz?.owner_name || effectiveMember.name || "");
+      setBusinessName(effectiveMember.business?.business_name || linkedBiz?.name || "");
+      setBusinessCategory(effectiveMember.business?.category || linkedBiz?.category || "");
       setBusinessRole(effectiveMember.business?.role || "Owner");
-      setBusinessCity(effectiveMember.business?.city || effectiveMember.city || "");
-      setBusinessPhone(effectiveMember.business?.phone || effectiveMember.phone || "");
-      setBusinessAddress(effectiveMember.business?.address || "");
-      setBusinessBannerUrl(effectiveMember.business?.banner_url || "");
-      setBusinessIsPublic(effectiveMember.business?.is_public ?? true);
+      setBusinessCity(effectiveMember.business?.city || linkedBiz?.city || effectiveMember.city || "");
+      setBusinessPhone(effectiveMember.business?.phone || linkedBiz?.phone || effectiveMember.phone || "");
+      setBusinessAddress(effectiveMember.business?.address || linkedBiz?.address || "");
+      setBusinessBannerUrl(effectiveMember.business?.banner_url || linkedBiz?.cover_url || "");
+      setBusinessIsPublic(
+        effectiveMember.business?.is_public !== undefined
+          ? effectiveMember.business.is_public
+          : linkedBiz
+          ? linkedBiz.status === "active" && linkedBiz.is_public !== false
+          : true
+      );
 
       // Job / Employment fields (નીચે નોકરી)
       setJobFullName(effectiveMember.employment?.full_name || effectiveMember.name || "");

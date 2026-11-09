@@ -102,10 +102,12 @@ export default function HomePage() {
     );
     if (ownerMember) {
       if (
-        !ownerMember.business ||
-        !ownerMember.business.business_name?.trim() ||
-        ownerMember.business.is_public === false
+        ownerMember.business &&
+        (!ownerMember.business.business_name?.trim() || ownerMember.business.is_public === false)
       ) {
+        return false;
+      }
+      if (ownerMember.privacy?.business === "private") {
         return false;
       }
     }

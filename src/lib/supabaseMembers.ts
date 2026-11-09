@@ -124,6 +124,7 @@ export function dbRowToMember(row: any, matRow?: any): Member {
       education: row.privacy_education || DEFAULT_PRIVACY.education,
     },
     family_relations: Array.isArray(row.family_relations) ? row.family_relations : [],
+    business: row.employment && row.employment.business_detail ? row.employment.business_detail : undefined,
     employment: row.employment && typeof row.employment === "object" ? row.employment : undefined,
     education: row.education && typeof row.education === "object" ? row.education : undefined,
     password_hash: row.password_hash || undefined,
@@ -174,7 +175,12 @@ export function memberToDbRow(m: Partial<Member>): Record<string, any> {
   if (m.committee_order !== undefined) row.committee_order = m.committee_order;
   if (m.completeness !== undefined) row.completeness = m.completeness;
   if (m.family_relations !== undefined) row.family_relations = m.family_relations;
-  if (m.employment !== undefined) row.employment = m.employment;
+  if (m.employment !== undefined || m.business !== undefined) {
+    row.employment = {
+      ...(m.employment || {}),
+      ...(m.business !== undefined ? { business_detail: m.business } : {}),
+    };
+  }
   if (m.education !== undefined || m.jati !== undefined || m.dod !== undefined) {
     row.education = {
       ...(m.education || {}),
