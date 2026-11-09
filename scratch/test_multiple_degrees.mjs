@@ -64,3 +64,4 @@ assert.strictEqual(selfDegreesJoined, "B.Com, MBA");
 console.log("✓ Backward compatibility serialized string correctly forms: 'B.Com, MBA'");
 
 console.log("=== ALL MULTIPLE DEGREES TESTS PASSED! ===");
+

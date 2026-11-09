@@ -40,3 +40,4 @@ assert(
 console.log("✓ Register page (/register) redirect to home page ('/') after OTP verify verified");
 
 console.log("=== ALL LOGIN & REGISTER HOME PAGE REDIRECT TESTS PASSED! ===");
+

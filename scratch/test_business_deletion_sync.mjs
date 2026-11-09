@@ -95,3 +95,4 @@ assert(!visibleBusinesses.some((b) => b.name === "Private Biz"), "Private busine
 
 console.log("✓ Removed and private businesses are strictly excluded from business directory!");
 console.log("=== ALL BUSINESS REMOVAL TESTS PASSED! ===");
+
