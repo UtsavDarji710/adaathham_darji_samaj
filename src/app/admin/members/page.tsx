@@ -164,11 +164,6 @@ export default function AdminMembersPage() {
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-charcoal-900">{m.name}</span>
-                        {m.dod && (
-                          <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 font-bold px-1.5 py-0.5 rounded">
-                            સ્વર્ગસ્થ
-                          </span>
-                        )}
                       </div>
                       <span className="text-[11px] text-charcoal-400 block">
                         {m.marital_status || "લગ્ન સ્થિતિ નથી"} {m.jati ? `• ${m.jati}` : ""}
@@ -368,16 +363,6 @@ export default function AdminMembersPage() {
                       type="date"
                       value={editingMember.dob || ""}
                       onChange={(e) => setEditingMember({ ...editingMember, dob: e.target.value })}
-                      className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-charcoal-700 mb-1">અવસાન તારીખ (DOD - જો સ્વર્ગસ્થ હોય)</label>
-                    <input
-                      type="date"
-                      value={editingMember.dod || ""}
-                      onChange={(e) => setEditingMember({ ...editingMember, dod: e.target.value, is_deceased: !!e.target.value })}
                       className="w-full px-3 py-2 border border-ivory-300 rounded-xl focus:outline-none"
                     />
                   </div>

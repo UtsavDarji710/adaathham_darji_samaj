@@ -1920,23 +1920,6 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                અવસાન તારીખ (Date of Death - જો સ્વર્ગસ્થ હોય)
-              </label>
-              <input
-                type="date"
-                value={dod}
-                onChange={(e) => setDod(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
-              />
-              {dod && (
-                <span className="text-[10px] text-rose-600 font-bold block mt-1">
-                  ✓ સ્વર્ગસ્થ તરીકે નોંધણી થશે
-                </span>
-              )}
-            </div>
-
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-charcoal-700 mb-1">રહેઠાણનું સરનામું</label>
               <textarea
@@ -2520,20 +2503,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* ૧૨. અવસાન તારીખ (DOD - જો સ્વર્ગસ્થ હોય) */}
-              <div>
-                <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  ૧૨. અવસાન તારીખ (DOD - જો સ્વર્ગસ્થ હોય)
-                </label>
-                <input
-                  type="date"
-                  value={newMemberDod}
-                  onChange={(e) => setNewMemberDod(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-forest-500 focus:outline-none"
-                />
-              </div>
-
-              {/* ૧૩. પ્રાઇવસી સેટિંગ (Requirement 11) */}
+              {/* ૧૨. પ્રાઇવસી સેટિંગ (Requirement 11) */}
               <div className="sm:col-span-2 p-3.5 rounded-2xl bg-forest-50/60 border border-forest-200">
                 <label className="block text-xs font-bold text-charcoal-900 mb-1 flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5 text-forest-700" />

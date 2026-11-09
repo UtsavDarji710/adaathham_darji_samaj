@@ -25,8 +25,8 @@ assert(
   "Admin members page Edit pencil icon must link to /profile?memberId=${m.id}"
 );
 assert(
-  adminMembersSrc.includes("m.dod"),
-  "Admin members page must show deceased badge when dod is set"
+  adminMembersSrc.includes("m.name"),
+  "Admin members page must display member name"
 );
 console.log("✓ Admin members page (+ સભ્ય ઉમેરો & Edit pencil profile flow) verified");
 
@@ -58,10 +58,10 @@ assert(
   "Profile page General Info tab must include Jati field"
 );
 assert(
-  profileSrc.includes("અવસાન તારીખ (Date of Death"),
-  "Profile page General Info tab must include Date of Death field"
+  !profileSrc.includes("અવસાન તારીખ (Date of Death"),
+  "Profile page General Info tab must NOT include Date of Death field after removal"
 );
-console.log("✓ Profile page Admin full edit & jati/dod inputs verified");
+console.log("✓ Profile page Admin full edit & Jati field verified (DOD removed as requested)");
 
 // 4. Verify /api/members supports POST for adding new members
 const membersApiSrc = fs.readFileSync("src/app/api/members/route.ts", "utf-8");
