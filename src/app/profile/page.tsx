@@ -149,6 +149,7 @@ export default function ProfilePage() {
     businesses,
     addBusiness,
     updateBusiness,
+    deleteBusiness,
     addMember,
     updateMember,
     addRelationship,
@@ -945,8 +946,14 @@ export default function ProfilePage() {
     // Auto-sync business with Community Business directory
     const targetUser = effectiveMember || currentUser;
     if (targetUser) {
-      const existing = businesses.find((b) => b.owner_id === targetUser.id);
-      if (businessName.trim()) {
+      const cleanPhone = (businessPhone || targetUser.phone || "").replace(/\D/g, "");
+      const existing = businesses.find(
+        (b) =>
+          b.owner_id === targetUser.id ||
+          b.owner_id === (targetUser as any).auth_user_id ||
+          (cleanPhone && b.phone && b.phone.replace(/\D/g, "") === cleanPhone)
+      );
+      if (businessName.trim() && businessIsPublic) {
         if (existing) {
           updateBusiness(existing.id, {
             name: businessName,
@@ -955,10 +962,10 @@ export default function ProfilePage() {
             address: businessAddress || targetUser.address || "",
             phone: businessPhone || targetUser.phone || "",
             cover_url: businessBannerUrl || existing.cover_url,
-            status: businessIsPublic ? "active" : "hidden",
-            is_public: businessIsPublic,
+            status: "active",
+            is_public: true,
           });
-        } else if (businessIsPublic) {
+        } else {
           addBusiness({
             owner_id: targetUser.id,
             owner_name: businessOwnerName || targetUser.name,
@@ -976,11 +983,67 @@ export default function ProfilePage() {
           });
         }
       } else if (existing) {
-        updateBusiness(existing.id, { status: "hidden", is_public: false });
+        if (!businessName.trim()) {
+          deleteBusiness(existing.id);
+        } else {
+          updateBusiness(existing.id, { status: "hidden", is_public: false });
+        }
       }
     }
 
     showToast("બિઝનેસ અને નોકરીની વિગતો સફળતાપૂર્વક સાચવાઈ ગઈ!");
+  };
+
+  const handleRemoveBusiness = () => {
+    if (!window.confirm("શું આપ ખરેખર આપનો વ્યવસાય ડિરેક્ટરી અને પ્રોફાઇલમાંથી દૂર કરવા માંગો છો?")) {
+      return;
+    }
+    const targetUser = effectiveMember || currentUser;
+    if (targetUser) {
+      const cleanPhone = (businessPhone || targetUser.phone || "").replace(/\D/g, "");
+      const existing = businesses.find(
+        (b) =>
+          b.owner_id === targetUser.id ||
+          b.owner_id === (targetUser as any).auth_user_id ||
+          (cleanPhone && b.phone && b.phone.replace(/\D/g, "") === cleanPhone)
+      );
+      if (existing) {
+        deleteBusiness(existing.id);
+      }
+    }
+
+    setBusinessOwnerName("");
+    setBusinessName("");
+    setBusinessCategory("");
+    setBusinessRole("");
+    setBusinessCity("");
+    setBusinessPhone("");
+    setBusinessAddress("");
+    setBusinessBannerUrl("");
+    setBusinessIsPublic(false);
+
+    const clearedUpdates = {
+      business: {
+        owner_name: "",
+        business_name: "",
+        category: "",
+        role: "",
+        city: "",
+        phone: "",
+        address: "",
+        banner_url: "",
+        is_public: false,
+      },
+    };
+
+    if (effectiveMember) {
+      updateMember(effectiveMember.id, clearedUpdates);
+    }
+    if (currentUser && effectiveMember?.id === currentUser.id) {
+      updateCurrentUserProfile(clearedUpdates);
+    }
+
+    showToast("વ્યવસાય સફળતાપૂર્વક દૂર કરવામાં આવ્યો છે.");
   };
 
   const showToast = (msg: string) => {
@@ -2464,6 +2527,16 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                {(businessName.trim().length > 0 || !!currentUser?.business?.business_name) && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveBusiness}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>વ્યવસાય દૂર કરો</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

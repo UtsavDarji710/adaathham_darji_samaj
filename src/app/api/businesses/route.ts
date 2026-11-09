@@ -65,3 +65,67 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, ...updates } = body;
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Business ID is required" }, { status: 400 });
+    }
+    if (isSupabaseConfigured() && supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("businesses")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (!error && data) {
+        return NextResponse.json({ success: true, business: data });
+      }
+    }
+    return NextResponse.json({ success: true, business: body });
+  } catch (error: any) {
+    console.error("[/api/businesses PATCH error]", error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get("id");
+    let owner_id = searchParams.get("owner_id");
+
+    if (!id && !owner_id) {
+      try {
+        const body = await request.json();
+        id = body.id || null;
+        owner_id = body.owner_id || null;
+      } catch {}
+    }
+
+    if (!id && !owner_id) {
+      return NextResponse.json({ success: false, message: "ID or owner_id is required" }, { status: 400 });
+    }
+
+    if (isSupabaseConfigured() && supabaseAdmin) {
+      let query = supabaseAdmin.from("businesses").delete();
+      if (id) {
+        query = query.eq("id", id);
+      } else if (owner_id) {
+        query = query.eq("owner_id", owner_id);
+      }
+      const { data, error } = await query.select();
+      if (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, deleted: data });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("[/api/businesses DELETE error]", error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+

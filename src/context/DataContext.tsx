@@ -405,6 +405,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updated = businesses.map((b) => (b.id === id ? { ...b, ...updates } : b));
     setBusinesses(updated);
     sync(STORAGE_KEYS.businesses, updated);
+
+    // Sync updates to Supabase backend API
+    fetch("/api/businesses", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.warn("[updateBusiness error]", err));
   };
 
   const approveBusiness = (id: string) => {
@@ -415,6 +422,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updated = businesses.filter((b) => b.id !== id);
     setBusinesses(updated);
     sync(STORAGE_KEYS.businesses, updated);
+
+    // Sync deletion to Supabase backend API
+    fetch(`/api/businesses?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => console.warn("[deleteBusiness error]", err));
   };
 
   // Business Advertisements methods

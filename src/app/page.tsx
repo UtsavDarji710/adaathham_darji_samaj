@@ -94,9 +94,18 @@ export default function HomePage() {
     : totalMembers;
   const activeBusinesses = businesses.filter((b) => {
     if (b.status !== "active" || b.is_public === false) return false;
-    if (b.owner_id) {
-      const ownerMember = members.find((m) => m.id === b.owner_id);
-      if (ownerMember?.business && ownerMember.business.is_public === false) {
+    const cleanPhone = b.phone ? b.phone.replace(/\D/g, "") : "";
+    const ownerMember = members.find(
+      (m) =>
+        (b.owner_id && (m.id === b.owner_id || m.auth_user_id === b.owner_id)) ||
+        (cleanPhone && m.phone && m.phone.replace(/\D/g, "") === cleanPhone)
+    );
+    if (ownerMember) {
+      if (
+        !ownerMember.business ||
+        !ownerMember.business.business_name?.trim() ||
+        ownerMember.business.is_public === false
+      ) {
         return false;
       }
     }

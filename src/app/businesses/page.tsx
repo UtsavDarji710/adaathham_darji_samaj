@@ -65,9 +65,19 @@ export default function BusinessDirectoryPage() {
       if (b.is_public === false || b.status !== "active") return false;
 
       // 2. Cross-check owning member's profile privacy preference if linked to a member
-      if (b.owner_id) {
-        const ownerMember = members.find((m) => m.id === b.owner_id);
-        if (ownerMember?.business && ownerMember.business.is_public === false) {
+      const cleanPhone = b.phone ? b.phone.replace(/\D/g, "") : "";
+      const ownerMember = members.find(
+        (m) =>
+          (b.owner_id && (m.id === b.owner_id || m.auth_user_id === b.owner_id)) ||
+          (cleanPhone && m.phone && m.phone.replace(/\D/g, "") === cleanPhone)
+      );
+      if (ownerMember) {
+        // If owner removed business or set business to private, do not show in directory
+        if (
+          !ownerMember.business ||
+          !ownerMember.business.business_name?.trim() ||
+          ownerMember.business.is_public === false
+        ) {
           return false;
         }
       }
