@@ -40,6 +40,6 @@ export const INITIAL_BANK_DETAILS: SamitiBankDetails = {
   ifsc_code: "BARB0MODASA",
   branch_name: "મોડાસા મુખ્ય શાખા (Modasa Main Branch)",
   upi_id: "shri9825191@barodampay",
-  qr_code_url: "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=adaathamdarjisamiti@sbi&pn=Adaatham%20Darji%20Seva%20Samiti&cu=INR",
+  qr_code_url: "https://opshugwobopselcmgsko.supabase.co/storage/v1/object/public/samiti-assets/bank-qr-code.jpg",
   updated_at: "2026-01-15",
 };

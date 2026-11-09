@@ -188,6 +188,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch {}
+
+      try {
+        const val = localStorage.getItem(STORAGE_KEYS.bank_details);
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (
+            parsed &&
+            (parsed.qr_code_url?.includes("qrserver.com") ||
+              parsed.qr_code_url?.includes("sbi") ||
+              parsed.bank_name?.includes("SBI") ||
+              !parsed.qr_code_url?.includes("supabase"))
+          ) {
+            localStorage.removeItem(STORAGE_KEYS.bank_details);
+          }
+        }
+      } catch {}
     };
 
     purgeLegacyMockData();

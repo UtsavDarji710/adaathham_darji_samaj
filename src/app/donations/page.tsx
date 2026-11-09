@@ -393,9 +393,12 @@ export default function DonationsPage() {
           <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-ivory-50 rounded-2xl border border-ivory-200 text-center space-y-3">
             <div className="p-3 bg-white rounded-2xl border-2 border-dashed border-forest-300 shadow-sm">
               <img
-                src={bankDetails.qr_code_url}
+                src={bankDetails.qr_code_url || "/bank_qr_code.jpg"}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/bank_qr_code.jpg";
+                }}
                 alt="સત્તાવાર પેમેન્ટ QR કોડ"
-                className="w-44 h-44 object-contain mx-auto rounded-lg"
+                className="w-48 h-48 object-contain mx-auto rounded-lg"
               />
             </div>
             <div>
