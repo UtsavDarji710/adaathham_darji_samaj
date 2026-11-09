@@ -80,10 +80,8 @@ export default function HomePage() {
     setLoginLoading(false);
 
     if (result.success) {
-      setLoginSuccess(result.message || "લૉગિન સફળ!");
-      if (result.user?.role && result.user.role !== "member") {
-        router.push("/admin");
-      }
+      setLoginSuccess(result.message || "લૉગિન સફળ! મુખ્ય પૃષ્ઠ પર સ્વાગત છે.");
+      router.push("/");
     } else {
       setLoginError(result.message || "યુઝરનેમ અથવા પાસવર્ડ અમાન્ય છે.");
     }

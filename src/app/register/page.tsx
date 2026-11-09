@@ -202,9 +202,9 @@ export default function RegisterPage() {
           "member"
         );
 
-        setSuccessMsg("ઓટીપી ચકાસણી સફળ! આપનું ખાતું સક્રિય થઈ ગયું છે. પ્રોફાઇલ પર જઈ રહ્યા છો...");
+        setSuccessMsg("ઓટીપી ચકાસણી સફળ! આપનું ખાતું સક્રિય થઈ ગયું છે. મુખ્ય પૃષ્ઠ (Home page) પર લઈ જઈ રહ્યા છીએ...");
         setTimeout(() => {
-          router.push("/profile");
+          router.push("/");
         }, 1200);
       } else {
         setErrorMsg(regData.message || "ખાતું સક્રિય કરવામાં ક્ષતિ આવી.");

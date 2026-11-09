@@ -70,16 +70,9 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [forgotCooldown]);
 
-  // Helper to resolve deep link callbackUrl
-  const getRedirectUrl = (role?: string) => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const callback = params.get("callbackUrl") || params.get("redirect");
-      if (callback && !callback.startsWith("/login") && !callback.startsWith("/register")) {
-        return callback;
-      }
-    }
-    return role && role !== "member" ? "/admin" : "/";
+  // Helper to resolve redirect URL (always redirect to home page "/")
+  const getRedirectUrl = () => {
+    return "/";
   };
 
   // Submit Username + Password Login
@@ -103,9 +96,9 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      setSuccessMsg(result.message || "લૉગિન સફળ! પોર્ટલ પર લઈ જઈ રહ્યા છીએ...");
+      setSuccessMsg(result.message || "લૉગિન સફળ! મુખ્ય પૃષ્ઠ (Home page) પર લઈ જઈ રહ્યા છીએ...");
       setTimeout(() => {
-        router.push(getRedirectUrl(result.user?.role));
+        router.push("/");
       }, 500);
     } else {
       setErrorMsg(result.message);
