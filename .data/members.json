@@ -317,7 +317,7 @@
     "piyar_name": "Sardoi",
     "is_public_in_family": false,
     "marital_status": "પરણિત (Married)",
-    "gender": "male",
+    "gender": "female",
     "dob": null,
     "blood_group": "B+",
     "role": "member",
@@ -415,13 +415,25 @@
     ],
     "employment": {
       "city": "મોડાસા",
-      "phone": "",
+      "phone": "7383755226",
       "company": "",
       "industry": "",
       "job_type": "ખાનગી ક્ષેત્ર (Private Sector)",
-      "full_name": "",
+      "full_name": "DHARMIKKUMAR DINESHBHAI PARMAR",
+      "is_public": true,
       "job_title": "",
-      "experience_years": 5
+      "business_detail": {
+        "city": "મોડાસા",
+        "role": "Owner",
+        "phone": "98250 31031",
+        "address": "Modasa",
+        "category": "અન્ય વ્યવસાય",
+        "is_public": true,
+        "banner_url": "",
+        "owner_name": "ધાર્મિકકુમાર દિનેશભાઈ પરમાર",
+        "business_name": "મારુતિ ક્લાસિસ "
+      },
+      "experience_years": ""
     },
     "education": {
       "degree": "Graduate / Professional",
@@ -433,7 +445,7 @@
     },
     "completeness": 95,
     "created_at": "2026-11-08T21:24:41.519+00:00",
-    "updated_at": "2026-11-09T13:28:35.179+00:00",
+    "updated_at": "2026-11-10T15:44:12.142+00:00",
     "username": "dharmik31",
     "password_hash": "48cc3eff5d5d796d4ab875ec7a184b1abe3ffcff2773b5b8f53313d14e83e0b614d6a69cb5c8aa4b4c5083311c3a8f4d425ad8cc24b6bad6c90c7f2b5168c711",
     "salt": "5d5748f3992f2e78c685a66595a2abb5",

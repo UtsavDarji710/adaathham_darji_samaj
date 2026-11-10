@@ -279,6 +279,11 @@ export default function ProfilePage() {
   const [maritalStatus, setMaritalStatus] = useState(effectiveMember?.marital_status || currentUser?.marital_status || "પરણિત (Married)");
   const [bloodGroup, setBloodGroup] = useState(effectiveMember?.blood_group || currentUser?.blood_group || "B+");
   const [photoUrl, setPhotoUrl] = useState(effectiveMember?.photo_url || currentUser?.photo_url || "");
+  const [gender, setGender] = useState<"male" | "female">(
+    (effectiveMember?.gender as any) === "female" || (currentUser?.gender as any) === "female"
+      ? "female"
+      : "male"
+  );
   const [jati, setJati] = useState<string>(effectiveMember?.jati || currentUser?.jati || "અડાઆઠમ દરજી");
   const [dod, setDod] = useState<string>(effectiveMember?.dod || currentUser?.dod || "");
   const [dob, setDob] = useState<string>(effectiveMember?.dob || currentUser?.dob || "");
@@ -852,6 +857,7 @@ export default function ProfilePage() {
         maternal_grandfather_name: maternalGrandfather,
         family_relations: familyRelations,
         marital_status: maritalStatus,
+        gender: gender,
         blood_group: bloodGroup,
         photo_url: photoUrl,
         jati: jati.trim() || "અડાઆઠમ દરજી",
@@ -1256,6 +1262,7 @@ export default function ProfilePage() {
       setPiyarName("");
       setFamilyRelations([]);
       setMaritalStatus("પરણિત (Married)");
+      setGender("male");
       setBloodGroup("B+");
       setPhotoUrl("");
       setJati("અડાઆઠમ દરજી");
@@ -1314,6 +1321,7 @@ export default function ProfilePage() {
       setPiyarName(effectiveMember.piyar_name || "");
       setFamilyRelations(getInitialFamilyRelations(effectiveMember));
       setMaritalStatus(effectiveMember.marital_status || "પરણિત (Married)");
+      setGender((effectiveMember.gender as any) === "female" ? "female" : "male");
       setBloodGroup(effectiveMember.blood_group || "B+");
       setPhotoUrl(effectiveMember.photo_url || "");
       setJati(effectiveMember.jati || "અડાઆઠમ દરજી");
@@ -1725,7 +1733,7 @@ export default function ProfilePage() {
             </div>
 
             <p className="text-xs text-charcoal-500">
-              મૂળ વતન: <strong>{nativePlace || effectiveMember?.native_place || currentUser.native_place}</strong> • હાલ: <strong>{city || effectiveMember?.city || currentUser.city}</strong> • મોબાઈલ: <strong>{phone || effectiveMember?.phone || currentUser.phone}</strong> • જાતિ: <strong>{jati || "અડાઆઠમ દરજી"}</strong>
+              મૂળ વતન: <strong>{nativePlace || effectiveMember?.native_place || currentUser.native_place}</strong> • હાલ: <strong>{city || effectiveMember?.city || currentUser.city}</strong> • મોબાઈલ: <strong>{phone || effectiveMember?.phone || currentUser.phone}</strong> • લિંગ: <strong>{gender === "female" ? "સ્ત્રી" : "પુરુષ"}</strong>
             </p>
 
             {/* Profile Completeness Bar */}
@@ -2020,15 +2028,16 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                  જાતિ (Jati / Caste) *
+                  લિંગ (Gender) *
                 </label>
-                <input
-                  type="text"
-                  value={jati}
-                  onChange={(e) => setJati(e.target.value)}
-                  placeholder="દા.ત. અડાઆઠમ દરજી, દરજી, શ્રીમાળી"
-                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800"
-                />
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value as "male" | "female")}
+                  className="w-full px-3.5 py-2.5 text-xs border border-ivory-300 rounded-xl bg-white focus:border-saffron-500 focus:outline-none font-semibold text-charcoal-800 cursor-pointer"
+                >
+                  <option value="male">પુરુષ (Male)</option>
+                  <option value="female">સ્ત્રી (Female)</option>
+                </select>
               </div>
 
               <div>
@@ -2435,10 +2444,10 @@ export default function ProfilePage() {
                   </select>
                 </div>
 
-                {/* ૨. જાતિ */}
+                {/* ૨. લિંગ (Gender) */}
                 <div>
                   <label className="block text-xs font-bold text-charcoal-700 mb-1">
-                    ૨. જાતિ (Gender) *
+                    ૨. લિંગ (Gender) *
                   </label>
                   <div className="flex items-center gap-4 h-[38px]">
                     <label className="inline-flex items-center gap-1.5 text-xs font-medium text-charcoal-800 cursor-pointer">
