@@ -43,6 +43,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [nativePlace, setNativePlace] = useState("અડાઆઠમ");
   const [city, setCity] = useState("મોડાસા");
+  const [gender, setGender] = useState<"male" | "female">("male");
   const [address, setAddress] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(true);
 
@@ -185,6 +186,7 @@ export default function RegisterPage() {
           native_place: nativePlace,
           city,
           address,
+          gender,
         }),
       });
 
@@ -429,6 +431,19 @@ export default function RegisterPage() {
                   required
                   className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-700 mb-1">લિંગ (Gender) *</label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value as "male" | "female")}
+                  required
+                  className="w-full px-3.5 py-2.5 border border-ivory-300 rounded-xl focus:border-saffron-500 focus:outline-none bg-white font-medium"
+                >
+                  <option value="male">પુરુષ (Male)</option>
+                  <option value="female">સ્ત્રી (Female)</option>
+                </select>
               </div>
             </div>
 

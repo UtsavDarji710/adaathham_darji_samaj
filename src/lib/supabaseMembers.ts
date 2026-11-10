@@ -203,7 +203,7 @@ export function memberToDbRow(m: Partial<Member>): Record<string, any> {
     if (m.privacy.business) row.privacy_business = m.privacy.business;
     if (m.privacy.employment) row.privacy_employment = m.privacy.employment;
     if (m.privacy.education) row.privacy_education = m.privacy.education;
-    if (m.privacy.dob) row.privacy_dob = m.privacy.dob;
+    // Note: privacy_dob is not a column in members table
   }
 
   row.updated_at = new Date().toISOString();
@@ -410,7 +410,7 @@ export async function authenticateSupabase(
       const { data: reloaded } = await supabaseAdmin
         .from("members")
         .select("*")
-        .eq("auth_user_id", authResult.user.id)
+        .or(`auth_user_id.eq.${authResult.user.id},id.eq.${authResult.user.id},email.eq.${targetEmail}`)
         .maybeSingle();
       memberRow = reloaded;
     }
@@ -445,16 +445,19 @@ export async function authenticateSupabase(
       district: "અરવલ્લી",
       native_place: "અડાઆઠમ",
       marital_status: "પરણિત (Married)",
-      gender: "male",
+      gender: (meta.gender as any) || "male",
       completeness: 80,
       created_at: new Date().toISOString(),
       privacy: DEFAULT_PRIVACY,
     };
 
     // Auto-create in members table if missing from database
+    const healRow = memberToDbRow(fallbackMember);
+    delete healRow.privacy_dob;
+
     const { data: autoSaved, error: autoErr } = await supabaseAdmin
       .from("members")
-      .upsert(memberToDbRow(fallbackMember), { onConflict: "id" })
+      .upsert(healRow, { onConflict: "id" })
       .select()
       .maybeSingle();
 
@@ -476,7 +479,7 @@ export async function authenticateSupabase(
 }
 
 /**
- * Register a new member in Supabase Auth and Supabase `members` table
+ * Register a new member in Supabase Auth and Supabase `members` table in parallel
  */
 export async function registerSupabaseMember(
   memberData: Member,
@@ -488,114 +491,108 @@ export async function registerSupabaseMember(
 
   const cleanUsername = memberData.username?.toLowerCase().trim() || "";
   const normalizedEmail = memberData.email?.toLowerCase().trim() || "";
+  const cleanPhone = memberData.phone || "";
 
   try {
-    // 1. Create User in Supabase Authentication
+    // Generate UUID upfront so Auth user and Members table record share the exact same ID
+    const targetUserId =
+      memberData.id &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(memberData.id)
+        ? memberData.id
+        : crypto.randomUUID();
+
+    const { hash: passwordHash, salt: passwordSalt } = hashPassword(plainPassword);
+
+    // Prepare database row payload
+    const dbPayload = memberToDbRow({
+      ...memberData,
+      id: targetUserId,
+      auth_user_id: targetUserId,
+      username: cleanUsername,
+      email: normalizedEmail,
+      phone: cleanPhone,
+      password_hash: passwordHash,
+      salt: passwordSalt,
+      is_email_verified: true,
+      email_verified_at: new Date().toISOString(),
+    });
+    delete dbPayload.privacy_dob;
+
+    // Check if row already exists in members table
+    const { data: existingRow } = await supabaseAdmin
+      .from("members")
+      .select("id, auth_user_id, email, username, phone")
+      .or(`email.eq.${normalizedEmail},username.eq.${cleanUsername}`)
+      .maybeSingle();
+
+    const effectiveId = existingRow?.id || targetUserId;
+    dbPayload.id = effectiveId;
+    dbPayload.auth_user_id = existingRow?.auth_user_id || effectiveId;
+
+    // 1. Create or retrieve user in Supabase Authentication
     let authUserId: string | null = null;
 
     const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+      id: effectiveId,
       email: normalizedEmail,
       password: plainPassword,
       email_confirm: true,
       user_metadata: {
         username: cleanUsername,
         name: memberData.name,
-        phone: memberData.phone,
+        phone: cleanPhone,
         role: memberData.role || "member",
+        gender: memberData.gender || "male",
         email_verified: true,
       },
     });
 
-    if (authErr) {
-      if (authErr.message.toLowerCase().includes("already registered")) {
-        // User auth exists; retrieve id
-        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-        const found = usersData?.users.find((u) => u.email?.toLowerCase() === normalizedEmail);
-        authUserId = found?.id || null;
-      } else {
-        console.error("[registerSupabaseMember authErr]", authErr);
-        return {
-          success: false,
-          message: `ઓથેન્ટિકેશન એકાઉન્ટ બનાવવામાં ભૂલ: ${authErr.message}`,
-        };
-      }
-    } else {
+    if (!authErr && authData?.user) {
       authUserId = authData.user.id;
+    } else if (authErr && authErr.message.toLowerCase().includes("already registered")) {
+      // User already exists in Supabase Auth; retrieve their id
+      const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+      const found = usersData?.users.find((u) => u.email?.toLowerCase() === normalizedEmail);
+      authUserId = found?.id || effectiveId;
+    } else if (authErr) {
+      console.error("[registerSupabaseMember authErr]", authErr);
+      return {
+        success: false,
+        message: `ઓથેન્ટિકેશન એકાઉન્ટ બનાવવામાં ભૂલ: ${authErr.message}`,
+      };
     }
 
-    const { hash: passwordHash, salt: passwordSalt } = hashPassword(plainPassword);
-
-    // 2. Prepare database row
-    const dbPayload = memberToDbRow({
-      ...memberData,
-      id: authUserId || undefined,
-      auth_user_id: authUserId || undefined,
-      username: cleanUsername,
-      email: normalizedEmail,
-      password_hash: passwordHash,
-      salt: passwordSalt,
-      is_email_verified: true,
-      email_verified_at: new Date().toISOString(),
-    });
-
-    // Check if row already exists in members table
-    const { data: existingRow } = await supabaseAdmin
-      .from("members")
-      .select("id")
-      .or(`email.eq.${normalizedEmail},username.eq.${cleanUsername}`)
-      .maybeSingle();
+    // 2. Synchronize immediately to members table
+    dbPayload.id = authUserId || effectiveId;
+    dbPayload.auth_user_id = authUserId || effectiveId;
 
     let savedMemberRow: any = null;
 
-    if (existingRow) {
-      const { data: updated, error: updateErr } = await supabaseAdmin
+    const { data: upsertedRow, error: upsertErr } = await supabaseAdmin
+      .from("members")
+      .upsert(dbPayload, { onConflict: "id" })
+      .select()
+      .maybeSingle();
+
+    if (!upsertErr && upsertedRow) {
+      savedMemberRow = upsertedRow;
+    } else {
+      if (upsertErr) {
+        console.warn("[registerSupabaseMember upsert warning]", upsertErr);
+      }
+      // Try updating existing row by email, username, or phone
+      const { data: updatedRow } = await supabaseAdmin
         .from("members")
         .update(dbPayload)
-        .eq("id", existingRow.id)
-        .select()
-        .single();
-
-      if (updateErr) {
-        console.error("[registerSupabaseMember updateErr]", updateErr);
-      } else {
-        savedMemberRow = updated;
-      }
-    } else {
-      const { data: inserted, error: insertErr } = await supabaseAdmin
-        .from("members")
-        .insert(dbPayload)
+        .or(`email.eq.${normalizedEmail},username.eq.${cleanUsername},phone.eq.${cleanPhone}`)
         .select()
         .maybeSingle();
 
-      if (insertErr) {
-        console.error("[registerSupabaseMember insertErr]", insertErr);
-        // Attempt upsert by ID or phone
-        const { data: upserted, error: upsertErr } = await supabaseAdmin
-          .from("members")
-          .upsert(dbPayload, { onConflict: "id" })
-          .select()
-          .maybeSingle();
-
-        if (upsertErr) {
-          console.error("[registerSupabaseMember upsertErr]", upsertErr);
-          // If unique phone constraint was violated, try upserting by phone
-          const { data: phoneUpserted } = await supabaseAdmin
-            .from("members")
-            .update(dbPayload)
-            .eq("phone", memberData.phone)
-            .select()
-            .maybeSingle();
-          savedMemberRow = phoneUpserted;
-        } else {
-          savedMemberRow = upserted;
-        }
-      } else {
-        savedMemberRow = inserted;
-      }
+      savedMemberRow = updatedRow;
     }
 
+    // Final verification: Ensure row is present in members table
     if (!savedMemberRow) {
-      // Final verification: check if row exists by authUserId, email or username
       const { data: foundRow } = await supabaseAdmin
         .from("members")
         .select("*")
