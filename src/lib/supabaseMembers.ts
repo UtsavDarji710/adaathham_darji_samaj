@@ -451,16 +451,20 @@ export async function authenticateSupabase(
       privacy: DEFAULT_PRIVACY,
     };
 
-    // Auto-create in members table
-    try {
-      await supabaseAdmin.from("members").insert(memberToDbRow(fallbackMember));
-    } catch (e) {
-      // Ignore conflict
+    // Auto-create in members table if missing from database
+    const { data: autoSaved, error: autoErr } = await supabaseAdmin
+      .from("members")
+      .upsert(memberToDbRow(fallbackMember), { onConflict: "id" })
+      .select()
+      .maybeSingle();
+
+    if (autoErr) {
+      console.warn("[authenticateSupabase auto-heal insert error]", autoErr);
     }
 
     return {
       success: true,
-      member: fallbackMember,
+      member: autoSaved ? dbRowToMember(autoSaved) : fallbackMember,
     };
   } catch (err: any) {
     console.error("[authenticateSupabase error]", err);
@@ -561,18 +565,28 @@ export async function registerSupabaseMember(
         .from("members")
         .insert(dbPayload)
         .select()
-        .single();
+        .maybeSingle();
 
       if (insertErr) {
         console.error("[registerSupabaseMember insertErr]", insertErr);
-        // If unique phone constraint was violated, try upserting by phone
-        if (insertErr.code === "23505") {
-          const { data: upserted } = await supabaseAdmin
+        // Attempt upsert by ID or phone
+        const { data: upserted, error: upsertErr } = await supabaseAdmin
+          .from("members")
+          .upsert(dbPayload, { onConflict: "id" })
+          .select()
+          .maybeSingle();
+
+        if (upsertErr) {
+          console.error("[registerSupabaseMember upsertErr]", upsertErr);
+          // If unique phone constraint was violated, try upserting by phone
+          const { data: phoneUpserted } = await supabaseAdmin
             .from("members")
             .update(dbPayload)
             .eq("phone", memberData.phone)
             .select()
-            .single();
+            .maybeSingle();
+          savedMemberRow = phoneUpserted;
+        } else {
           savedMemberRow = upserted;
         }
       } else {
@@ -580,7 +594,26 @@ export async function registerSupabaseMember(
       }
     }
 
-    const resultMember = savedMemberRow ? dbRowToMember(savedMemberRow) : memberData;
+    if (!savedMemberRow) {
+      // Final verification: check if row exists by authUserId, email or username
+      const { data: foundRow } = await supabaseAdmin
+        .from("members")
+        .select("*")
+        .or(`id.eq.${authUserId},email.eq.${normalizedEmail},username.eq.${cleanUsername}`)
+        .maybeSingle();
+
+      if (foundRow) {
+        savedMemberRow = foundRow;
+      } else {
+        console.error("[registerSupabaseMember] Could not save member into database table");
+        return {
+          success: false,
+          message: "ડેટાબેઝમાં સભ્ય માહિતી સાચવવામાં ક્ષતિ આવી. કૃપા કરીને પુનઃ પ્રયાસ કરો.",
+        };
+      }
+    }
+
+    const resultMember = dbRowToMember(savedMemberRow);
     return {
       success: true,
       member: resultMember,
