@@ -928,14 +928,25 @@ export default function AdminDonationsPage() {
             <div className="p-4 border-t border-ivory-200 bg-ivory-50 flex items-center justify-end gap-2">
               {previewProofDonation.status !== "approved" && previewProofDonation.payment_status !== "verified" && (
                 <button
-                  onClick={() => {
-                    handleApprove(previewProofDonation);
+                  disabled={processingId === previewProofDonation.id}
+                  onClick={async () => {
+                    const don = previewProofDonation;
+                    await handleApprove(don);
                     setPreviewProofDonation(null);
                   }}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>ચુકવણી મંજૂર કરો</span>
+                  {processingId === previewProofDonation.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>મંજૂર કરી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      <span>ચુકવણી મંજૂર કરો</span>
+                    </>
+                  )}
                 </button>
               )}
 

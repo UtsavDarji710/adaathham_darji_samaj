@@ -31,6 +31,7 @@ import {
   LogOut,
   AlertCircle,
   X,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -522,7 +523,7 @@ export default function HomePage() {
                       className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02]"
                     >
                       {loginLoading ? (
-                        <span className="inline-block animate-spin">⏳</span>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <LogIn className="w-4 h-4" />
                       )}

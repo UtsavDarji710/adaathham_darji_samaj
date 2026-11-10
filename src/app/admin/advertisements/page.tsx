@@ -619,14 +619,25 @@ export default function AdminAdvertisementsPage() {
             <div className="p-4 border-t border-ivory-200 bg-ivory-50 flex items-center justify-end gap-2">
               {previewAd.status !== "approved" && (
                 <button
-                  onClick={() => {
-                    handleApprove(previewAd);
+                  disabled={processingAdId === previewAd.id}
+                  onClick={async () => {
+                    const ad = previewAd;
+                    await handleApprove(ad);
                     setPreviewAd(null);
                   }}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>મંજૂર કરો</span>
+                  {processingAdId === previewAd.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>મંજૂર કરી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      <span>મંજૂર કરો</span>
+                    </>
+                  )}
                 </button>
               )}
               {previewAd.status !== "rejected" && (

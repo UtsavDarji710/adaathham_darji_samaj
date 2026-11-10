@@ -261,6 +261,9 @@ export default function ProfilePage() {
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
   const [isSavingMatrimony, setIsSavingMatrimony] = useState(false);
   const [isSavingAdvertisement, setIsSavingAdvertisement] = useState(false);
+  const [isRemovingBusiness, setIsRemovingBusiness] = useState(false);
+  const [processingAdDeleteId, setProcessingAdDeleteId] = useState<string | null>(null);
+  const [processingEduDeleteId, setProcessingEduDeleteId] = useState<string | null>(null);
 
   // Form states initialized with effectiveMember or currentUser data
   const [username, setUsername] = useState(effectiveMember?.username || currentUser?.username || "");
@@ -729,7 +732,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleRemoveEducationRecord = (id: string) => {
+  const handleRemoveEducationRecord = async (id: string) => {
     const rec = educationRecords.find((r) => r.id === id);
     if (!rec) return;
 
@@ -737,14 +740,20 @@ export default function ProfilePage() {
       typeof window !== "undefined" &&
       window.confirm(`શું આપ ${rec.member_name} ની "${rec.degree}" ડિગ્રી કાઢી નાખવા માંગો છો?`)
     ) {
-      const updated = educationRecords.filter((r) => r.id !== id);
-      setEducationRecords(updated);
-      if (editingDegreeId === id) {
-        setEditingDegreeId(null);
-        setEduDegreeInput("");
+      setProcessingEduDeleteId(id);
+      try {
+        await new Promise((r) => setTimeout(r, 450));
+        const updated = educationRecords.filter((r) => r.id !== id);
+        setEducationRecords(updated);
+        if (editingDegreeId === id) {
+          setEditingDegreeId(null);
+          setEduDegreeInput("");
+        }
+        persistEducation(updated);
+        showToast(`ડિગ્રી "${rec.degree}" સફળતાપૂર્વક દૂર કરવામાં આવી.`);
+      } finally {
+        setProcessingEduDeleteId(null);
       }
-      persistEducation(updated);
-      showToast(`ડિગ્રી "${rec.degree}" સફળતાપૂર્વક દૂર કરવામાં આવી.`);
     }
   };
 
@@ -1169,56 +1178,62 @@ export default function ProfilePage() {
     }
   };
 
-  const handleRemoveBusiness = () => {
+  const handleRemoveBusiness = async () => {
     if (!window.confirm("શું આપ ખરેખર આપનો વ્યવસાય ડિરેક્ટરી અને પ્રોફાઇલમાંથી દૂર કરવા માંગો છો?")) {
       return;
     }
-    const targetUser = effectiveMember || currentUser;
-    if (targetUser) {
-      const cleanPhone = (businessPhone || targetUser.phone || "").replace(/\D/g, "");
-      const existing = businesses.find(
-        (b) =>
-          b.owner_id === targetUser.id ||
-          b.owner_id === (targetUser as any).auth_user_id ||
-          (cleanPhone && b.phone && b.phone.replace(/\D/g, "") === cleanPhone)
-      );
-      if (existing) {
-        deleteBusiness(existing.id);
+    setIsRemovingBusiness(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const targetUser = effectiveMember || currentUser;
+      if (targetUser) {
+        const cleanPhone = (businessPhone || targetUser.phone || "").replace(/\D/g, "");
+        const existing = businesses.find(
+          (b) =>
+            b.owner_id === targetUser.id ||
+            b.owner_id === (targetUser as any).auth_user_id ||
+            (cleanPhone && b.phone && b.phone.replace(/\D/g, "") === cleanPhone)
+        );
+        if (existing) {
+          deleteBusiness(existing.id);
+        }
       }
+
+      setBusinessOwnerName("");
+      setBusinessName("");
+      setBusinessCategory("");
+      setBusinessRole("");
+      setBusinessCity("");
+      setBusinessPhone("");
+      setBusinessAddress("");
+      setBusinessBannerUrl("");
+      setBusinessIsPublic(false);
+
+      const clearedUpdates = {
+        business: {
+          owner_name: "",
+          business_name: "",
+          category: "",
+          role: "",
+          city: "",
+          phone: "",
+          address: "",
+          banner_url: "",
+          is_public: false,
+        },
+      };
+
+      if (effectiveMember) {
+        updateMember(effectiveMember.id, clearedUpdates);
+      }
+      if (currentUser && effectiveMember?.id === currentUser.id) {
+        updateCurrentUserProfile(clearedUpdates);
+      }
+
+      showToast("વ્યવસાય સફળતાપૂર્વક દૂર કરવામાં આવ્યો છે.");
+    } finally {
+      setIsRemovingBusiness(false);
     }
-
-    setBusinessOwnerName("");
-    setBusinessName("");
-    setBusinessCategory("");
-    setBusinessRole("");
-    setBusinessCity("");
-    setBusinessPhone("");
-    setBusinessAddress("");
-    setBusinessBannerUrl("");
-    setBusinessIsPublic(false);
-
-    const clearedUpdates = {
-      business: {
-        owner_name: "",
-        business_name: "",
-        category: "",
-        role: "",
-        city: "",
-        phone: "",
-        address: "",
-        banner_url: "",
-        is_public: false,
-      },
-    };
-
-    if (effectiveMember) {
-      updateMember(effectiveMember.id, clearedUpdates);
-    }
-    if (currentUser && effectiveMember?.id === currentUser.id) {
-      updateCurrentUserProfile(clearedUpdates);
-    }
-
-    showToast("વ્યવસાય સફળતાપૂર્વક દૂર કરવામાં આવ્યો છે.");
   };
 
   const showToast = (msg: string) => {
@@ -1390,10 +1405,16 @@ export default function ProfilePage() {
     });
   }, [advertisements, effectiveMember, currentUser, businessName]);
 
-  const handleDeleteAd = (adId: string, adName: string) => {
+  const handleDeleteAd = async (adId: string, adName: string) => {
     if (typeof window !== "undefined" && window.confirm(`શું આપ "${adName}" જાહેરાતની વિનંતી રદ કરવા / કાઢી નાખવા માંગો છો?`)) {
-      deleteAdvertisement(adId);
-      showToast("જાહેરાત સફળતાપૂર્વક કાઢી નાખવામાં આવી!");
+      setProcessingAdDeleteId(adId);
+      try {
+        await new Promise((r) => setTimeout(r, 450));
+        deleteAdvertisement(adId);
+        showToast("જાહેરાત સફળતાપૂર્વક કાઢી નાખવામાં આવી!");
+      } finally {
+        setProcessingAdDeleteId(null);
+      }
     }
   };
 
@@ -2877,11 +2898,21 @@ export default function ProfilePage() {
                 {(businessName.trim().length > 0 || !!effectiveMember?.business?.business_name || (!selectedMemberId && !!currentUser?.business?.business_name)) && (
                   <button
                     type="button"
+                    disabled={isRemovingBusiness}
                     onClick={handleRemoveBusiness}
-                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>વ્યવસાય દૂર કરો</span>
+                    {isRemovingBusiness ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>દૂર થઈ રહ્યું છે...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>વ્યવસાય દૂર કરો</span>
+                      </>
+                    )}
                   </button>
                 )}
                 <button
@@ -3276,11 +3307,21 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-end pt-2 border-t border-ivory-200">
                         <button
                           type="button"
+                          disabled={processingAdDeleteId === ad.id}
                           onClick={() => handleDeleteAd(ad.id, ad.business_name)}
-                          className="px-3 py-1 text-[11px] font-bold text-rose-700 hover:text-white hover:bg-rose-600 rounded-lg border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1 text-[11px] font-bold text-rose-700 hover:text-white hover:bg-rose-600 disabled:opacity-50 rounded-lg border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
                         >
-                          <Trash2 className="w-3 h-3" />
-                          <span>વિનંતી રદ કરો (Cancel)</span>
+                          {processingAdDeleteId === ad.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>રદ થઈ રહ્યું છે...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-3 h-3" />
+                              <span>વિનંતી રદ કરો (Cancel)</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -3759,11 +3800,16 @@ export default function ProfilePage() {
                               </button>
                               <button
                                 type="button"
+                                disabled={processingEduDeleteId === deg.id}
                                 onClick={() => handleRemoveEducationRecord(deg.id)}
-                                className="p-1.5 text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
                                 title="ડિગ્રી દૂર કરો"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                {processingEduDeleteId === deg.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
                               </button>
                             </div>
                           </div>

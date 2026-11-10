@@ -691,9 +691,17 @@ export default function JobsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
+                  disabled={isSubmittingJob}
+                  className="px-5 py-2 bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
-                  જાહેરાત પ્રસિદ્ધ કરો
+                  {isSubmittingJob ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>જાહેરાત પ્રસિદ્ધ થઈ રહી છે...</span>
+                    </>
+                  ) : (
+                    <span>જાહેરાત પ્રસિદ્ધ કરો</span>
+                  )}
                 </button>
               </div>
             </form>
