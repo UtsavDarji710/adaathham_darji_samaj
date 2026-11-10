@@ -23,6 +23,7 @@ import {
   KeyRound,
   X,
   Mail,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -363,8 +364,17 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
             >
-              <span>{loading ? "ચકાસણી ચાલુ છે..." : "લૉગિન કરો (Login)"}</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>ચકાસણી ચાલુ છે...</span>
+                </>
+              ) : (
+                <>
+                  <span>લૉગિન કરો (Login)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
@@ -552,8 +562,17 @@ export default function LoginPage() {
                     disabled={forgotLoading || forgotCooldown > 0}
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span>{forgotLoading ? "મોકલી રહ્યું છે..." : "રીસેટ ઓટીપી મોકલો"}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>મોકલી રહ્યું છે...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>રીસેટ ઓટીપી મોકલો</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -675,8 +694,17 @@ export default function LoginPage() {
                     disabled={forgotLoading || forgotOtp.length !== 6}
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-forest-700 to-forest-800 hover:from-forest-800 hover:to-forest-900 text-white font-bold shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>{forgotLoading ? "અપડેટ ચાલુ છે..." : "નવો પાસવર્ડ સેટ કરો"}</span>
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>અપડેટ ચાલુ છે...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>નવો પાસવર્ડ સેટ કરો</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

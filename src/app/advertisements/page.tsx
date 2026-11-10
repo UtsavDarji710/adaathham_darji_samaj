@@ -21,6 +21,7 @@ import {
   LogIn,
   ExternalLink,
   X,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -45,6 +46,7 @@ export default function AdvertisementsPage() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isSubmittingAd, setIsSubmittingAd] = useState(false);
 
   // Form state
   const [businessName, setBusinessName] = useState("");
@@ -96,7 +98,7 @@ export default function AdvertisementsPage() {
     }
   };
 
-  const handleSubmitAd = (e: React.FormEvent) => {
+  const handleSubmitAd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       setShowSubmitModal(false);
@@ -109,38 +111,44 @@ export default function AdvertisementsPage() {
       return;
     }
 
-    const defaultBanner = bannerPreview || null;
+    setIsSubmittingAd(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const defaultBanner = bannerPreview || null;
 
-    // Submit for approval (Status: pending)
-    addAdvertisement({
-      business_name: businessName.trim(),
-      category,
-      description: description.trim(),
-      owner_name: ownerName.trim() || currentUser.name,
-      contact_number: contactNumber.trim(),
-      address: address.trim(),
-      image_url: defaultBanner,
-      website_link: websiteLink.trim() || undefined,
-      status: "pending",
-      submitted_by: currentUser.id,
-    });
+      // Submit for approval (Status: pending)
+      addAdvertisement({
+        business_name: businessName.trim(),
+        category,
+        description: description.trim(),
+        owner_name: ownerName.trim() || currentUser.name,
+        contact_number: contactNumber.trim(),
+        address: address.trim(),
+        image_url: defaultBanner,
+        website_link: websiteLink.trim() || undefined,
+        status: "pending",
+        submitted_by: currentUser.id,
+      });
 
-    addLog(
-      "વ્યવસાય જાહેરાત અરજી સબમિટ",
-      businessName.trim(),
-      `કેટેગરી: ${category}, માલિક: ${ownerName.trim() || currentUser.name} (ચકાસણી પેન્ડિંગ)`,
-      currentUser.name,
-      currentUser.role || "member"
-    );
+      addLog(
+        "વ્યવસાય જાહેરાત અરજી સબમિટ",
+        businessName.trim(),
+        `કેટેગરી: ${category}, માલિક: ${ownerName.trim() || currentUser.name} (ચકાસણી પેન્ડિંગ)`,
+        currentUser.name,
+        currentUser.role || "member"
+      );
 
-    // Reset and close
-    setShowSubmitModal(false);
-    setBusinessName("");
-    setDescription("");
-    setBannerPreview("");
-    setWebsiteLink("");
-    setSuccessToast("તમારી વ્યવસાય જાહેરાત એડમિન સમિતિને મંજૂરી માટે મોકલાઈ ગઈ છે. ચકાસણી બાદ હોમપેજ પર પ્રદર્શિત થશે.");
-    setTimeout(() => setSuccessToast(null), 6000);
+      // Reset and close
+      setShowSubmitModal(false);
+      setBusinessName("");
+      setDescription("");
+      setBannerPreview("");
+      setWebsiteLink("");
+      setSuccessToast("તમારી વ્યવસાય જાહેરાત એડમિન સમિતિને મંજૂરી માટે મોકલાઈ ગઈ છે. ચકાસણી બાદ હોમપેજ પર પ્રદર્શિત થશે.");
+      setTimeout(() => setSuccessToast(null), 6000);
+    } finally {
+      setIsSubmittingAd(false);
+    }
   };
 
   return (
@@ -595,9 +603,17 @@ export default function AdvertisementsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs shadow-md transition-all hover:scale-[1.01]"
+                  disabled={isSubmittingAd}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
                 >
-                  Submit for Approval (મંજૂરી માટે મોકલો)
+                  {isSubmittingAd ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>મંજૂરી માટે મોકલી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <span>Submit for Approval (મંજૂરી માટે મોકલો)</span>
+                  )}
                 </button>
               </div>
             </form>

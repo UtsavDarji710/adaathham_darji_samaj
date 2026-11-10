@@ -19,6 +19,7 @@ import {
   UserPlus,
   Shield,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -33,6 +34,7 @@ export default function BusinessDirectoryPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isSubmittingBusiness, setIsSubmittingBusiness] = useState(false);
 
   // New business form state
   const [bizName, setBizName] = useState("");
@@ -98,7 +100,7 @@ export default function BusinessDirectoryPage() {
     });
   }, [businesses, members, searchQuery, selectedCategory]);
 
-  const handleAddBusinessSubmit = (e: React.FormEvent) => {
+  const handleAddBusinessSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       setShowAddModal(false);
@@ -107,38 +109,44 @@ export default function BusinessDirectoryPage() {
     }
     if (!bizName.trim() || !phone.trim()) return;
 
-    addBusiness({
-      owner_id: currentUser.id,
-      owner_name: currentUser.name,
-      name: bizName,
-      category,
-      description,
-      city,
-      address,
-      phone: phone || currentUser.phone,
-      email: email || undefined,
-      website: website || undefined,
-      cover_url: coverUrl.trim() || null,
-      is_featured: isPaidAd,
-      is_paid: isPaidAd,
-      paid_amount: isPaidAd ? 1500 : 0,
-      status: "active",
-    });
+    setIsSubmittingBusiness(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      addBusiness({
+        owner_id: currentUser.id,
+        owner_name: currentUser.name,
+        name: bizName,
+        category,
+        description,
+        city,
+        address,
+        phone: phone || currentUser.phone,
+        email: email || undefined,
+        website: website || undefined,
+        cover_url: coverUrl.trim() || null,
+        is_featured: isPaidAd,
+        is_paid: isPaidAd,
+        paid_amount: isPaidAd ? 1500 : 0,
+        status: "active",
+      });
 
-    addLog(
-      "નવો વ્યવસાય ઉમેર્યો",
-      bizName,
-      `કેટેગરી: ${category}, શહેર: ${city}`,
-      currentUser.name,
-      currentUser.role || "member"
-    );
+      addLog(
+        "નવો વ્યવસાય ઉમેર્યો",
+        bizName,
+        `કેટેગરી: ${category}, શહેર: ${city}`,
+        currentUser.name,
+        currentUser.role || "member"
+      );
 
-    setShowAddModal(false);
-    setBizName("");
-    setDescription("");
-    setAddress("");
-    setSuccessToast("વ્યવસાય સફળતાપૂર્વક ડિરેક્ટરીમાં ઉમેરાઈ ગયો છે!");
-    setTimeout(() => setSuccessToast(null), 4000);
+      setShowAddModal(false);
+      setBizName("");
+      setDescription("");
+      setAddress("");
+      setSuccessToast("વ્યવસાય સફળતાપૂર્વક ડિરેક્ટરીમાં ઉમેરાઈ ગયો છે!");
+      setTimeout(() => setSuccessToast(null), 4000);
+    } finally {
+      setIsSubmittingBusiness(false);
+    }
   };
 
   return (
@@ -410,9 +418,17 @@ export default function BusinessDirectoryPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-forest-800 hover:bg-forest-900 text-white rounded-xl font-bold shadow-sm transition-colors"
+                  disabled={isSubmittingBusiness}
+                  className="px-5 py-2 bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white rounded-xl font-bold shadow-sm transition-colors flex items-center gap-1.5"
                 >
-                  વ્યવસાય નોંધણી કરો
+                  {isSubmittingBusiness ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>નોંધણી થઈ રહી છે...</span>
+                    </>
+                  ) : (
+                    <span>વ્યવસાય નોંધણી કરો</span>
+                  )}
                 </button>
               </div>
             </form>

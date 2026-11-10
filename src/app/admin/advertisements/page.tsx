@@ -23,6 +23,7 @@ import {
   Search,
   Building,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -57,6 +58,11 @@ export default function AdminAdvertisementsPage() {
 
   const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Action Loading States
+  const [processingAdId, setProcessingAdId] = useState<string | null>(null);
+  const [isCreatingAd, setIsCreatingAd] = useState(false);
+  const [isRejectingAd, setIsRejectingAd] = useState(false);
 
   // Modal states
   const [previewAd, setPreviewAd] = useState<BusinessAdvertisement | null>(null);
@@ -100,42 +106,48 @@ export default function AdminAdvertisementsPage() {
     setAddAddress(m.address || m.city || "");
   };
 
-  const handleCreateAd = (e: React.FormEvent) => {
+  const handleCreateAd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addBusinessName.trim() || !addDescription.trim() || !addContactNumber.trim() || !addAddress.trim()) {
       alert("કૃપા કરીને બધી ફરજિયાત વિગતો ભરો.");
       return;
     }
 
-    const approverName = currentUser?.name || "એડમિન કમિટી";
+    setIsCreatingAd(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const approverName = currentUser?.name || "એડમિન કમિટી";
 
-    addAdvertisement({
-      business_name: addBusinessName.trim(),
-      category: addCategory,
-      description: addDescription.trim(),
-      owner_name: addOwnerName.trim() || (selectedMember ? selectedMember.name : "સમાજ સભ્ય"),
-      contact_number: addContactNumber.trim(),
-      address: addAddress.trim(),
-      image_url: addBannerUrl.trim() || null, // null if no banner uploaded (NO dummy image!)
-      website_link: addWebsiteLink.trim() || undefined,
-      status: addStatus,
-      submitted_by: selectedMember ? selectedMember.id : currentUser?.id,
-      approved_by: addStatus === "approved" ? approverName : undefined,
-      approved_at: addStatus === "approved" ? new Date().toISOString() : undefined,
-    });
+      addAdvertisement({
+        business_name: addBusinessName.trim(),
+        category: addCategory,
+        description: addDescription.trim(),
+        owner_name: addOwnerName.trim() || (selectedMember ? selectedMember.name : "સમાજ સભ્ય"),
+        contact_number: addContactNumber.trim(),
+        address: addAddress.trim(),
+        image_url: addBannerUrl.trim() || null, // null if no banner uploaded (NO dummy image!)
+        website_link: addWebsiteLink.trim() || undefined,
+        status: addStatus,
+        submitted_by: selectedMember ? selectedMember.id : currentUser?.id,
+        approved_by: addStatus === "approved" ? approverName : undefined,
+        approved_at: addStatus === "approved" ? new Date().toISOString() : undefined,
+      });
 
-    addLog(
-      addStatus === "approved" ? "વ્યવસાય જાહેરાત પ્રકાશિત (એડમિન)" : "વ્યવસાય જાહેરાત અરજી નોંધાઈ (પેન્ડિંગ)",
-      addBusinessName.trim(),
-      `માલિક: ${addOwnerName.trim() || "સભ્ય"}, સંપર્ક: ${addContactNumber.trim()}`,
-      approverName,
-      currentUser?.role || "secretary"
-    );
+      addLog(
+        addStatus === "approved" ? "વ્યવસાય જાહેરાત પ્રકાશિત (એડમિન)" : "વ્યવસાય જાહેરાત અરજી નોંધાઈ (પેન્ડિંગ)",
+        addBusinessName.trim(),
+        `માલિક: ${addOwnerName.trim() || "સભ્ય"}, સંપર્ક: ${addContactNumber.trim()}`,
+        approverName,
+        currentUser?.role || "secretary"
+      );
 
-    setShowAddModal(false);
-    resetAddForm();
-    setSuccessToast(`"${addBusinessName.trim()}" જાહેરાત સફળતાપૂર્વક ઉમેરાઈ ગઈ!`);
-    setTimeout(() => setSuccessToast(null), 3500);
+      setShowAddModal(false);
+      resetAddForm();
+      setSuccessToast(`"${addBusinessName.trim()}" જાહેરાત સફળતાપૂર્વક ઉમેરાઈ ગઈ!`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsCreatingAd(false);
+    }
   };
 
   const pendingCount = advertisements.filter((a) => a.status === "pending").length;
@@ -147,18 +159,24 @@ export default function AdminAdvertisementsPage() {
     return a.status === activeFilter;
   });
 
-  const handleApprove = (ad: BusinessAdvertisement) => {
-    const approverName = currentUser?.name || "એડમિન કમિટી";
-    approveAdvertisement(ad.id, approverName);
-    addLog(
-      "વ્યવસાય જાહેરાત મંજૂર",
-      ad.business_name,
-      `જાહેરાત માન્ય કરવામાં આવી અને હોમપેજ/પોર્ટલ પર સક્રિય કરાઈ.`,
-      approverName,
-      currentUser?.role || "secretary"
-    );
-    setSuccessToast(`"${ad.business_name}" જાહેરાત સફળતાપૂર્વક મંજૂર કરવામાં આવી!`);
-    setTimeout(() => setSuccessToast(null), 3500);
+  const handleApprove = async (ad: BusinessAdvertisement) => {
+    setProcessingAdId(ad.id);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const approverName = currentUser?.name || "એડમિન કમિટી";
+      approveAdvertisement(ad.id, approverName);
+      addLog(
+        "વ્યવસાય જાહેરાત મંજૂર",
+        ad.business_name,
+        `જાહેરાત માન્ય કરવામાં આવી અને હોમપેજ/પોર્ટલ પર સક્રિય કરાઈ.`,
+        approverName,
+        currentUser?.role || "secretary"
+      );
+      setSuccessToast(`"${ad.business_name}" જાહેરાત સફળતાપૂર્વક મંજૂર કરવામાં આવી!`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setProcessingAdId(null);
+    }
   };
 
   const handleOpenRejectModal = (ad: BusinessAdvertisement) => {
@@ -166,33 +184,45 @@ export default function AdminAdvertisementsPage() {
     setRejectionRemarks(ad.rejection_remarks || "");
   };
 
-  const handleConfirmReject = (e: React.FormEvent) => {
+  const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingAd) return;
 
-    const rejecterName = currentUser?.name || "એડમિન કમિટી";
-    const remarks = rejectionRemarks.trim() || "વિગતો અથવા બેનર યોગ્ય નથી. કૃપા કરીને સુધારીને ફરી મોકલો.";
+    setIsRejectingAd(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const rejecterName = currentUser?.name || "એડમિન કમિટી";
+      const remarks = rejectionRemarks.trim() || "વિગતો અથવા બેનર યોગ્ય નથી. કૃપા કરીને સુધારીને ફરી મોકલો.";
 
-    rejectAdvertisement(rejectingAd.id, remarks, rejecterName);
-    addLog(
-      "વ્યવસાય જાહેરાત અસ્વીકાર",
-      rejectingAd.business_name,
-      `કારણ: ${remarks}`,
-      rejecterName,
-      currentUser?.role || "secretary"
-    );
+      rejectAdvertisement(rejectingAd.id, remarks, rejecterName);
+      addLog(
+        "વ્યવસાય જાહેરાત અસ્વીકાર",
+        rejectingAd.business_name,
+        `કારણ: ${remarks}`,
+        rejecterName,
+        currentUser?.role || "secretary"
+      );
 
-    setRejectingAd(null);
-    setRejectionRemarks("");
-    setSuccessToast(`"${rejectingAd.business_name}" જાહેરાત અસ્વીકાર કરવામાં આવી.`);
-    setTimeout(() => setSuccessToast(null), 3500);
+      setRejectingAd(null);
+      setRejectionRemarks("");
+      setSuccessToast(`"${rejectingAd.business_name}" જાહેરાત અસ્વીકાર કરવામાં આવી.`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsRejectingAd(false);
+    }
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (confirm(`શું તમે ખરેખર "${name}" જાહેરાત કાઢી નાખવા માંગો છો?`)) {
-      deleteAdvertisement(id);
-      setSuccessToast("જાહેરાત ડિલીટ કરવામાં આવી.");
-      setTimeout(() => setSuccessToast(null), 3000);
+      setProcessingAdId(id);
+      try {
+        await new Promise((r) => setTimeout(r, 450));
+        deleteAdvertisement(id);
+        setSuccessToast("જાહેરાત ડિલીટ કરવામાં આવી.");
+        setTimeout(() => setSuccessToast(null), 3000);
+      } finally {
+        setProcessingAdId(null);
+      }
     }
   };
 
@@ -467,17 +497,28 @@ export default function AdminAdvertisementsPage() {
                   {ad.status !== "approved" && (
                     <button
                       onClick={() => handleApprove(ad)}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
+                      disabled={processingAdId === ad.id}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
                     >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>મંજૂર કરો</span>
+                      {processingAdId === ad.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>મંજૂર થઈ રહ્યું છે...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>મંજૂર કરો</span>
+                        </>
+                      )}
                     </button>
                   )}
 
                   {ad.status !== "rejected" && (
                     <button
                       onClick={() => handleOpenRejectModal(ad)}
-                      className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-colors flex items-center gap-1"
+                      disabled={processingAdId === ad.id}
+                      className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-700 border border-red-200 text-xs font-bold transition-colors flex items-center gap-1"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>અસ્વીકાર</span>
@@ -486,10 +527,15 @@ export default function AdminAdvertisementsPage() {
 
                   <button
                     onClick={() => handleDelete(ad.id, ad.business_name)}
-                    className="p-1.5 rounded-xl text-charcoal-400 hover:text-red-700 hover:bg-red-50 transition-colors"
+                    disabled={processingAdId === ad.id}
+                    className="p-1.5 rounded-xl text-charcoal-400 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
                     title="ડિલીટ કરો"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    {processingAdId === ad.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -653,9 +699,17 @@ export default function AdminAdvertisementsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition-colors"
+                  disabled={isRejectingAd}
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  અસ્વીકાર કન્ફર્મ કરો
+                  {isRejectingAd ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>અસ્વીકાર થઈ રહ્યો છે...</span>
+                    </>
+                  ) : (
+                    <span>અસ્વીકાર કન્ફર્મ કરો</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -970,10 +1024,20 @@ export default function AdminAdvertisementsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
+                  disabled={isCreatingAd}
+                  className="px-6 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>જાહેરાત સાચવો & ઉમેરો</span>
+                  {isCreatingAd ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>જાહેરાત સાચવી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>જાહેરાત સાચવો & ઉમેરો</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

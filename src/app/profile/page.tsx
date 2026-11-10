@@ -44,6 +44,7 @@ import {
   ShieldCheck,
   Globe,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
@@ -251,6 +252,15 @@ export default function ProfilePage() {
     )
     : [];
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Step & Form Action Loading States
+  const [isSavingGeneral, setIsSavingGeneral] = useState(false);
+  const [isSavingNewMember, setIsSavingNewMember] = useState(false);
+  const [isSavingEmployment, setIsSavingEmployment] = useState(false);
+  const [isSavingEducation, setIsSavingEducation] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [isSavingMatrimony, setIsSavingMatrimony] = useState(false);
+  const [isSavingAdvertisement, setIsSavingAdvertisement] = useState(false);
 
   // Form states initialized with effectiveMember or currentUser data
   const [username, setUsername] = useState(effectiveMember?.username || currentUser?.username || "");
@@ -466,7 +476,7 @@ export default function ProfilePage() {
     }, 100);
   };
 
-  const handleAddNewMemberSubmit = (e: React.FormEvent) => {
+  const handleAddNewMemberSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberRelation) {
       alert("કૃપા કરીને સંબંધ પસંદ કરો.");
@@ -485,89 +495,95 @@ export default function ProfilePage() {
       }
     }
 
-    const newId = `mem-${Date.now()}`;
+    setIsSavingNewMember(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const newId = `mem-${Date.now()}`;
 
-    const createdMember: Member = {
-      id: newId,
-      name: newMemberName.trim(),
-      photo_url: null,
-      phone: newMemberPhone.trim() || "",
-      email: newMemberEmail.trim() || undefined,
-      address: newMemberAddress.trim() || currentUser?.address || "",
-      city: newMemberCity.trim() || currentUser?.city || "મોડાસા",
-      district: currentUser?.district || "અરવલ્લી",
-      native_place: newMemberNativePlace.trim() || currentUser?.native_place || "અડાઆઠમ",
-      sasri_name: newMemberSasriName.trim() || undefined,
-      piyar_name: newMemberPiyarName.trim() || undefined,
-      is_public_in_family: newMemberIsPublic,
-      gender: newMemberGender,
-      blood_group: newMemberBloodGroup || "B+",
-      marital_status: newMemberMaritalStatus || "પરણિત (Married)",
-      jati: newMemberJati.trim() || "અડાઆઠમ દરજી",
-      caste: newMemberJati.trim() || "અડાઆઠમ દરજી",
-      dod: newMemberDod || undefined,
-      is_deceased: Boolean(newMemberDod),
-      role: "member",
-      is_lifetime_member: false,
-      completeness: 85,
-      created_at: new Date().toISOString(),
-      privacy: { ...DEFAULT_MEMBER_PRIVACY },
-    };
+      const createdMember: Member = {
+        id: newId,
+        name: newMemberName.trim(),
+        photo_url: null,
+        phone: newMemberPhone.trim() || "",
+        email: newMemberEmail.trim() || undefined,
+        address: newMemberAddress.trim() || currentUser?.address || "",
+        city: newMemberCity.trim() || currentUser?.city || "મોડાસા",
+        district: currentUser?.district || "અરવલ્લી",
+        native_place: newMemberNativePlace.trim() || currentUser?.native_place || "અડાઆઠમ",
+        sasri_name: newMemberSasriName.trim() || undefined,
+        piyar_name: newMemberPiyarName.trim() || undefined,
+        is_public_in_family: newMemberIsPublic,
+        gender: newMemberGender,
+        blood_group: newMemberBloodGroup || "B+",
+        marital_status: newMemberMaritalStatus || "પરણિત (Married)",
+        jati: newMemberJati.trim() || "અડાઆઠમ દરજી",
+        caste: newMemberJati.trim() || "અડાઆઠમ દરજી",
+        dod: newMemberDod || undefined,
+        is_deceased: Boolean(newMemberDod),
+        role: "member",
+        is_lifetime_member: false,
+        completeness: 85,
+        created_at: new Date().toISOString(),
+        privacy: { ...DEFAULT_MEMBER_PRIVACY },
+      };
 
-    // 1. Add to DataContext
-    addMember(createdMember);
+      // 1. Add to DataContext
+      addMember(createdMember);
 
-    // 2. Add family relationship
-    const parentMember = effectiveMember || currentUser;
-    if (parentMember) {
-      addRelationship({
-        from_member_id: parentMember.id,
-        from_member_name: parentMember.name,
-        to_member_id: newId,
-        to_member_name: createdMember.name,
-        relationship: "other",
-        relationship_label: newMemberRelation.split(" (")[0] || "સંબંધી",
-        status: "approved",
-        requested_by: currentUser?.id || parentMember.id,
-        approved_by: currentUser?.name || parentMember.name,
-      });
+      // 2. Add family relationship
+      const parentMember = effectiveMember || currentUser;
+      if (parentMember) {
+        addRelationship({
+          from_member_id: parentMember.id,
+          from_member_name: parentMember.name,
+          to_member_id: newId,
+          to_member_name: createdMember.name,
+          relationship: "other",
+          relationship_label: newMemberRelation.split(" (")[0] || "સંબંધી",
+          status: "approved",
+          requested_by: currentUser?.id || parentMember.id,
+          approved_by: currentUser?.name || parentMember.name,
+        });
 
-      if (addLog && currentUser) {
-        addLog(
-          "પરિવારમાં નવા સભ્યની નોંધણી",
-          `${createdMember.name} (${newMemberRelation})`,
-          `નોંધણી કરનાર: ${currentUser.name}, ગામ: ${createdMember.native_place}`,
-          currentUser.name,
-          currentUser.role || "member"
-        );
+        if (addLog && currentUser) {
+          addLog(
+            "પરિવારમાં નવા સભ્યની નોંધણી",
+            `${createdMember.name} (${newMemberRelation})`,
+            `નોંધણી કરનાર: ${currentUser.name}, ગામ: ${createdMember.native_place}`,
+            currentUser.name,
+            currentUser.role || "member"
+          );
+        }
       }
+
+      // 3. Add to local familyRelations state
+      const relationItem: FamilyRelationDetail = {
+        id: newId,
+        relation: newMemberRelation,
+        name: createdMember.name,
+        phone: createdMember.phone,
+        city: createdMember.city,
+        native_place: createdMember.native_place,
+        sasri_name: createdMember.sasri_name,
+        piyar_name: createdMember.piyar_name,
+        is_public: newMemberIsPublic,
+        gender: createdMember.gender,
+        jati: createdMember.jati,
+        dod: createdMember.dod,
+        is_deceased: createdMember.is_deceased,
+        is_registered: true,
+        member_id: newId,
+      };
+
+      setFamilyRelations((prev) => [...prev, relationItem]);
+      setShowNewMemberCard(false);
+      setNewMemberEmail("");
+      setNewMemberDod("");
+      setNewMemberJati("અડાઆઠમ દરજી");
+      showToast(`નવા સભ્ય "${createdMember.name}" સફળતાપૂર્વક ઉમેરાયા!`);
+    } finally {
+      setIsSavingNewMember(false);
     }
-
-    // 3. Add to local familyRelations state
-    const relationItem: FamilyRelationDetail = {
-      id: newId,
-      relation: newMemberRelation,
-      name: createdMember.name,
-      phone: createdMember.phone,
-      city: createdMember.city,
-      native_place: createdMember.native_place,
-      sasri_name: createdMember.sasri_name,
-      piyar_name: createdMember.piyar_name,
-      is_public: newMemberIsPublic,
-      gender: createdMember.gender,
-      jati: createdMember.jati,
-      dod: createdMember.dod,
-      is_deceased: createdMember.is_deceased,
-      is_registered: true,
-      member_id: newId,
-    };
-
-    setFamilyRelations((prev) => [...prev, relationItem]);
-    setShowNewMemberCard(false);
-    setNewMemberEmail("");
-    setNewMemberDod("");
-    setNewMemberJati("અડાઆઠમ દરજી");
-    showToast(`નવા સભ્ય "${createdMember.name}" સફળતાપૂર્વક ઉમેરાયા!`);
   };
 
   // ૧. બિઝનેસ / વ્યવસાય (ઉપર બિઝનેસ)
@@ -657,54 +673,60 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveEducationRecord = (e: React.FormEvent) => {
+  const handleSaveEducationRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eduDegreeInput.trim()) {
       alert("કૃપા કરીને ડિગ્રી / અભ્યાસનું નામ દાખલ કરો (દા.ત. B.Com, MBA, B.Tech).");
       return;
     }
 
-    let memberName = effectiveMember?.name || name || (!selectedMemberId ? currentUser?.name : "") || "મુખ્ય સભ્ય";
-    if (selectedEduMemberId !== "self") {
-      const rel = familyRelations.find((r) => r.id === selectedEduMemberId);
-      memberName = rel ? `${rel.name} (${rel.relation})` : "પરિવાર સભ્ય";
+    setIsSavingEducation(true);
+    try {
+      await new Promise((r) => setTimeout(r, 400));
+      let memberName = effectiveMember?.name || name || (!selectedMemberId ? currentUser?.name : "") || "મુખ્ય સભ્ય";
+      if (selectedEduMemberId !== "self") {
+        const rel = familyRelations.find((r) => r.id === selectedEduMemberId);
+        memberName = rel ? `${rel.name} (${rel.relation})` : "પરિવાર સભ્ય";
+      }
+
+      let updatedRecords: MemberEducationRecord[];
+
+      if (editingDegreeId) {
+        // Update existing degree
+        updatedRecords = educationRecords.map((rec) =>
+          rec.id === editingDegreeId
+            ? {
+              ...rec,
+              member_id: selectedEduMemberId,
+              member_name: memberName,
+              degree: eduDegreeInput.trim(),
+              field_of_study: eduCategory,
+            }
+            : rec
+        );
+        setEditingDegreeId(null);
+        showToast(`${memberName} ની ડિગ્રી વિગત સફળતાપૂર્વક સુધારી!`);
+      } else {
+        // Add new degree (allows multiple degrees per person!)
+        const newRecord: MemberEducationRecord = {
+          id: `deg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          member_id: selectedEduMemberId,
+          member_name: memberName,
+          degree: eduDegreeInput.trim(),
+          field_of_study: eduCategory,
+          institution: "",
+          passing_year: "",
+        };
+        updatedRecords = [...educationRecords, newRecord];
+        showToast(`${memberName} માટે નવી ડિગ્રી (${eduDegreeInput.trim()}) સફળતાપૂર્વક ઉમેરાઈ!`);
+      }
+
+      setEducationRecords(updatedRecords);
+      setEduDegreeInput(""); // Clear degree input ready to add next degree!
+      persistEducation(updatedRecords);
+    } finally {
+      setIsSavingEducation(false);
     }
-
-    let updatedRecords: MemberEducationRecord[];
-
-    if (editingDegreeId) {
-      // Update existing degree
-      updatedRecords = educationRecords.map((rec) =>
-        rec.id === editingDegreeId
-          ? {
-            ...rec,
-            member_id: selectedEduMemberId,
-            member_name: memberName,
-            degree: eduDegreeInput.trim(),
-            field_of_study: eduCategory,
-          }
-          : rec
-      );
-      setEditingDegreeId(null);
-      showToast(`${memberName} ની ડિગ્રી વિગત સફળતાપૂર્વક સુધારી!`);
-    } else {
-      // Add new degree (allows multiple degrees per person!)
-      const newRecord: MemberEducationRecord = {
-        id: `deg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        member_id: selectedEduMemberId,
-        member_name: memberName,
-        degree: eduDegreeInput.trim(),
-        field_of_study: eduCategory,
-        institution: "",
-        passing_year: "",
-      };
-      updatedRecords = [...educationRecords, newRecord];
-      showToast(`${memberName} માટે નવી ડિગ્રી (${eduDegreeInput.trim()}) સફળતાપૂર્વક ઉમેરાઈ!`);
-    }
-
-    setEducationRecords(updatedRecords);
-    setEduDegreeInput(""); // Clear degree input ready to add next degree!
-    persistEducation(updatedRecords);
   };
 
   const handleRemoveEducationRecord = (id: string) => {
@@ -780,7 +802,7 @@ export default function ProfilePage() {
     setFamilyRelations((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const handleSaveGeneral = (e: React.FormEvent) => {
+  const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const cleanUsername = username.trim().toLowerCase();
@@ -796,169 +818,182 @@ export default function ProfilePage() {
     }
     setUsernameError(null);
 
-    const father = familyRelations.find((r) => r.relation.includes("પિતા"))?.name || "";
-    const grandfather = familyRelations.find((r) => r.relation.includes("દાદા"))?.name || "";
-    const maternalUncle = familyRelations.find((r) => r.relation.includes("મામા"))?.name || "";
-    const maternalGrandfather = familyRelations.find((r) => r.relation.includes("નાના"))?.name || "";
+    setIsSavingGeneral(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
 
-    const updates: Partial<Member> = {
-      username: cleanUsername,
-      name,
-      email: email.trim(),
-      phone,
-      address,
-      city,
-      native_place: nativePlace,
-      sasri_name: sasriName,
-      piyar_name: piyarName,
-      father_name: father,
-      grandfather_name: grandfather,
-      maternal_uncle_name: maternalUncle,
-      maternal_grandfather_name: maternalGrandfather,
-      family_relations: familyRelations,
-      marital_status: maritalStatus,
-      blood_group: bloodGroup,
-      photo_url: photoUrl,
-      jati: jati.trim() || "અડાઆઠમ દરજી",
-      caste: jati.trim() || "અડાઆઠમ દરજી",
-      dod: dod || undefined,
-      dob: dob || undefined,
-      is_deceased: Boolean(dod),
-      completeness: 95,
-      is_available_for_matrimony: isUnmarried ? isAvailableForMatrimony : false,
-      matrimony: {
-        is_available: isUnmarried ? isAvailableForMatrimony : false,
-        is_public_listing: isUnmarried && isAvailableForMatrimony ? isPublicListing : false,
-        is_saved: true,
-        height: matrimonyHeight,
-        complexion: matrimonyComplexion,
-        about_me: matrimonyAbout,
-        partner_expectations: matrimonyExpectations,
-        privacy: matrimonyPrivacy,
-        updated_at: new Date().toISOString(),
-      },
-    };
+      const father = familyRelations.find((r) => r.relation.includes("પિતા"))?.name || "";
+      const grandfather = familyRelations.find((r) => r.relation.includes("દાદા"))?.name || "";
+      const maternalUncle = familyRelations.find((r) => r.relation.includes("મામા"))?.name || "";
+      const maternalGrandfather = familyRelations.find((r) => r.relation.includes("નાના"))?.name || "";
 
-    if (isAddingNewMember) {
-      const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `mem-${Date.now()}`;
-      const newMember: Member = {
-        ...updates,
-        id: newId,
-        gender: "male",
-        role: "member",
-        is_lifetime_member: false,
-        created_at: new Date().toISOString(),
-        completeness: 85,
-        privacy: {
-          phone: "members",
-          address: "members",
-          photo: "public",
-          family: "members",
-          business: "public",
-          employment: "members",
-          education: "members",
-          dob: "members",
+      const updates: Partial<Member> = {
+        username: cleanUsername,
+        name,
+        email: email.trim(),
+        phone,
+        address,
+        city,
+        native_place: nativePlace,
+        sasri_name: sasriName,
+        piyar_name: piyarName,
+        father_name: father,
+        grandfather_name: grandfather,
+        maternal_uncle_name: maternalUncle,
+        maternal_grandfather_name: maternalGrandfather,
+        family_relations: familyRelations,
+        marital_status: maritalStatus,
+        blood_group: bloodGroup,
+        photo_url: photoUrl,
+        jati: jati.trim() || "અડાઆઠમ દરજી",
+        caste: jati.trim() || "અડાઆઠમ દરજી",
+        dod: dod || undefined,
+        dob: dob || undefined,
+        is_deceased: Boolean(dod),
+        completeness: 95,
+        is_available_for_matrimony: isUnmarried ? isAvailableForMatrimony : false,
+        matrimony: {
+          is_available: isUnmarried ? isAvailableForMatrimony : false,
+          is_public_listing: isUnmarried && isAvailableForMatrimony ? isPublicListing : false,
+          is_saved: true,
+          height: matrimonyHeight,
+          complexion: matrimonyComplexion,
+          about_me: matrimonyAbout,
+          partner_expectations: matrimonyExpectations,
+          privacy: matrimonyPrivacy,
+          updated_at: new Date().toISOString(),
         },
-      } as Member;
+      };
 
-      addMember(newMember);
+      if (isAddingNewMember) {
+        const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `mem-${Date.now()}`;
+        const newMember: Member = {
+          ...updates,
+          id: newId,
+          gender: "male",
+          role: "member",
+          is_lifetime_member: false,
+          created_at: new Date().toISOString(),
+          completeness: 85,
+          privacy: {
+            phone: "members",
+            address: "members",
+            photo: "public",
+            family: "members",
+            business: "public",
+            employment: "members",
+            education: "members",
+            dob: "members",
+          },
+        } as Member;
 
-      // Persist to backend /api/members
-      fetch("/api/members", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMember),
-      }).catch((err) => console.warn("[addMember error]", err));
+        addMember(newMember);
+
+        // Persist to backend /api/members
+        fetch("/api/members", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newMember),
+        }).catch((err) => console.warn("[addMember error]", err));
+
+        if (addLog && currentUser) {
+          addLog(
+            "એડમિન દ્વારા નવા સભ્યની નોંધણી",
+            name,
+            `યુઝરનેમ: ${cleanUsername}, ફોન: ${phone}`,
+            currentUser.name,
+            currentUser.role || "admin"
+          );
+        }
+
+        showToast(`નવા સભ્ય "${name}" સફળતાપૂર્વક ઉમેરાયા!`);
+        setTimeout(() => {
+          router.push("/admin/members");
+        }, 1500);
+        return;
+      }
+
+      if (effectiveMember) {
+        updateMember(effectiveMember.id, updates);
+        // Sync to backend /api/profile
+        fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId: effectiveMember.id, updates }),
+        }).catch((err) => console.warn("[profile sync error]", err));
+      }
+      if (currentUser && effectiveMember?.id === currentUser.id) {
+        updateCurrentUserProfile(updates);
+      }
 
       if (addLog && currentUser) {
         addLog(
-          "એડમિન દ્વારા નવા સભ્યની નોંધણી",
-          name,
-          `યુઝરનેમ: ${cleanUsername}, ફોન: ${phone}`,
+          "સભ્ય પ્રોફાઇલ સુધારી",
+          effectiveMember?.name || name,
+          effectiveMember?.id === currentUser.id ? "પોતાની પ્રોફાઇલ સાચવી" : `એડમિન દ્વારા સભ્યની વિગતો સુધારી (${currentUser.name})`,
           currentUser.name,
           currentUser.role || "admin"
         );
       }
-
-      showToast(`નવા સભ્ય "${name}" સફળતાપૂર્વક ઉમેરાયા!`);
-      setTimeout(() => {
-        router.push("/admin/members");
-      }, 1500);
-      return;
+      showToast(effectiveMember?.id === currentUser?.id ? "સામાન્ય માહિતી સફળતાપૂર્વક સાચવાઈ!" : `${effectiveMember?.name} ની માહિતી સફળતાપૂર્વક સાચવાઈ!`);
+    } finally {
+      setIsSavingGeneral(false);
     }
-
-    if (effectiveMember) {
-      updateMember(effectiveMember.id, updates);
-      // Sync to backend /api/profile
-      fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId: effectiveMember.id, updates }),
-      }).catch((err) => console.warn("[profile sync error]", err));
-    }
-    if (currentUser && effectiveMember?.id === currentUser.id) {
-      updateCurrentUserProfile(updates);
-    }
-
-    if (addLog && currentUser) {
-      addLog(
-        "સભ્ય પ્રોફાઇલ સુધારી",
-        effectiveMember?.name || name,
-        effectiveMember?.id === currentUser.id ? "પોતાની પ્રોફાઇલ સાચવી" : `એડમિન દ્વારા સભ્યની વિગતો સુધારી (${currentUser.name})`,
-        currentUser.name,
-        currentUser.role || "admin"
-      );
-    }
-    showToast(effectiveMember?.id === currentUser?.id ? "સામાન્ય માહિતી સફળતાપૂર્વક સાચવાઈ!" : `${effectiveMember?.name} ની માહિતી સફળતાપૂર્વક સાચવાઈ!`);
   };
 
-  const handleSaveMatrimonyProfile = (e: React.FormEvent) => {
+  const handleSaveMatrimonyProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!effectiveMember) return;
 
-    const finalMatrimonyAvailable = isUnmarried ? isAvailableForMatrimony : false;
-    const finalPublicListing = isUnmarried && isAvailableForMatrimony ? isPublicListing : false;
+    setIsSavingMatrimony(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const finalMatrimonyAvailable = isUnmarried ? isAvailableForMatrimony : false;
+      const finalPublicListing = isUnmarried && isAvailableForMatrimony ? isPublicListing : false;
 
-    const updates: Partial<Member> = {
-      is_available_for_matrimony: finalMatrimonyAvailable,
-      matrimony: {
-        is_available: finalMatrimonyAvailable,
-        is_public_listing: finalPublicListing,
-        is_saved: true,
-        height: matrimonyHeight,
-        complexion: matrimonyComplexion,
-        about_me: matrimonyAbout,
-        partner_expectations: matrimonyExpectations,
-        privacy: matrimonyPrivacy,
-        updated_at: new Date().toISOString(),
-      },
-    };
+      const updates: Partial<Member> = {
+        is_available_for_matrimony: finalMatrimonyAvailable,
+        matrimony: {
+          is_available: finalMatrimonyAvailable,
+          is_public_listing: finalPublicListing,
+          is_saved: true,
+          height: matrimonyHeight,
+          complexion: matrimonyComplexion,
+          about_me: matrimonyAbout,
+          partner_expectations: matrimonyExpectations,
+          privacy: matrimonyPrivacy,
+          updated_at: new Date().toISOString(),
+        },
+      };
 
-    if (effectiveMember) {
-      updateMember(effectiveMember.id, updates);
-    }
-    if (currentUser && effectiveMember?.id === currentUser.id) {
-      updateCurrentUserProfile(updates);
-    }
+      if (effectiveMember) {
+        updateMember(effectiveMember.id, updates);
+      }
+      if (currentUser && effectiveMember?.id === currentUser.id) {
+        updateCurrentUserProfile(updates);
+      }
 
-    if (addLog && currentUser) {
-      addLog(
-        "મેટ્રિમોની પ્રોફાઇલ અપડેટ",
-        `${effectiveMember.name} — ${finalMatrimonyAvailable ? (finalPublicListing ? "પબ્લિક લિસ્ટિંગ સક્રિય" : "ખાનગી/આંતરિક સક્રિય") : "નિષ્ક્રિય"}`,
-        `લગ્ન સ્થિતિ: ${maritalStatus}, ઊંચાઈ: ${matrimonyHeight}`,
-        currentUser.name,
-        currentUser.role || "member"
-      );
-    }
+      if (addLog && currentUser) {
+        addLog(
+          "મેટ્રિમોની પ્રોફાઇલ અપડેટ",
+          `${effectiveMember.name} — ${finalMatrimonyAvailable ? (finalPublicListing ? "પબ્લિક લિસ્ટિંગ સક્રિય" : "ખાનગી/આંતરિક સક્રિય") : "નિષ્ક્રિય"}`,
+          `લગ્ન સ્થિતિ: ${maritalStatus}, ઊંચાઈ: ${matrimonyHeight}`,
+          currentUser.name,
+          currentUser.role || "member"
+        );
+      }
 
-    if (finalMatrimonyAvailable && finalPublicListing) {
-      showToast("મેટ્રિમોની પ્રોફાઇલ સાચવાઈ અને પબ્લિક લિસ્ટિંગમાં સક્રિય થઈ!");
-    } else {
-      showToast("મેટ્રિમોની પ્રોફાઇલ અને સેટિંગ્સ સફળતાપૂર્વક સાચવાઈ ગયા!");
+      if (finalMatrimonyAvailable && finalPublicListing) {
+        showToast("મેટ્રિમોની પ્રોફાઇલ સાચવાઈ અને પબ્લિક લિસ્ટિંગમાં સક્રિય થઈ!");
+      } else {
+        showToast("મેટ્રિમોની પ્રોફાઇલ અને સેટિંગ્સ સફળતાપૂર્વક સાચવાઈ ગયા!");
+      }
+    } finally {
+      setIsSavingMatrimony(false);
     }
   };
 
-  const handleSaveAdvertisement = (e: React.FormEvent) => {
+  const handleSaveAdvertisement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adBusinessName.trim()) {
       alert("કૃપા કરીને બિઝનેસ / પેઢીનું નામ દાખલ કરો.");
@@ -969,151 +1004,169 @@ export default function ProfilePage() {
       return;
     }
 
-    addAdvertisement({
-      business_name: adBusinessName.trim(),
-      category: adCategory.trim() || "સામાન્ય વેપાર",
-      description: adDescription.trim() || `${adBusinessName} - વ્યવસાય જાહેરાત`,
-      owner_name: adOwnerName.trim() || effectiveMember?.name || currentUser?.name || "ઓનર",
-      contact_number: adPhone.trim() || effectiveMember?.phone || currentUser?.phone || "",
-      address: adAddress.trim() || effectiveMember?.address || currentUser?.address || "",
-      image_url: adImageUrl.trim() || null,
-      website_link: adWebsite.trim() || undefined,
-      status: "pending",
-      submitted_by: effectiveMember?.id || currentUser?.id,
-    });
-
-    if (addLog && currentUser) {
-      addLog(
-        "વ્યવસાય જાહેરાત અરજી",
-        `${adBusinessName} (${adCategory || "વેપાર"})`,
-        `અરજદાર: ${currentUser.name}, સંપર્ક: ${adPhone}`,
-        currentUser.name,
-        currentUser.role || "member"
-      );
-    }
-
-    showToast("આપની વ્યવસાય જાહેરાત મંજૂરી માટે સબમિટ થઈ ગઈ છે! એડમિન દ્વારા મંજૂર થયા પછી તે વેબસાઇટ પર પ્રદર્શિત થશે.");
-    setIsAdModalOpen(false);
-  };
-
-  const handleSavePrivacy = (e: React.FormEvent) => {
-    e.preventDefault();
-    const privacyUpdates = {
-      phone: privacyPhone,
-      dob: privacyDob,
-      address: privacyAddress,
-      photo: privacyPhoto,
-      family: privacyFamily,
-      business: privacyBusiness,
-      employment: privacyEmployment,
-      education: privacyEducation,
-    };
-    if (effectiveMember) {
-      updateMember(effectiveMember.id, {
-        privacy: { ...(effectiveMember.privacy || {}), ...privacyUpdates },
+    setIsSavingAdvertisement(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      addAdvertisement({
+        business_name: adBusinessName.trim(),
+        category: adCategory.trim() || "સામાન્ય વેપાર",
+        description: adDescription.trim() || `${adBusinessName} - વ્યવસાય જાહેરાત`,
+        owner_name: adOwnerName.trim() || effectiveMember?.name || currentUser?.name || "ઓનર",
+        contact_number: adPhone.trim() || effectiveMember?.phone || currentUser?.phone || "",
+        address: adAddress.trim() || effectiveMember?.address || currentUser?.address || "",
+        image_url: adImageUrl.trim() || null,
+        website_link: adWebsite.trim() || undefined,
+        status: "pending",
+        submitted_by: effectiveMember?.id || currentUser?.id,
       });
-      // Sync to backend /api/profile
-      fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          memberId: effectiveMember.id,
-          updates: { privacy: privacyUpdates },
-        }),
-      }).catch((err) => console.warn("[privacy sync error]", err));
+
+      if (addLog && currentUser) {
+        addLog(
+          "વ્યવસાય જાહેરાત અરજી",
+          `${adBusinessName} (${adCategory || "વેપાર"})`,
+          `અરજદાર: ${currentUser.name}, સંપર્ક: ${adPhone}`,
+          currentUser.name,
+          currentUser.role || "member"
+        );
+      }
+
+      showToast("આપની વ્યવસાય જાહેરાત મંજૂરી માટે સબમિટ થઈ ગઈ છે! એડમિન દ્વારા મંજૂર થયા પછી તે વેબસાઇટ પર પ્રદર્શિત થશે.");
+      setIsAdModalOpen(false);
+    } finally {
+      setIsSavingAdvertisement(false);
     }
-    if (currentUser && effectiveMember?.id === currentUser.id) {
-      updatePrivacySettings(privacyUpdates);
-    }
-    showToast("ગોપનીયતા સેટિંગ્સ સફળતાપૂર્વક અપડેટ થયા!");
   };
 
-  const handleSaveEmployment = (e: React.FormEvent) => {
+  const handleSavePrivacy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPrivacy(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const privacyUpdates = {
+        phone: privacyPhone,
+        dob: privacyDob,
+        address: privacyAddress,
+        photo: privacyPhoto,
+        family: privacyFamily,
+        business: privacyBusiness,
+        employment: privacyEmployment,
+        education: privacyEducation,
+      };
+      if (effectiveMember) {
+        updateMember(effectiveMember.id, {
+          privacy: { ...(effectiveMember.privacy || {}), ...privacyUpdates },
+        });
+        // Sync to backend /api/profile
+        fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            memberId: effectiveMember.id,
+            updates: { privacy: privacyUpdates },
+          }),
+        }).catch((err) => console.warn("[privacy sync error]", err));
+      }
+      if (currentUser && effectiveMember?.id === currentUser.id) {
+        updatePrivacySettings(privacyUpdates);
+      }
+      showToast("ગોપનીયતા સેટિંગ્સ સફળતાપૂર્વક અપડેટ થયા!");
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
+  const handleSaveEmployment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!effectiveMember) return;
 
-    // Save on member profile
-    const empUpdates: Partial<Member> = {
-      business: {
-        owner_name: businessOwnerName,
-        business_name: businessName,
-        category: businessCategory,
-        role: businessRole,
-        city: businessCity,
-        phone: businessPhone,
-        address: businessAddress,
-        banner_url: businessBannerUrl,
-        is_public: businessIsPublic,
-      },
-      employment: {
-        full_name: jobFullName,
-        job_type: jobSector,
-        company: jobCompany,
-        job_title: jobTitle,
-        city: jobCity,
-        phone: jobPhone,
-        industry: jobIndustry,
-        experience_years: jobExperience,
-        is_public: jobIsPublic,
-      },
-    };
+    setIsSavingEmployment(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      // Save on member profile
+      const empUpdates: Partial<Member> = {
+        business: {
+          owner_name: businessOwnerName,
+          business_name: businessName,
+          category: businessCategory,
+          role: businessRole,
+          city: businessCity,
+          phone: businessPhone,
+          address: businessAddress,
+          banner_url: businessBannerUrl,
+          is_public: businessIsPublic,
+        },
+        employment: {
+          full_name: jobFullName,
+          job_type: jobSector,
+          company: jobCompany,
+          job_title: jobTitle,
+          city: jobCity,
+          phone: jobPhone,
+          industry: jobIndustry,
+          experience_years: jobExperience,
+          is_public: jobIsPublic,
+        },
+      };
 
-    if (effectiveMember) {
-      updateMember(effectiveMember.id, empUpdates);
-    }
-    if (currentUser && effectiveMember?.id === currentUser.id) {
-      updateCurrentUserProfile(empUpdates);
-    }
+      if (effectiveMember) {
+        updateMember(effectiveMember.id, empUpdates);
+      }
+      if (currentUser && effectiveMember?.id === currentUser.id) {
+        updateCurrentUserProfile(empUpdates);
+      }
 
-    // Auto-sync business with Community Business directory
-    const targetUser = effectiveMember || currentUser;
-    if (targetUser) {
-      const cleanPhone = (businessPhone || targetUser.phone || "").replace(/\D/g, "");
-      const existing = businesses.find(
-        (b) =>
-          b.owner_id === targetUser.id ||
-          b.owner_id === (targetUser as any).auth_user_id ||
-          (cleanPhone && b.phone && b.phone.replace(/\D/g, "") === cleanPhone)
-      );
-      if (businessName.trim() && businessIsPublic) {
-        if (existing) {
-          updateBusiness(existing.id, {
-            name: businessName,
-            category: businessCategory || "સામાન્ય વેપાર",
-            city: businessCity || targetUser.city || "મોડાસા",
-            address: businessAddress || targetUser.address || "",
-            phone: businessPhone || targetUser.phone || "",
-            cover_url: businessBannerUrl || existing.cover_url,
-            status: "active",
-            is_public: true,
-          });
-        } else {
-          addBusiness({
-            owner_id: targetUser.id,
-            owner_name: businessOwnerName || targetUser.name,
-            name: businessName,
-            category: businessCategory || "સામાન્ય વેપાર",
-            description: `${businessRole ? businessRole + " તરીકે સંચાલિત." : ""} ${businessName}`,
-            city: businessCity || targetUser.city || "મોડાસા",
-            address: businessAddress || targetUser.address || "",
-            phone: businessPhone || targetUser.phone || "",
-            cover_url: businessBannerUrl || "",
-            is_featured: false,
-            is_paid: false,
-            status: "active",
-            is_public: true,
-          });
-        }
-      } else if (existing) {
-        if (!businessName.trim()) {
-          deleteBusiness(existing.id);
-        } else {
-          updateBusiness(existing.id, { status: "hidden", is_public: false });
+      // Auto-sync business with Community Business directory
+      const targetUser = effectiveMember || currentUser;
+      if (targetUser) {
+        const cleanPhone = (businessPhone || targetUser.phone || "").replace(/\D/g, "");
+        const existing = businesses.find(
+          (b) =>
+            b.owner_id === targetUser.id ||
+            b.owner_id === (targetUser as any).auth_user_id ||
+            (cleanPhone && b.phone && b.phone.replace(/\D/g, "") === cleanPhone)
+        );
+        if (businessName.trim() && businessIsPublic) {
+          if (existing) {
+            updateBusiness(existing.id, {
+              name: businessName,
+              category: businessCategory || "સામાન્ય વેપાર",
+              city: businessCity || targetUser.city || "મોડાસા",
+              address: businessAddress || targetUser.address || "",
+              phone: businessPhone || targetUser.phone || "",
+              cover_url: businessBannerUrl || existing.cover_url,
+              status: "active",
+              is_public: true,
+            });
+          } else {
+            addBusiness({
+              owner_id: targetUser.id,
+              owner_name: businessOwnerName || targetUser.name,
+              name: businessName,
+              category: businessCategory || "સામાન્ય વેપાર",
+              description: `${businessRole ? businessRole + " તરીકે સંચાલિત." : ""} ${businessName}`,
+              city: businessCity || targetUser.city || "મોડાસા",
+              address: businessAddress || targetUser.address || "",
+              phone: businessPhone || targetUser.phone || "",
+              cover_url: businessBannerUrl || "",
+              is_featured: false,
+              is_paid: false,
+              status: "active",
+              is_public: true,
+            });
+          }
+        } else if (existing) {
+          if (!businessName.trim()) {
+            deleteBusiness(existing.id);
+          } else {
+            updateBusiness(existing.id, { status: "hidden", is_public: false });
+          }
         }
       }
-    }
 
-    showToast("બિઝનેસ અને નોકરીની વિગતો સફળતાપૂર્વક સાચવાઈ ગઈ!");
+      showToast("બિઝનેસ અને નોકરીની વિગતો સફળતાપૂર્વક સાચવાઈ ગઈ!");
+    } finally {
+      setIsSavingEmployment(false);
+    }
   };
 
   const handleRemoveBusiness = () => {
@@ -2264,10 +2317,20 @@ export default function ProfilePage() {
 
               <button
                 type="submit"
-                className="w-full sm:w-auto px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+                disabled={isSavingGeneral}
+                className="w-full sm:w-auto px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
               >
-                <Save className="w-4 h-4" />
-                <span>વિગતો સાચવો</span>
+                {isSavingGeneral ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>સાચવી રહ્યા છીએ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>વિગતો સાચવો</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -2770,10 +2833,20 @@ export default function ProfilePage() {
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+                  disabled={isSavingNewMember}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-forest-800 hover:bg-forest-900 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span>+ નવો સભ્ય સાચવો અને ઉમેરો (Save New Member)</span>
+                  {isSavingNewMember ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>સભ્ય ઉમેરી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      <span>+ નવો સભ્ય સાચવો અને ઉમેરો (Save New Member)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -3435,10 +3508,20 @@ export default function ProfilePage() {
             </div>
             <button
               type="submit"
-              className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+              disabled={isSavingEmployment}
+              className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
             >
-              <Save className="w-4 h-4" />
-              <span>વિગતો સાચવો (Save Details)</span>
+              {isSavingEmployment ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>સાચવી રહ્યા છીએ...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>વિગતો સાચવો (Save Details)</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -3546,9 +3629,15 @@ export default function ProfilePage() {
               )}
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+                disabled={isSavingEducation}
+                className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer"
               >
-                {editingDegreeId ? (
+                {isSavingEducation ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{editingDegreeId ? "ડિગ્રી સુધારી રહ્યા છીએ..." : "ડિગ્રી ઉમેરી રહ્યા છીએ..."}</span>
+                  </>
+                ) : editingDegreeId ? (
                   <>
                     <Save className="w-4 h-4" />
                     <span>ડિગ્રી સુધારો (Update Degree)</span>
@@ -3989,10 +4078,20 @@ export default function ProfilePage() {
           <div className="flex justify-end pt-4 border-t border-ivory-200">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2"
+              disabled={isSavingPrivacy}
+              className="px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2"
             >
-              <Save className="w-4 h-4" />
-              <span>ગોપનીયતા સેટિંગ્સ સાચવો</span>
+              {isSavingPrivacy ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>સાચવી રહ્યા છીએ...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>ગોપનીયતા સેટિંગ્સ સાચવો</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -4356,10 +4455,20 @@ export default function ProfilePage() {
             <div className="flex justify-end pt-3 border-t border-ivory-200">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+                disabled={isSavingMatrimony}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <Save className="w-4 h-4" />
-                <span>મેટ્રિમોની પ્રોફાઇલ સાચવો</span>
+                {isSavingMatrimony ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>સાચવી રહ્યા છીએ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>મેટ્રિમોની પ્રોફાઇલ સાચવો</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -4832,10 +4941,20 @@ export default function ProfilePage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-gradient-to-r from-saffron-600 to-amber-600 hover:from-saffron-700 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  disabled={isSavingAdvertisement}
+                  className="px-6 py-2 bg-gradient-to-r from-saffron-600 to-amber-600 hover:from-saffron-700 hover:to-amber-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Megaphone className="w-3.5 h-3.5" />
-                  <span>જાહેરાત સબમિટ કરો (Submit for Approval)</span>
+                  {isSavingAdvertisement ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>સબમિટ થઈ રહ્યું છે...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Megaphone className="w-3.5 h-3.5" />
+                      <span>જાહેરાત સબમિટ કરો (Submit for Approval)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

@@ -20,6 +20,7 @@ import {
   Filter,
   Lock,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -35,6 +36,7 @@ export default function JobsPage() {
   const [viewMode, setViewMode] = useState<"members" | "openings" | "all">("members");
   const [showAddModal, setShowAddModal] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isSubmittingJob, setIsSubmittingJob] = useState(false);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -103,47 +105,53 @@ export default function JobsPage() {
     });
   }, [jobPostings, searchQuery, selectedType]);
 
-  const handlePostJob = (e: React.FormEvent) => {
+  const handlePostJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !companyName.trim() || !contactPhone.trim()) {
       alert("કૃપા કરીને નોકરીનું શીર્ષક, કંપનીનું નામ અને સંપર્ક નંબર ભરો.");
       return;
     }
 
-    addJobPosting({
-      title: title.trim(),
-      company_name: companyName.trim(),
-      category,
-      job_type: jobType,
-      city: city.trim(),
-      salary_range: salaryRange.trim() || undefined,
-      experience: experience.trim() || undefined,
-      description: description.trim(),
-      contact_person: contactPerson.trim() || "સંચાલક",
-      contact_phone: contactPhone.trim(),
-      contact_email: contactEmail.trim() || undefined,
-      posted_by: currentUser?.id,
-      status: "active",
-    });
+    setIsSubmittingJob(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      addJobPosting({
+        title: title.trim(),
+        company_name: companyName.trim(),
+        category,
+        job_type: jobType,
+        city: city.trim(),
+        salary_range: salaryRange.trim() || undefined,
+        experience: experience.trim() || undefined,
+        description: description.trim(),
+        contact_person: contactPerson.trim() || "સંચાલક",
+        contact_phone: contactPhone.trim(),
+        contact_email: contactEmail.trim() || undefined,
+        posted_by: currentUser?.id,
+        status: "active",
+      });
 
-    if (currentUser) {
-      addLog(
-        "નવી નોકરીની જાહેરાત",
-        title,
-        `કંપની: ${companyName}, શહેર: ${city}`,
-        currentUser.name,
-        currentUser.role || "member"
-      );
+      if (currentUser) {
+        addLog(
+          "નવી નોકરીની જાહેરાત",
+          title,
+          `કંપની: ${companyName}, શહેર: ${city}`,
+          currentUser.name,
+          currentUser.role || "member"
+        );
+      }
+
+      setShowAddModal(false);
+      setTitle("");
+      setCompanyName("");
+      setSalaryRange("");
+      setExperience("");
+      setDescription("");
+      setSuccessToast("નોકરીની જાહેરાત સફળતાપૂર્વક મૂકવામાં આવી!");
+      setTimeout(() => setSuccessToast(null), 4000);
+    } finally {
+      setIsSubmittingJob(false);
     }
-
-    setShowAddModal(false);
-    setTitle("");
-    setCompanyName("");
-    setSalaryRange("");
-    setExperience("");
-    setDescription("");
-    setSuccessToast("નોકરીની જાહેરાત સફળતાપૂર્વક મૂકવામાં આવી!");
-    setTimeout(() => setSuccessToast(null), 4000);
   };
 
   return (

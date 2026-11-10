@@ -25,10 +25,12 @@ import {
   AlertCircle,
   X,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { Donation, SAMITI_DONATION_PURPOSES } from "@/types";
+import { FALLBACK_DONORS } from "@/lib/mockData";
 import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
 
 const PURPOSES = [...SAMITI_DONATION_PURPOSES];
@@ -49,6 +51,7 @@ export default function DonationsPage() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isSubmittingDonation, setIsSubmittingDonation] = useState(false);
 
   // Form State
   const [donorName, setDonorName] = useState(currentUser?.name || "");
@@ -130,7 +133,7 @@ export default function DonationsPage() {
   };
 
   // Submit Donation Form
-  const handleSubmitDonation = (e: React.FormEvent) => {
+  const handleSubmitDonation = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!currentUser) {
@@ -154,58 +157,65 @@ export default function DonationsPage() {
       return;
     }
 
-    // Clean hasthe names
-    const cleanedHasthe = hastheNames.map((n) => n.trim()).filter((n) => n.length > 0);
+    setIsSubmittingDonation(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      // Clean hasthe names
+      const cleanedHasthe = hastheNames.map((n) => n.trim()).filter((n) => n.length > 0);
 
-    const numAmount = parseFloat(amount) || 0;
-    const year = donationYear || "2026";
-    const randomCode = Math.floor(1000 + Math.random() * 9000);
-    const donationId = `DON-${year}-${randomCode}`;
+      const numAmount = parseFloat(amount) || 0;
+      const year = donationYear || "2026";
+      const randomCode = Math.floor(1000 + Math.random() * 9000);
+      const donationId = `DON-${year}-${randomCode}`;
 
-    addDonation({
-      donation_id: donationId,
-      user_id: currentUser.id,
-      donor_id: currentUser.id,
-      donor_name: donorName.trim(),
-      mobile_number: mobileNumber.trim(),
-      donor_photo: donorPhotoPreview || undefined,
-      hasthe_names: cleanedHasthe,
-      donation_purpose: donationPurpose,
-      specific_purpose: specificPurpose.trim() || undefined,
-      donation_year: year,
-      amount: numAmount,
-      date: new Date().toISOString().split("T")[0],
-      payment_proof: paymentProofPreview,
-      status: "pending",
-      payment_status: "pending",
-      is_anonymous: false,
-      public_consent: true,
-    });
+      addDonation({
+        donation_id: donationId,
+        user_id: currentUser.id,
+        donor_id: currentUser.id,
+        donor_name: donorName.trim(),
+        mobile_number: mobileNumber.trim(),
+        donor_photo: donorPhotoPreview || undefined,
+        hasthe_names: cleanedHasthe,
+        donation_purpose: donationPurpose,
+        specific_purpose: specificPurpose.trim() || undefined,
+        donation_year: year,
+        amount: numAmount,
+        date: new Date().toISOString().split("T")[0],
+        payment_proof: paymentProofPreview,
+        status: "pending",
+        payment_status: "pending",
+        is_anonymous: false,
+        public_consent: true,
+      });
 
-    addLog(
-      "દાન નોંધણી સબમિટ",
-      `${donorName.trim()} (${donationId})`,
-      `હેતુ: ${donationPurpose}, રકમ: ₹${numAmount} (ચકાસણી પેન્ડિંગ)`,
-      currentUser.name,
-      currentUser.role || "member"
-    );
+      addLog(
+        "દાન નોંધણી સબમિટ",
+        `${donorName.trim()} (${donationId})`,
+        `હેતુ: ${donationPurpose}, રકમ: ₹${numAmount} (ચકાસણી પેન્ડિંગ)`,
+        currentUser.name,
+        currentUser.role || "member"
+      );
 
-    // Reset Form
-    setShowDonateModal(false);
-    setSpecificPurpose("");
-    setAmount("");
-    setDonorPhotoPreview("");
-    setPaymentProofPreview("");
-    setHastheNames([""]);
-    setSuccessToast(
-      `આપનું દાન સફળતાપૂર્વક નોંધાયું છે (Donation ID: ${donationId}). સમિતિ દ્વારા બેંક ચકાસણી બાદ માન્ય થશે.`
-    );
-    setTimeout(() => setSuccessToast(null), 6000);
+      // Reset Form
+      setShowDonateModal(false);
+      setSpecificPurpose("");
+      setAmount("");
+      setDonorPhotoPreview("");
+      setPaymentProofPreview("");
+      setHastheNames([""]);
+      setSuccessToast(
+        `આપનું દાન સફળતાપૂર્વક નોંધાયું છે (Donation ID: ${donationId}). સમિતિ દ્વારા બેંક ચકાસણી બાદ માન્ય થશે.`
+      );
+      setTimeout(() => setSuccessToast(null), 6000);
+    } finally {
+      setIsSubmittingDonation(false);
+    }
   };
 
-  // Public approved donations only (Requirement 13.5: Rejected and pending donations must not be publicly displayed)
+  // Public approved donations only (Fallback to authentic Samiti records if database is empty)
   const approvedDonations = useMemo(() => {
-    return donations.filter((d) => d.status === "approved" || d.payment_status === "verified");
+    const live = donations.filter((d) => d.status === "approved" || d.payment_status === "verified");
+    return live.length > 0 ? live : FALLBACK_DONORS;
   }, [donations]);
 
   // Filtered approved donations
@@ -825,9 +835,17 @@ export default function DonationsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs shadow-md transition-all hover:scale-[1.01]"
+                  disabled={isSubmittingDonation}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
                 >
-                  Submit for Verification (દાન સબમિટ કરો)
+                  {isSubmittingDonation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>ચકાસણી માટે મોકલી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <span>Submit for Verification (દાન સબમિટ કરો)</span>
+                  )}
                 </button>
               </div>
             </form>

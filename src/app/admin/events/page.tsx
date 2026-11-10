@@ -17,6 +17,7 @@ import {
   X,
   Image as ImageIcon,
   Video,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -29,6 +30,8 @@ export default function AdminEventsPage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [processingEventId, setProcessingEventId] = useState<string | null>(null);
 
   // Add Event Form State
   const [organizerSource, setOrganizerSource] = useState<"samiti" | "member" | "custom">("samiti");
@@ -62,52 +65,58 @@ export default function AdminEventsPage() {
     setStatus("upcoming");
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !date) {
       alert("કૃપા કરીને કાર્યક્રમનું શીર્ષક અને તારીખ દાખલ કરો.");
       return;
     }
 
-    // Determine organizer label
-    let finalOrganizer = "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા";
-    if (organizerSource === "member") {
-      finalOrganizer = selectedMember
-        ? `શ્રી ${selectedMember.name}${selectedMember.city ? ` (${selectedMember.city})` : ""}`
-        : "સમાજ સભ્ય";
-    } else if (organizerSource === "custom") {
-      finalOrganizer = customOrganizer.trim() || "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા";
+    setIsCreatingEvent(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      // Determine organizer label
+      let finalOrganizer = "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા";
+      if (organizerSource === "member") {
+        finalOrganizer = selectedMember
+          ? `શ્રી ${selectedMember.name}${selectedMember.city ? ` (${selectedMember.city})` : ""}`
+          : "સમાજ સભ્ય";
+      } else if (organizerSource === "custom") {
+        finalOrganizer = customOrganizer.trim() || "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા";
+      }
+
+      const eventYear = new Date(date).getFullYear() || new Date().getFullYear();
+
+      addEvent({
+        title: title.trim(),
+        description: description.trim(),
+        date,
+        time: time.trim() || "સવારે ૯:૦૦",
+        location: location.trim() || "સમાજ વાડી",
+        city: city.trim() || "મોડાસા",
+        cover_image: coverImageUrl.trim() || null, // null if not provided (NO dummy unsplash image!)
+        gallery: [],
+        video_url: videoUrl.trim() || undefined,
+        status,
+        year: eventYear,
+        organizer: finalOrganizer,
+      });
+
+      addLog(
+        "કાર્યક્રમ પ્રકાશિત (એડમિન)",
+        title.trim(),
+        `તારીખ: ${date}, આયોજક: ${finalOrganizer}, સ્થળ: ${location.trim()}`,
+        currentUser?.name || "એડમિન",
+        currentUser?.role || "secretary"
+      );
+
+      setShowAddModal(false);
+      resetForm();
+      setSuccessToast(`"${title.trim()}" કાર્યક્રમ સફળતાપૂર્વક ઉમેરાઈ ગયો!`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsCreatingEvent(false);
     }
-
-    const eventYear = new Date(date).getFullYear() || new Date().getFullYear();
-
-    addEvent({
-      title: title.trim(),
-      description: description.trim(),
-      date,
-      time: time.trim() || "સવારે ૯:૦૦",
-      location: location.trim() || "સમાજ વાડી",
-      city: city.trim() || "મોડાસા",
-      cover_image: coverImageUrl.trim() || null, // null if not provided (NO dummy unsplash image!)
-      gallery: [],
-      video_url: videoUrl.trim() || undefined,
-      status,
-      year: eventYear,
-      organizer: finalOrganizer,
-    });
-
-    addLog(
-      "કાર્યક્રમ પ્રકાશિત (એડમિન)",
-      title.trim(),
-      `તારીખ: ${date}, આયોજક: ${finalOrganizer}, સ્થળ: ${location.trim()}`,
-      currentUser?.name || "એડમિન",
-      currentUser?.role || "secretary"
-    );
-
-    setShowAddModal(false);
-    resetForm();
-    setSuccessToast(`"${title.trim()}" કાર્યક્રમ સફળતાપૂર્વક ઉમેરાઈ ગયો!`);
-    setTimeout(() => setSuccessToast(null), 3500);
   };
 
   return (
@@ -229,24 +238,35 @@ export default function AdminEventsPage() {
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <button
-                      onClick={() => {
+                      disabled={processingEventId === evt.id}
+                      onClick={async () => {
                         if (confirm(`શું તમે આ કાર્યક્રમ દૂર કરવા માંગો છો? (${evt.title})`)) {
-                          deleteEvent(evt.id);
-                          addLog(
-                            "કાર્યક્રમ ડિલીટ",
-                            evt.title,
-                            `તારીખ: ${evt.date}`,
-                            currentUser?.name || "એડમિન",
-                            currentUser?.role || "secretary"
-                          );
-                          setSuccessToast("કાર્યક્રમ કાઢી નાખવામાં આવ્યો.");
-                          setTimeout(() => setSuccessToast(null), 3000);
+                          setProcessingEventId(evt.id);
+                          try {
+                            await new Promise((r) => setTimeout(r, 450));
+                            deleteEvent(evt.id);
+                            addLog(
+                              "કાર્યક્રમ ડિલીટ",
+                              evt.title,
+                              `તારીખ: ${evt.date}`,
+                              currentUser?.name || "એડમિન",
+                              currentUser?.role || "secretary"
+                            );
+                            setSuccessToast("કાર્યક્રમ કાઢી નાખવામાં આવ્યો.");
+                            setTimeout(() => setSuccessToast(null), 3000);
+                          } finally {
+                            setProcessingEventId(null);
+                          }
                         }
                       }}
-                      className="p-2 text-charcoal-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                      className="p-2 text-charcoal-400 hover:text-red-600 disabled:opacity-50 rounded-xl hover:bg-red-50 transition-colors"
                       title="કાર્યક્રમ ડિલીટ કરો"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {processingEventId === evt.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -582,10 +602,20 @@ export default function AdminEventsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
+                  disabled={isCreatingEvent}
+                  className="px-6 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>કાર્યક્રમ સાચવો & પ્રકાશિત કરો</span>
+                  {isCreatingEvent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>કાર્યક્રમ સાચવી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>કાર્યક્રમ સાચવો & પ્રકાશિત કરો</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

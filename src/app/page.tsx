@@ -30,12 +30,14 @@ import {
   UserPlus,
   LogOut,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { AutoScrollSlider } from "@/components/AutoScrollSlider";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Donation, Announcement, BusinessItem, CommunityEvent, DEFAULT_BUSINESS_COVER } from "@/types";
+import { FALLBACK_ANNOUNCEMENTS, FALLBACK_DONORS } from "@/lib/mockData";
 
 export default function HomePage() {
   const {
@@ -116,10 +118,15 @@ export default function HomePage() {
   const totalEvents = events.length;
   const upcomingEvents = events.filter((e) => e.status === "upcoming");
 
-  // Filter approved donors for Donors List (Section 1)
+  // Filter approved donors for Donors List
   const approvedDonors = donations.filter(
     (d) => d.status === "approved" || d.payment_status === "verified"
   );
+
+  // Fallbacks to authentic Samiti records if database collections are unpopulated
+  const displayAnnouncements = announcements.length > 0 ? announcements : FALLBACK_ANNOUNCEMENTS;
+  const displayDonors = approvedDonors.length > 0 ? approvedDonors : FALLBACK_DONORS;
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   // Requirement 3 & 4: Only APPROVED advertisements on homepage with auto-scrolling carousel
   const approvedAds = advertisements.filter((a) => a.status === "approved");
@@ -793,48 +800,72 @@ export default function HomePage() {
 
       {/* 1. મહત્વપૂર્ણ સૂચનાઓ (Important Notices - Continuous Horizontal Auto-Scroll) */}
       <AutoScrollSlider<Announcement>
-        items={announcements}
+        items={displayAnnouncements}
         speedSeconds={45}
         direction="left"
         icon={<Megaphone className="w-5 h-5 text-saffron-600" />}
         title="મહત્વપૂર્ણ સૂચનાઓ (Important Notices)"
         subtitle="સમાજના પરિવારો માટે નવીનતમ અધિકૃત સૂચનાઓ અને મહત્વની જાહેરાતો. (વાંચવા માટે હોવર કરો)"
         headerRight={
-          <Link
-            href="/advertisements"
-            className="px-3.5 py-1.5 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 text-xs font-bold rounded-xl border border-saffron-200 transition-colors flex items-center gap-1"
-          >
-            <span>બધી સૂચનાઓ</span>
-            <ChevronRight className="w-3 h-3" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-saffron-800 bg-saffron-50 border border-saffron-200 px-2.5 py-1 rounded-xl">
+              કુલ {displayAnnouncements.length} સૂચનાઓ
+            </span>
+          </div>
         }
         renderItem={(item) => (
-          <div className="w-[300px] sm:w-[340px] md:w-[380px] bg-white rounded-3xl border border-ivory-300 p-4 sm:p-5 shadow-card hover:shadow-hover transition-all flex flex-col justify-between h-[230px] group">
+          <div
+            onClick={() => setSelectedAnnouncement(item)}
+            className="w-[310px] sm:w-[340px] md:w-[360px] min-h-[250px] bg-white rounded-3xl border border-ivory-300 p-5 shadow-card hover:shadow-xl transition-all duration-300 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
+          >
+            {/* Top accent bar */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-1.5 ${
+                item.is_urgent
+                  ? "bg-gradient-to-r from-red-500 via-rose-500 to-amber-500"
+                  : "bg-gradient-to-r from-saffron-500 via-amber-400 to-saffron-600"
+              }`}
+            />
+
             <div>
-              <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center justify-between gap-2 mb-2.5">
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
                     item.is_urgent
-                      ? "bg-red-100 text-red-800 border border-red-200 animate-pulse"
-                      : "bg-saffron-100 text-saffron-800"
+                      ? "bg-red-50 text-red-700 border border-red-200 animate-pulse"
+                      : "bg-saffron-50 text-saffron-800 border border-saffron-200"
                   }`}
                 >
-                  {item.category}
+                  {item.is_urgent ? (
+                    <AlertCircle className="w-3 h-3 text-red-600 flex-shrink-0" />
+                  ) : (
+                    <Megaphone className="w-3 h-3 text-saffron-600 flex-shrink-0" />
+                  )}
+                  <span>{item.category}</span>
                 </span>
-                <span className="text-[11px] text-charcoal-500 font-medium">{item.date}</span>
+                <span className="text-[11px] text-charcoal-500 font-semibold flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-charcoal-400" />
+                  <span>{item.date}</span>
+                </span>
               </div>
-              <h3 className="font-bold text-xs sm:text-sm text-charcoal-900 mb-1.5 leading-snug line-clamp-2 group-hover:text-saffron-700 transition-colors">
+
+              <h3 className="font-black text-sm sm:text-base text-charcoal-900 group-hover:text-saffron-700 transition-colors line-clamp-2 leading-snug mb-2">
                 {item.title}
               </h3>
+
               <p className="text-xs text-charcoal-600 line-clamp-3 leading-relaxed">
                 {item.body}
               </p>
             </div>
 
-            <div className="pt-2.5 mt-2 border-t border-ivory-200 flex items-center justify-between text-[11px] text-charcoal-500">
-              <span className="truncate">સૂચક: {item.author}</span>
-              <span className="font-bold text-saffron-700 cursor-pointer hover:underline flex-shrink-0">
-                વાંચો →
+            <div className="pt-3 mt-3 border-t border-ivory-200 flex items-center justify-between text-xs">
+              <span className="truncate text-charcoal-600 font-medium flex items-center gap-1.5 text-[11px]">
+                <User className="w-3 h-3 text-saffron-600 flex-shrink-0" />
+                <span className="truncate">{item.author}</span>
+              </span>
+              <span className="text-[11px] font-extrabold text-saffron-700 group-hover:text-saffron-800 bg-saffron-50 group-hover:bg-saffron-100 border border-saffron-200 px-2.5 py-1 rounded-xl transition-colors flex items-center gap-1 flex-shrink-0 shadow-2xs">
+                <span>વિગત જુઓ</span>
+                <ArrowRight className="w-3 h-3" />
               </span>
             </div>
           </div>
@@ -868,62 +899,78 @@ export default function HomePage() {
           </div>
         }
         renderItem={(biz) => (
-          <div className="w-[280px] sm:w-[310px] md:w-[330px] bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-hover transition-all flex flex-col group h-[310px]">
-            <div className="relative aspect-[16/10] overflow-hidden bg-ivory-200 flex-shrink-0">
-              <img
-                src={
-                  biz.cover_url && !biz.cover_url.includes("images.unsplash.com/photo-1558769132")
-                    ? biz.cover_url
-                    : DEFAULT_BUSINESS_COVER
-                }
-                alt={biz.name}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = DEFAULT_BUSINESS_COVER;
-                }}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+          <div className="w-[300px] sm:w-[330px] md:w-[350px] min-h-[380px] bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-xl transition-all duration-300 flex flex-col group justify-between">
+            {/* Header banner or cover image */}
+            <div className="relative h-36 w-full overflow-hidden bg-ivory-100 flex-shrink-0 border-b border-ivory-200">
+              {biz.cover_url && !biz.cover_url.includes("unsplash") && !biz.cover_url.includes("placeholder") ? (
+                <img
+                  src={biz.cover_url}
+                  alt={biz.name}
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-saffron-100/70 via-amber-50 to-forest-50 flex items-center justify-center relative">
+                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-saffron-200 flex items-center justify-center text-saffron-700 group-hover:scale-110 transition-transform duration-300">
+                    <Briefcase className="w-6 h-6" />
+                  </div>
+                </div>
+              )}
+
               {biz.is_featured && (
-                <span className="absolute top-2 left-2 bg-gradient-to-r from-saffron-600 to-saffron-700 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                <span className="absolute top-2.5 left-2.5 bg-gradient-to-r from-saffron-600 to-amber-600 text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5" />
                   ફીચર્ડ
                 </span>
               )}
-              <span className="absolute bottom-2 right-2 bg-white/95 backdrop-blur-2xs text-charcoal-800 text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-2xs">
+              <span className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-2xs">
                 {biz.category}
               </span>
             </div>
 
-            <div className="p-3.5 flex-1 flex flex-col justify-between">
+            {/* Card Content with ample spacing */}
+            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
               <div>
-                <h3 className="font-bold text-xs sm:text-sm text-charcoal-900 group-hover:text-saffron-700 transition-colors line-clamp-1">
+                <h3 className="font-extrabold text-sm sm:text-base text-charcoal-900 group-hover:text-saffron-700 transition-colors line-clamp-1 leading-snug">
                   {biz.name}
                 </h3>
-                <p className="text-[10px] text-charcoal-500 mt-0.5 flex items-center gap-1">
-                  <Users className="w-2.5 h-2.5 text-saffron-600 flex-shrink-0" />
-                  <span>સંચાલક: {biz.owner_name}</span>
-                </p>
-                <p className="text-[10px] text-charcoal-600 mt-0.5 flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5 text-forest-700 flex-shrink-0" />
-                  <span className="truncate">{biz.city}</span>
-                </p>
-                <p className="text-[11px] text-charcoal-600 mt-1 line-clamp-2 leading-relaxed">
-                  {biz.description}
-                </p>
+
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-charcoal-600 flex items-center gap-1.5 font-medium">
+                    <User className="w-3.5 h-3.5 text-saffron-600 flex-shrink-0" />
+                    <span className="truncate">સંચાલક: <strong className="text-charcoal-800">{biz.owner_name}</strong></span>
+                  </p>
+                  <p className="text-xs text-charcoal-600 flex items-center gap-1.5 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-forest-700 flex-shrink-0" />
+                    <span className="truncate">{biz.address ? `${biz.address}, ${biz.city}` : biz.city}</span>
+                  </p>
+                </div>
+
+                <div className="mt-2.5 p-2.5 bg-ivory-50/80 rounded-xl border border-ivory-200">
+                  <p className="text-xs text-charcoal-600 line-clamp-2 leading-relaxed">
+                    {biz.description || "અડાઆઠમ દરજી સમાજના સભ્યનો વિશ્વસનીય વ્યવસાય."}
+                  </p>
+                </div>
               </div>
 
-              <div className="pt-2 mt-2 border-t border-ivory-200 flex items-center justify-between text-xs">
+              {/* Action Buttons */}
+              <div className="pt-3 mt-3 border-t border-ivory-200 flex items-center justify-between gap-2">
                 <a
                   href={`tel:${biz.phone}`}
-                  className="flex items-center gap-1 text-forest-800 font-bold hover:underline text-[11px]"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 font-bold text-xs transition-colors shadow-2xs"
+                  title={`સંપર્ક: ${biz.phone}`}
                 >
-                  <Phone className="w-3 h-3" />
-                  <span>સંપર્ક</span>
+                  <Phone className="w-3.5 h-3.5 text-forest-700" />
+                  <span>{biz.phone || "સંપર્ક કરો"}</span>
                 </a>
                 <Link
                   href={`/businesses/${biz.id}`}
-                  className="text-saffron-700 font-bold hover:underline text-[11px]"
+                  className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-2xs transition-colors"
                 >
-                  વિગતો →
+                  <span>વિગતો જુઓ</span>
+                  <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
             </div>
@@ -933,7 +980,7 @@ export default function HomePage() {
 
       {/* 3. દાતાઓની યાદી (Donors List - Continuous Horizontal Auto-Scroll) */}
       <AutoScrollSlider<Donation>
-        items={approvedDonors}
+        items={displayDonors}
         speedSeconds={28}
         direction="left"
         icon={<Heart className="w-5 h-5 text-rose-600 fill-rose-100" />}
@@ -945,7 +992,7 @@ export default function HomePage() {
               href="/donations"
               className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 transition-colors flex items-center gap-1"
             >
-              <span>તમામ દાતાઓ ({approvedDonors.length})</span>
+              <span>તમામ દાતાઓ ({displayDonors.length})</span>
               <ChevronRight className="w-3 h-3" />
             </Link>
             {currentUser && (
@@ -959,17 +1006,17 @@ export default function HomePage() {
           </div>
         }
         renderItem={(donor) => (
-          <div className="w-[280px] sm:w-[320px] bg-white rounded-3xl border border-ivory-300 p-4 sm:p-5 shadow-card hover:shadow-hover transition-all flex flex-col justify-between h-[210px] relative overflow-hidden group">
+          <div className="w-[300px] sm:w-[330px] md:w-[350px] min-h-[250px] bg-white rounded-3xl border border-ivory-300 p-5 shadow-card hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative overflow-hidden group">
             {/* Top Accent Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 via-saffron-500 to-amber-500" />
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 via-amber-500 to-forest-600" />
 
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <span className="text-[10px] font-extrabold bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
                   <Award className="w-3 h-3 text-rose-600" />
                   <span>વર્ષ {donor.donation_year}</span>
                 </span>
-                <span className="text-[10px] font-bold text-charcoal-400">
+                <span className="text-[10px] font-mono font-bold text-charcoal-400 bg-ivory-100 px-2 py-0.5 rounded-md">
                   {donor.donation_id}
                 </span>
               </div>
@@ -985,31 +1032,93 @@ export default function HomePage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-extrabold text-xs sm:text-sm text-charcoal-900 truncate group-hover:text-rose-700 transition-colors">
+                  <h4 className="font-black text-sm sm:text-base text-charcoal-900 truncate group-hover:text-rose-700 transition-colors">
                     {donor.donor_name}
                   </h4>
-                  <p className="text-[11px] text-charcoal-500 truncate mt-0.5">
-                    {donor.donation_purpose}
-                  </p>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded-md border border-rose-100 mt-1">
+                    <Heart className="w-3 h-3 text-rose-600 fill-rose-100 flex-shrink-0" />
+                    <span className="truncate">{donor.donation_purpose}</span>
+                  </span>
                 </div>
               </div>
 
               {donor.hasthe_names && donor.hasthe_names.length > 0 && (
-                <p className="text-[10px] text-charcoal-500 mt-2 truncate bg-ivory-50 px-2 py-1 rounded-lg border border-ivory-200">
-                  હસ્તે: <strong>{donor.hasthe_names.join(", ")}</strong>
+                <p className="text-[11px] text-charcoal-600 mt-2.5 truncate bg-ivory-50 px-2.5 py-1.5 rounded-xl border border-ivory-200">
+                  હસ્તે: <strong className="text-charcoal-800">{donor.hasthe_names.join(", ")}</strong>
                 </p>
               )}
             </div>
 
-            <div className="pt-2 mt-2 border-t border-ivory-200 flex items-center justify-between">
-              <span className="text-xs font-bold text-charcoal-600">દાન રાશિ:</span>
-              <span className="text-sm font-black text-forest-800 bg-forest-50 border border-forest-200 px-2.5 py-0.5 rounded-lg shadow-2xs font-mono">
+            <div className="pt-3 mt-3 border-t border-ivory-200 flex items-center justify-between">
+              <span className="text-xs font-bold text-charcoal-600 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>દાન રાશિ:</span>
+              </span>
+              <span className="text-sm sm:text-base font-black text-forest-800 bg-forest-50 border border-forest-200 px-3 py-1 rounded-xl shadow-2xs font-mono tracking-tight">
                 ₹{donor.amount.toLocaleString("en-IN")}
               </span>
             </div>
           </div>
         )}
       />
+
+      {/* Announcement Detail Reader Modal */}
+      {selectedAnnouncement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-ivory-300 p-6 space-y-4 relative">
+            <button
+              onClick={() => setSelectedAnnouncement(null)}
+              className="absolute top-4 right-4 p-2 text-charcoal-400 hover:text-charcoal-800 rounded-full hover:bg-ivory-100 transition-colors"
+              title="બંધ કરો"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                  selectedAnnouncement.is_urgent
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-saffron-50 text-saffron-800 border border-saffron-200"
+                }`}
+              >
+                {selectedAnnouncement.is_urgent ? (
+                  <AlertCircle className="w-3 h-3 text-red-600 flex-shrink-0" />
+                ) : (
+                  <Megaphone className="w-3 h-3 text-saffron-600 flex-shrink-0" />
+                )}
+                <span>{selectedAnnouncement.category}</span>
+              </span>
+              <span className="text-xs text-charcoal-500 font-semibold flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-charcoal-400" />
+                <span>{selectedAnnouncement.date}</span>
+              </span>
+            </div>
+
+            <h3 className="font-black text-lg text-charcoal-900 leading-snug">
+              {selectedAnnouncement.title}
+            </h3>
+
+            <div className="p-4 bg-ivory-50 rounded-2xl border border-ivory-200 text-sm text-charcoal-700 leading-relaxed whitespace-pre-line">
+              {selectedAnnouncement.body}
+            </div>
+
+            <div className="pt-2 border-t border-ivory-200 flex items-center justify-between text-xs text-charcoal-500">
+              <span className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-saffron-600" />
+                <span>સૂચક / જાહેરકર્તા: <strong>{selectedAnnouncement.author}</strong></span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedAnnouncement(null)}
+                className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 text-white font-bold rounded-xl transition-colors text-xs"
+              >
+                સમજાઈ ગયું (બંધ કરો)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         </>
       )}
       </div>

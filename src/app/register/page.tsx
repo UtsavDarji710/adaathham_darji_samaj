@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
@@ -458,10 +459,19 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-4 text-sm"
+              className="w-full py-3.5 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 disabled:opacity-50 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-4 text-sm"
             >
-              <span>{loading ? "ઓટીપી મોકલી રહ્યા છીએ..." : "ઓટીપી મેળવો અને આગળ વધો"}</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>ઓટીપી મોકલી રહ્યા છીએ...</span>
+                </>
+              ) : (
+                <>
+                  <span>ઓટીપી મેળવો અને આગળ વધો</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}
@@ -537,8 +547,17 @@ export default function RegisterPage() {
               disabled={loading || otp.length !== 6}
               className="w-full py-3.5 bg-forest-800 hover:bg-forest-900 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-4 text-sm disabled:opacity-50"
             >
-              <span>{loading ? "ચકાસણી ચાલુ છે..." : "ઓટીપી ચકાસો અને નોંધણી પૂર્ણ કરો"}</span>
-              <CheckCircle className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>ચકાસણી ચાલુ છે...</span>
+                </>
+              ) : (
+                <>
+                  <span>ઓટીપી ચકાસો અને નોંધણી પૂર્ણ કરો</span>
+                  <CheckCircle className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}

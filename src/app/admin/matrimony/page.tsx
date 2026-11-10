@@ -26,6 +26,7 @@ import {
   ExternalLink,
   Lock,
   Globe,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -47,6 +48,7 @@ export default function AdminMatrimonyPage() {
 
   const [selectedCandidate, setSelectedCandidate] = useState<Member | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [processingCandidateId, setProcessingCandidateId] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -135,66 +137,72 @@ export default function AdminMatrimonyPage() {
   });
 
   // Toggle Public Listing
-  const handleTogglePublicListing = (candidate: Member) => {
+  const handleTogglePublicListing = async (candidate: Member) => {
     if (!isMemberUnmarried(candidate)) {
       showToast("નિયમ મુજબ માત્ર અપરણિત સભ્યો જ પબ્લિક લિસ્ટિંગમાં મૂકી શકાય.");
       return;
     }
 
-    const currentPublic = candidate.matrimony?.is_public_listing ?? false;
-    const newPublic = !currentPublic;
+    setProcessingCandidateId(candidate.id);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const currentPublic = candidate.matrimony?.is_public_listing ?? false;
+      const newPublic = !currentPublic;
 
-    const defaultPrivacy = {
-      show_photo: true,
-      show_name: true,
-      show_age: true,
-      show_native_place: true,
-      show_education: true,
-      show_occupation: true,
-      show_contact: true,
-    };
+      const defaultPrivacy = {
+        show_photo: true,
+        show_name: true,
+        show_age: true,
+        show_native_place: true,
+        show_education: true,
+        show_occupation: true,
+        show_contact: true,
+      };
 
-    const updatedMatrimony: MatrimonyProfile = {
-      ...(candidate.matrimony || {
+      const updatedMatrimony: MatrimonyProfile = {
+        ...(candidate.matrimony || {
+          is_available: true,
+          privacy: defaultPrivacy,
+        }),
         is_available: true,
-        privacy: defaultPrivacy,
-      }),
-      is_available: true,
-      is_public_listing: newPublic,
-      is_saved: true,
-      privacy: candidate.matrimony?.privacy || defaultPrivacy,
-    };
+        is_public_listing: newPublic,
+        is_saved: true,
+        privacy: candidate.matrimony?.privacy || defaultPrivacy,
+      };
 
-    updateMember(candidate.id, {
-      is_available_for_matrimony: true,
-      matrimony: updatedMatrimony,
-    });
-
-    addLog(
-      "મેટ્રિમોની પબ્લિક સ્થિતિ બદલી",
-      candidate.name,
-      `પબ્લિક લિસ્ટિંગ સ્થિતિ: ${newPublic ? "સક્રિય (Active)" : "નિષ્ક્રિય (Private)"}`,
-      currentUser?.name || "એડમિન",
-      currentUser?.role || "admin"
-    );
-
-    if (selectedCandidate?.id === candidate.id) {
-      setSelectedCandidate({
-        ...candidate,
+      updateMember(candidate.id, {
         is_available_for_matrimony: true,
         matrimony: updatedMatrimony,
       });
-    }
 
-    showToast(
-      `${candidate.name} ની પબ્લિક લિસ્ટિંગ સ્થિતિ: ${
-        newPublic ? "જાહેર (Public)" : "ખાનગી (Private)"
-      } કરવામાં આવી.`
-    );
+      addLog(
+        "મેટ્રિમોની પબ્લિક સ્થિતિ બદલી",
+        candidate.name,
+        `પબ્લિક લિસ્ટિંગ સ્થિતિ: ${newPublic ? "સક્રિય (Active)" : "નિષ્ક્રિય (Private)"}`,
+        currentUser?.name || "એડમિન",
+        currentUser?.role || "admin"
+      );
+
+      if (selectedCandidate?.id === candidate.id) {
+        setSelectedCandidate({
+          ...candidate,
+          is_available_for_matrimony: true,
+          matrimony: updatedMatrimony,
+        });
+      }
+
+      showToast(
+        `${candidate.name} ની પબ્લિક લિસ્ટિંગ સ્થિતિ: ${
+          newPublic ? "જાહેર (Public)" : "ખાનગી (Private)"
+        } કરવામાં આવી.`
+      );
+    } finally {
+      setProcessingCandidateId(null);
+    }
   };
 
   // Opt-out / Deactivate from Matrimony
-  const handleDeactivateMatrimony = (candidate: Member) => {
+  const handleDeactivateMatrimony = async (candidate: Member) => {
     if (
       !confirm(
         `શું તમે ખરેખર ${candidate.name} નું પ્રોફાઇલ મેટ્રિમોનીમાંથી હટાવવા માંગો છો?`
@@ -203,32 +211,38 @@ export default function AdminMatrimonyPage() {
       return;
     }
 
-    const updatedMatrimony = candidate.matrimony
-      ? {
-          ...candidate.matrimony,
-          is_available: false,
-          is_public_listing: false,
-        }
-      : undefined;
+    setProcessingCandidateId(candidate.id);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const updatedMatrimony = candidate.matrimony
+        ? {
+            ...candidate.matrimony,
+            is_available: false,
+            is_public_listing: false,
+          }
+        : undefined;
 
-    updateMember(candidate.id, {
-      is_available_for_matrimony: false,
-      matrimony: updatedMatrimony,
-    });
+      updateMember(candidate.id, {
+        is_available_for_matrimony: false,
+        matrimony: updatedMatrimony,
+      });
 
-    addLog(
-      "મેટ્રિમોની પ્રોફાઇલ હટાવી",
-      candidate.name,
-      "મેટ્રિમોની ઉપલબ્ધતા બંધ કરવામાં આવી.",
-      currentUser?.name || "એડમિન",
-      currentUser?.role || "admin"
-    );
+      addLog(
+        "મેટ્રિમોની પ્રોફાઇલ હટાવી",
+        candidate.name,
+        "મેટ્રિમોની ઉપલબ્ધતા બંધ કરવામાં આવી.",
+        currentUser?.name || "એડમિન",
+        currentUser?.role || "admin"
+      );
 
-    if (selectedCandidate?.id === candidate.id) {
-      setSelectedCandidate(null);
+      if (selectedCandidate?.id === candidate.id) {
+        setSelectedCandidate(null);
+      }
+
+      showToast(`${candidate.name} નું નામ મેટ્રિમોનીમાંથી હટાવી દેવામાં આવ્યું.`);
+    } finally {
+      setProcessingCandidateId(null);
     }
-
-    showToast(`${candidate.name} નું નામ મેટ્રિમોનીમાંથી હટાવી દેવામાં આવ્યું.`);
   };
 
   return (
@@ -590,8 +604,9 @@ export default function AdminMatrimonyPage() {
                           {/* Toggle Public Visibility (If unmarried) */}
                           {isUnmarried && (
                             <button
+                              disabled={processingCandidateId === cand.id}
                               onClick={() => handleTogglePublicListing(cand)}
-                              className={`p-1.5 rounded-lg transition-colors ${
+                              className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
                                 cand.matrimony?.is_public_listing
                                   ? "text-emerald-700 hover:bg-emerald-50"
                                   : "text-amber-700 hover:bg-amber-50"
@@ -602,7 +617,9 @@ export default function AdminMatrimonyPage() {
                                   : "પબ્લિક લિસ્ટિંગમાં સક્રિય કરો"
                               }
                             >
-                              {cand.matrimony?.is_public_listing ? (
+                              {processingCandidateId === cand.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-charcoal-600" />
+                              ) : cand.matrimony?.is_public_listing ? (
                                 <EyeOff className="w-4 h-4" />
                               ) : (
                                 <Globe className="w-4 h-4" />
@@ -612,11 +629,16 @@ export default function AdminMatrimonyPage() {
 
                           {/* Deactivate / Remove */}
                           <button
+                            disabled={processingCandidateId === cand.id}
                             onClick={() => handleDeactivateMatrimony(cand)}
-                            className="p-1.5 text-charcoal-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-charcoal-400 hover:text-red-600 disabled:opacity-50 hover:bg-red-50 rounded-lg transition-colors"
                             title="મેટ્રિમોનીમાંથી હટાવો"
                           >
-                            <X className="w-4 h-4" />
+                            {processingCandidateId === cand.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                            ) : (
+                              <X className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -798,24 +820,38 @@ export default function AdminMatrimonyPage() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-ivory-200">
               <button
                 type="button"
+                disabled={processingCandidateId === selectedCandidate.id}
                 onClick={() => handleDeactivateMatrimony(selectedCandidate)}
-                className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-red-700 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-red-700 hover:text-red-800 disabled:opacity-50 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors flex items-center justify-center gap-1.5"
               >
-                મેટ્રિમોનીમાંથી હટાવો
+                {processingCandidateId === selectedCandidate.id ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>હટાવી રહ્યા છીએ...</span>
+                  </>
+                ) : (
+                  <span>મેટ્રિમોનીમાંથી હટાવો</span>
+                )}
               </button>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 {isMemberUnmarried(selectedCandidate) && (
                   <button
                     type="button"
+                    disabled={processingCandidateId === selectedCandidate.id}
                     onClick={() => handleTogglePublicListing(selectedCandidate)}
-                    className={`w-full sm:w-auto px-5 py-2 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`w-full sm:w-auto px-5 py-2 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 ${
                       selectedCandidate.matrimony?.is_public_listing
                         ? "bg-amber-600 hover:bg-amber-700 text-white"
                         : "bg-emerald-700 hover:bg-emerald-800 text-white"
                     }`}
                   >
-                    {selectedCandidate.matrimony?.is_public_listing ? (
+                    {processingCandidateId === selectedCandidate.id ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>અપડેટ ચાલુ છે...</span>
+                      </>
+                    ) : selectedCandidate.matrimony?.is_public_listing ? (
                       <>
                         <EyeOff className="w-3.5 h-3.5" />
                         <span>ખાનગી કરો (Make Private)</span>

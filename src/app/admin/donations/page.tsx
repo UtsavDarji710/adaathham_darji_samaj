@@ -30,6 +30,7 @@ import {
   Receipt,
   Tag,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -65,6 +66,13 @@ export default function AdminDonationsPage() {
   const [activeFilter, setActiveFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Action Loading States
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [isAddingDonation, setIsAddingDonation] = useState(false);
+  const [isEditingDonation, setIsEditingDonation] = useState(false);
 
   // Modal States
   const [previewProofDonation, setPreviewProofDonation] = useState<Donation | null>(null);
@@ -168,18 +176,24 @@ export default function AdminDonationsPage() {
   });
 
   // Action: Approve
-  const handleApprove = (donation: Donation) => {
-    const adminName = currentUser?.name || "ખજાનચી શ્રી";
-    approveDonation(donation.id, adminName);
-    addLog(
-      "દાન ચુકવણી ચકાસણી & મંજૂરી",
-      `${donation.donor_name} (${donation.donation_id || donation.receipt_number})`,
-      `રકમ ₹${donation.amount} બેંક જમા થયાની ખરાઈ કરીને માન્ય કરવામાં આવી.`,
-      adminName,
-      currentUser?.role || "treasurer"
-    );
-    setSuccessToast(`"${donation.donor_name}" નું દાન સફળતાપૂર્વક મંજૂર કરવામાં આવ્યું!`);
-    setTimeout(() => setSuccessToast(null), 3500);
+  const handleApprove = async (donation: Donation) => {
+    setProcessingId(donation.id);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const adminName = currentUser?.name || "ખજાનચી શ્રી";
+      approveDonation(donation.id, adminName);
+      addLog(
+        "દાન ચુકવણી ચકાસણી & મંજૂરી",
+        `${donation.donor_name} (${donation.donation_id || donation.receipt_number})`,
+        `રકમ ₹${donation.amount} બેંક જમા થયાની ખરાઈ કરીને માન્ય કરવામાં આવી.`,
+        adminName,
+        currentUser?.role || "treasurer"
+      );
+      setSuccessToast(`"${donation.donor_name}" નું દાન સફળતાપૂર્વક મંજૂર કરવામાં આવ્યું!`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   // Action: Open Reject Modal
@@ -189,42 +203,54 @@ export default function AdminDonationsPage() {
   };
 
   // Action: Confirm Reject
-  const handleConfirmReject = (e: React.FormEvent) => {
+  const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingDonation) return;
 
-    const adminName = currentUser?.name || "ખજાનચી શ્રી";
-    const remarks = rejectionRemarks.trim() || "ચુકવણી પ્રૂફ મેળ ખાતું નથી અથવા બેંકમાં જમા થયેલ નથી.";
+    setIsRejecting(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const adminName = currentUser?.name || "ખજાનચી શ્રી";
+      const remarks = rejectionRemarks.trim() || "ચુકવણી પ્રૂફ મેળ ખાતું નથી અથવા બેંકમાં જમા થયેલ નથી.";
 
-    rejectDonation(rejectingDonation.id, remarks, adminName);
-    addLog(
-      "દાન અસ્વીકાર",
-      `${rejectingDonation.donor_name} (${rejectingDonation.donation_id || rejectingDonation.receipt_number})`,
-      `કારણ: ${remarks}`,
-      adminName,
-      currentUser?.role || "treasurer"
-    );
-
-    setRejectingDonation(null);
-    setRejectionRemarks("");
-    setSuccessToast(`દાન અસ્વીકાર કરવામાં આવ્યું.`);
-    setTimeout(() => setSuccessToast(null), 3500);
-  };
-
-  // Action: Delete
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`શું તમે ખરેખર "${name}" નો દાન રેકોર્ડ કાઢી નાખવા માંગો છો? આ પ્રક્રિયા રદ કરી શકાશે નહીં.`)) {
-      const adminName = currentUser?.name || "ખજાનચી / એડમિન";
-      deleteDonation(id);
+      rejectDonation(rejectingDonation.id, remarks, adminName);
       addLog(
-        "દાન રેકોર્ડ ડિલીટ કર્યો",
-        name,
-        `રેકોર્ડ ID: ${id}`,
+        "દાન અસ્વીકાર",
+        `${rejectingDonation.donor_name} (${rejectingDonation.donation_id || rejectingDonation.receipt_number})`,
+        `કારણ: ${remarks}`,
         adminName,
         currentUser?.role || "treasurer"
       );
-      setSuccessToast(`"${name}" નો દાન રેકોર્ડ સફળતાપૂર્વક ડિલીટ કરવામાં આવ્યો.`);
-      setTimeout(() => setSuccessToast(null), 3000);
+
+      setRejectingDonation(null);
+      setRejectionRemarks("");
+      setSuccessToast(`દાન અસ્વીકાર કરવામાં આવ્યું.`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  // Action: Delete
+  const handleDelete = async (id: string, name: string) => {
+    if (confirm(`શું તમે ખરેખર "${name}" નો દાન રેકોર્ડ કાઢી નાખવા માંગો છો? આ પ્રક્રિયા રદ કરી શકાશે નહીં.`)) {
+      setProcessingId(id);
+      try {
+        await new Promise((r) => setTimeout(r, 450));
+        const adminName = currentUser?.name || "ખજાનચી / એડમિન";
+        deleteDonation(id);
+        addLog(
+          "દાન રેકોર્ડ ડિલીટ કર્યો",
+          name,
+          `રેકોર્ડ ID: ${id}`,
+          adminName,
+          currentUser?.role || "treasurer"
+        );
+        setSuccessToast(`"${name}" નો દાન રેકોર્ડ સફળતાપૂર્વક ડિલીટ કરવામાં આવ્યો.`);
+        setTimeout(() => setSuccessToast(null), 3000);
+      } finally {
+        setProcessingId(null);
+      }
     }
   };
 
@@ -292,7 +318,7 @@ export default function AdminDonationsPage() {
     setAddHastheList((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddDonationSubmit = (e: React.FormEvent) => {
+  const handleAddDonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addDonorName.trim()) {
       alert("કૃપા કરીને દાતાનું નામ દાખલ કરો.");
@@ -304,43 +330,49 @@ export default function AdminDonationsPage() {
       return;
     }
 
-    const adminName = currentUser?.name || "ખજાનચી / એડમિન";
-    addDonation({
-      user_id: selectedMember?.id,
-      donor_id: selectedMember?.id,
-      donor_name: addDonorName.trim(),
-      mobile_number: addMobileNumber.trim(),
-      amount: num,
-      donation_purpose: addPurpose,
-      purpose: addPurpose,
-      specific_purpose: addSpecificPurpose.trim() || undefined,
-      donation_year: addYear,
-      date: addDate,
-      payment_method: addPaymentMethod,
-      receipt_number: addReceiptNumber.trim() || undefined,
-      status: addStatus,
-      payment_status: addStatus === "approved" ? "verified" : "pending",
-      hasthe_names: addHastheList,
-      donor_photo: addDonorPhoto || undefined,
-      payment_proof: addPaymentProof || undefined,
-      is_anonymous: addIsAnonymous,
-      public_consent: addPublicConsent,
-      approved_by: addStatus === "approved" ? adminName : undefined,
-      approved_at: addStatus === "approved" ? addDate : undefined,
-      admin_remarks: addAdminRemarks.trim() || undefined,
-    });
+    setIsAddingDonation(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const adminName = currentUser?.name || "ખજાનચી / એડમિન";
+      addDonation({
+        user_id: selectedMember?.id,
+        donor_id: selectedMember?.id,
+        donor_name: addDonorName.trim(),
+        mobile_number: addMobileNumber.trim(),
+        amount: num,
+        donation_purpose: addPurpose,
+        purpose: addPurpose,
+        specific_purpose: addSpecificPurpose.trim() || undefined,
+        donation_year: addYear,
+        date: addDate,
+        payment_method: addPaymentMethod,
+        receipt_number: addReceiptNumber.trim() || undefined,
+        status: addStatus,
+        payment_status: addStatus === "approved" ? "verified" : "pending",
+        hasthe_names: addHastheList,
+        donor_photo: addDonorPhoto || undefined,
+        payment_proof: addPaymentProof || undefined,
+        is_anonymous: addIsAnonymous,
+        public_consent: addPublicConsent,
+        approved_by: addStatus === "approved" ? adminName : undefined,
+        approved_at: addStatus === "approved" ? addDate : undefined,
+        admin_remarks: addAdminRemarks.trim() || undefined,
+      });
 
-    addLog(
-      "એડમિન દ્વારા નવું દાન ઉમેર્યું",
-      `${addDonorName.trim()} (રકમ: ₹${num.toLocaleString("en-IN")})`,
-      `હેતુ: ${addPurpose}, પદ્ધતિ: ${addPaymentMethod}, સ્થિતિ: ${addStatus === "approved" ? "માન્ય" : "પેન્ડિંગ"}`,
-      adminName,
-      currentUser?.role || "treasurer"
-    );
+      addLog(
+        "એડમિન દ્વારા નવું દાન ઉમેર્યું",
+        `${addDonorName.trim()} (રકમ: ₹${num.toLocaleString("en-IN")})`,
+        `હેતુ: ${addPurpose}, પદ્ધતિ: ${addPaymentMethod}, સ્થિતિ: ${addStatus === "approved" ? "માન્ય" : "પેન્ડિંગ"}`,
+        adminName,
+        currentUser?.role || "treasurer"
+      );
 
-    setShowAddModal(false);
-    setSuccessToast(`"${addDonorName.trim()}" નું ₹${num.toLocaleString("en-IN")} નું દાન સફળતાપૂર્વક ઉમેરાયું!`);
-    setTimeout(() => setSuccessToast(null), 3500);
+      setShowAddModal(false);
+      setSuccessToast(`"${addDonorName.trim()}" નું ₹${num.toLocaleString("en-IN")} નું દાન સફળતાપૂર્વક ઉમેરાયું!`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsAddingDonation(false);
+    }
   };
 
   const handleOpenEditModal = (don: Donation) => {
@@ -376,7 +408,7 @@ export default function AdminDonationsPage() {
     setEditHastheList((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleEditDonationSubmit = (e: React.FormEvent) => {
+  const handleEditDonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingDonation) return;
     if (!editDonorName.trim()) {
@@ -389,43 +421,49 @@ export default function AdminDonationsPage() {
       return;
     }
 
-    const adminName = currentUser?.name || "ખજાનચી / એડમિન";
-    const updates: Partial<Donation> = {
-      donor_name: editDonorName.trim(),
-      mobile_number: editMobileNumber.trim(),
-      amount: num,
-      donation_purpose: editPurpose,
-      purpose: editPurpose,
-      specific_purpose: editSpecificPurpose.trim() || undefined,
-      donation_year: editYear,
-      date: editDate,
-      payment_method: editPaymentMethod,
-      receipt_number: editReceiptNumber.trim() || undefined,
-      status: editStatus,
-      payment_status: editStatus === "approved" ? "verified" : (editStatus === "pending" ? "pending" : editingDonation.payment_status),
-      hasthe_names: editHastheList,
-      donor_photo: editDonorPhoto || undefined,
-      payment_proof: editPaymentProof || undefined,
-      is_anonymous: editIsAnonymous,
-      public_consent: editPublicConsent,
-      admin_remarks: editAdminRemarks.trim() || undefined,
-      approved_by: editStatus === "approved" ? (editingDonation.approved_by || adminName) : undefined,
-      approved_at: editStatus === "approved" ? (editingDonation.approved_at || editDate) : undefined,
-    };
+    setIsEditingDonation(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const adminName = currentUser?.name || "ખજાનચી / એડમિન";
+      const updates: Partial<Donation> = {
+        donor_name: editDonorName.trim(),
+        mobile_number: editMobileNumber.trim(),
+        amount: num,
+        donation_purpose: editPurpose,
+        purpose: editPurpose,
+        specific_purpose: editSpecificPurpose.trim() || undefined,
+        donation_year: editYear,
+        date: editDate,
+        payment_method: editPaymentMethod,
+        receipt_number: editReceiptNumber.trim() || undefined,
+        status: editStatus,
+        payment_status: editStatus === "approved" ? "verified" : (editStatus === "pending" ? "pending" : editingDonation.payment_status),
+        hasthe_names: editHastheList,
+        donor_photo: editDonorPhoto || undefined,
+        payment_proof: editPaymentProof || undefined,
+        is_anonymous: editIsAnonymous,
+        public_consent: editPublicConsent,
+        admin_remarks: editAdminRemarks.trim() || undefined,
+        approved_by: editStatus === "approved" ? (editingDonation.approved_by || adminName) : undefined,
+        approved_at: editStatus === "approved" ? (editingDonation.approved_at || editDate) : undefined,
+      };
 
-    updateDonation(editingDonation.id, updates);
+      updateDonation(editingDonation.id, updates);
 
-    addLog(
-      "દાન વિગતો સુધારી",
-      `${editDonorName.trim()} (ID: ${editingDonation.donation_id || editingDonation.receipt_number})`,
-      `સુધારેલી રકમ: ₹${num.toLocaleString("en-IN")}, સ્થિતિ: ${editStatus}`,
-      adminName,
-      currentUser?.role || "treasurer"
-    );
+      addLog(
+        "દાન વિગતો સુધારી",
+        `${editDonorName.trim()} (ID: ${editingDonation.donation_id || editingDonation.receipt_number})`,
+        `સુધારેલી રકમ: ₹${num.toLocaleString("en-IN")}, સ્થિતિ: ${editStatus}`,
+        adminName,
+        currentUser?.role || "treasurer"
+      );
 
-    setEditingDonation(null);
-    setSuccessToast(`"${editDonorName.trim()}" નો દાન રેકોર્ડ સફળતાપૂર્વક અપડેટ થયો!`);
-    setTimeout(() => setSuccessToast(null), 3500);
+      setEditingDonation(null);
+      setSuccessToast(`"${editDonorName.trim()}" નો દાન રેકોર્ડ સફળતાપૂર્વક અપડેટ થયો!`);
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsEditingDonation(false);
+    }
   };
 
   // Bank QR Upload handler
@@ -443,29 +481,35 @@ export default function AdminDonationsPage() {
   };
 
   // Save Bank Details (Requirement 13.7)
-  const handleSaveBankConfig = (e: React.FormEvent) => {
+  const handleSaveBankConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateBankDetails({
-      account_holder: bankAccountHolder.trim(),
-      bank_name: bankName.trim(),
-      account_number: bankAccountNumber.trim(),
-      ifsc_code: bankIfsc.trim(),
-      branch_name: bankBranch.trim(),
-      upi_id: bankUpi.trim() || undefined,
-      qr_code_url: bankQrPreview,
-    });
+    setIsSavingBank(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      updateBankDetails({
+        account_holder: bankAccountHolder.trim(),
+        bank_name: bankName.trim(),
+        account_number: bankAccountNumber.trim(),
+        ifsc_code: bankIfsc.trim(),
+        branch_name: bankBranch.trim(),
+        upi_id: bankUpi.trim() || undefined,
+        qr_code_url: bankQrPreview,
+      });
 
-    addLog(
-      "બેંક વિગતો & QR કોડ અપડેટ",
-      bankName.trim(),
-      `ખાતા નંબર: ${bankAccountNumber.trim()}, IFSC: ${bankIfsc.trim()}`,
-      currentUser?.name || "ખજાનચી",
-      currentUser?.role || "treasurer"
-    );
+      addLog(
+        "બેંક વિગતો & QR કોડ અપડેટ",
+        bankName.trim(),
+        `ખાતા નંબર: ${bankAccountNumber.trim()}, IFSC: ${bankIfsc.trim()}`,
+        currentUser?.name || "ખજાનચી",
+        currentUser?.role || "treasurer"
+      );
 
-    setShowBankConfigModal(false);
-    setSuccessToast("બેંક વિગતો અને પેમેન્ટ QR કોડ સફળતાપૂર્વક અપડેટ થયા!");
-    setTimeout(() => setSuccessToast(null), 3500);
+      setShowBankConfigModal(false);
+      setSuccessToast("બેંક વિગતો અને પેમેન્ટ QR કોડ સફળતાપૂર્વક અપડેટ થયા!");
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsSavingBank(false);
+    }
   };
 
   return (
@@ -787,17 +831,28 @@ export default function AdminDonationsPage() {
                     {!isApproved && (
                       <button
                         onClick={() => handleApprove(don)}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
+                        disabled={processingId === don.id}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
                       >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span>મંજૂર કરો</span>
+                        {processingId === don.id ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>મંજૂર થઈ રહ્યું છે...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span>મંજૂર કરો</span>
+                          </>
+                        )}
                       </button>
                     )}
 
                     {!isRejected && (
                       <button
                         onClick={() => handleOpenReject(don)}
-                        className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-colors flex items-center gap-1"
+                        disabled={processingId === don.id}
+                        className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-700 border border-red-200 text-xs font-bold transition-colors flex items-center gap-1"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         <span>અસ્વીકાર</span>
@@ -815,10 +870,15 @@ export default function AdminDonationsPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(don.id, don.donor_name)}
-                      className="p-1.5 rounded-xl text-charcoal-400 hover:text-red-700 hover:bg-red-50 transition-colors"
+                      disabled={processingId === don.id}
+                      className="p-1.5 rounded-xl text-charcoal-400 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
                       title="ડિલીટ કરો"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {processingId === don.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -950,9 +1010,17 @@ export default function AdminDonationsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition-colors"
+                  disabled={isRejecting}
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  અસ્વીકાર કન્ફર્મ કરો
+                  {isRejecting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>અસ્વીકાર થઈ રહ્યો છે...</span>
+                    </>
+                  ) : (
+                    <span>અસ્વીકાર કન્ફર્મ કરો</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1095,9 +1163,17 @@ export default function AdminDonationsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold shadow-md transition-colors"
+                  disabled={isSavingBank}
+                  className="px-5 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  સાચવો (Save Bank Details)
+                  {isSavingBank ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>સાચવી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <span>સાચવો (Save Bank Details)</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1538,10 +1614,20 @@ export default function AdminDonationsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
+                  disabled={isAddingDonation}
+                  className="px-6 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>દાન સાચવો (Save Donation)</span>
+                  {isAddingDonation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>દાન સાચવી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>દાન સાચવો (Save Donation)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -1850,10 +1936,20 @@ export default function AdminDonationsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
+                  disabled={isEditingDonation}
+                  className="px-6 py-2 rounded-xl bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white font-bold shadow-md transition-colors flex items-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>ફેરફારો સાચવો (Save Changes)</span>
+                  {isEditingDonation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>સુધારી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>ફેરફારો સાચવો (Save Changes)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

@@ -22,6 +22,7 @@ import {
   GraduationCap,
   HeartHandshake,
   UserPlus,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -37,6 +38,7 @@ export default function AdminMembersPage() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const filtered = members.filter(
@@ -47,22 +49,28 @@ export default function AdminMembersPage() {
       m.phone.includes(search)
   );
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
-    updateMember(editingMember.id, editingMember);
+    setIsUpdating(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      updateMember(editingMember.id, editingMember);
 
-    addLog(
-      "સભ્ય વિગતો સુધારી",
-      editingMember.name,
-      `ભૂમિકા: ${editingMember.role}, હોદ્દો: ${editingMember.committee_role || "સભ્ય"}`,
-      currentUser?.name || "એડમિન",
-      currentUser?.role || "secretary"
-    );
+      addLog(
+        "સભ્ય વિગતો સુધારી",
+        editingMember.name,
+        `ભૂમિકા: ${editingMember.role}, હોદ્દો: ${editingMember.committee_role || "સભ્ય"}`,
+        currentUser?.name || "એડમિન",
+        currentUser?.role || "secretary"
+      );
 
-    setEditingMember(null);
-    setSuccessToast("સભ્યની તમામ વિગતો સફળતાપૂર્વક અપડેટ થઈ ગઈ!");
-    setTimeout(() => setSuccessToast(null), 3500);
+      setEditingMember(null);
+      setSuccessToast("સભ્યની તમામ વિગતો સફળતાપૂર્વક અપડેટ થઈ ગઈ!");
+      setTimeout(() => setSuccessToast(null), 3500);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleDeleteMember = async () => {
@@ -736,10 +744,20 @@ export default function AdminMembersPage() {
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     type="submit"
-                    className="w-full sm:w-auto px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5"
+                    disabled={isUpdating}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5"
                   >
-                    <Save className="w-4 h-4" />
-                    <span>તમામ સુધારાઓ સાચવો (Save All Changes)</span>
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>સાચવી રહ્યા છીએ...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>તમામ સુધારાઓ સાચવો (Save All Changes)</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

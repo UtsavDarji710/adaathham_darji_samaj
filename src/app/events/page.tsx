@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   CheckCircle,
   Filter,
+  Loader2,
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
@@ -26,6 +27,7 @@ export default function EventsPage() {
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
 
   // New Event Form State
   const [title, setTitle] = useState("");
@@ -49,43 +51,49 @@ export default function EventsPage() {
     });
   }, [events, filterTab, selectedYear]);
 
-  const handleAddEvent = (e: React.FormEvent) => {
+  const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !date.trim()) return;
 
-    const eventYear = new Date(date).getFullYear() || 2025;
-    const isUpcoming = new Date(date) >= new Date();
+    setIsSubmittingEvent(true);
+    try {
+      await new Promise((r) => setTimeout(r, 450));
+      const eventYear = new Date(date).getFullYear() || 2025;
+      const isUpcoming = new Date(date) >= new Date();
 
-    addEvent({
-      title,
-      description,
-      date,
-      time: time || "સવારે ૯:૦૦",
-      location,
-      city,
-      cover_image: coverImage || null,
-      gallery: [],
-      video_url: videoUrl || undefined,
-      status: isUpcoming ? "upcoming" : "past",
-      year: eventYear,
-      organizer: "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા",
-    });
+      addEvent({
+        title,
+        description,
+        date,
+        time: time || "સવારે ૯:૦૦",
+        location,
+        city,
+        cover_image: coverImage || null,
+        gallery: [],
+        video_url: videoUrl || undefined,
+        status: isUpcoming ? "upcoming" : "past",
+        year: eventYear,
+        organizer: "શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા",
+      });
 
-    addLog(
-      "નવો કાર્યક્રમ ઉમેર્યો",
-      title,
-      `તારીખ: ${date}, સ્થળ: ${location}`,
-      currentUser?.name || "એડમિન",
-      currentUser?.role || "secretary"
-    );
+      addLog(
+        "નવો કાર્યક્રમ ઉમેર્યો",
+        title,
+        `તારીખ: ${date}, સ્થળ: ${location}`,
+        currentUser?.name || "એડમિન",
+        currentUser?.role || "secretary"
+      );
 
-    setShowAddModal(false);
-    setTitle("");
-    setDescription("");
-    setDate("");
-    setLocation("");
-    setSuccessToast("નવો કાર્યક્રમ સફળતાપૂર્વક ઉમેરાઈ ગયો છે!");
-    setTimeout(() => setSuccessToast(null), 4000);
+      setShowAddModal(false);
+      setTitle("");
+      setDescription("");
+      setDate("");
+      setLocation("");
+      setSuccessToast("નવો કાર્યક્રમ સફળતાપૂર્વક ઉમેરાઈ ગયો છે!");
+      setTimeout(() => setSuccessToast(null), 4000);
+    } finally {
+      setIsSubmittingEvent(false);
+    }
   };
 
   return (
@@ -351,9 +359,17 @@ export default function EventsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded-xl font-bold shadow-sm"
+                  disabled={isSubmittingEvent}
+                  className="px-5 py-2 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white rounded-xl font-bold shadow-sm transition-colors flex items-center gap-1.5"
                 >
-                  કાર્યક્રમ પ્રકાશિત કરો
+                  {isSubmittingEvent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>પ્રકાશિત કરી રહ્યા છીએ...</span>
+                    </>
+                  ) : (
+                    <span>કાર્યક્રમ પ્રકાશિત કરો</span>
+                  )}
                 </button>
               </div>
             </form>
