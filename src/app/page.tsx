@@ -888,14 +888,6 @@ export default function HomePage() {
             >
               બધા ({activeBusinesses.length})
             </Link>
-            {currentUser && (
-              <Link
-                href="/businesses"
-                className="px-3 py-1.5 bg-saffron-600 hover:bg-saffron-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors hidden sm:inline-flex"
-              >
-                + ઉમેરો
-              </Link>
-            )}
           </div>
         }
         renderItem={(biz) => (
@@ -995,14 +987,6 @@ export default function HomePage() {
               <span>તમામ દાતાઓ ({displayDonors.length})</span>
               <ChevronRight className="w-3 h-3" />
             </Link>
-            {currentUser && (
-              <Link
-                href="/donations"
-                className="px-3 py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors hidden sm:inline-flex"
-              >
-                + દાન નોંધાવો
-              </Link>
-            )}
           </div>
         }
         renderItem={(donor) => (

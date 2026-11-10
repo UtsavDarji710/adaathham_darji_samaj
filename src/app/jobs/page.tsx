@@ -178,16 +178,6 @@ export default function JobsPage() {
             સમાજના વ્યવસાયિકો દ્વારા ઉપલબ્ધ નોકરીની તકો અને સમાજના યુવાનો માટે રોજગારી સહકાર.
           </p>
         </div>
-
-        {currentUser && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-5 py-2.5 bg-forest-800 hover:bg-forest-900 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ નોકરીની જાહેરાત મૂકો</span>
-          </button>
-        )}
       </div>
 
       {/* View Mode Switcher */}

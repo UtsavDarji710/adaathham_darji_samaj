@@ -174,16 +174,6 @@ export default function BusinessDirectoryPage() {
             અડાઆઠમ દરજી સમાજના સભ્યોના ઉદ્યોગો, વ્યવસાયો અને ટેલરિંગ કેન્દ્રોની અધિકૃત યાદી.
           </p>
         </div>
-
-        {currentUser && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
-          >
-            <Plus className="w-4 h-4" />
-            <span>આપનો વ્યવસાય ઉમેરો</span>
-          </button>
-        )}
       </div>
 
       {/* Filter and Search Bar */}
