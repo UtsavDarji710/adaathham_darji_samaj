@@ -57,6 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUserState] = useState<Member | null>(null);
 
   useEffect(() => {
+    // 0. Instant session hydration from cached storage (0ms header render)
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("ad8_current_user");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.id && !String(parsed.id).startsWith("mem-")) {
+            setCurrentUserState(parsed);
+          }
+        }
+      } catch {}
+    }
+
     const initSession = async () => {
       try {
         const res = await fetch("/api/auth/me");

@@ -88,6 +88,7 @@ interface DataContextType {
 
   // Announcements actions
   addAnnouncement: (ann: Omit<Announcement, "id">) => void;
+  updateAnnouncement: (id: string, updates: Partial<Announcement>) => void;
   deleteAnnouncement: (id: string) => void;
 
   // Logs
@@ -224,84 +225,110 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     purgeLegacyMockData();
 
-    // 1. Fetch live dynamic members from API / Supabase
-    fetch("/api/members", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.members)) {
-          setMembers(data.members);
-          sync(STORAGE_KEYS.members, data.members);
+    // Instant cache hydration from localStorage for 0ms initial render
+    try {
+      const loadCached = (key: string, setter: (val: any) => void) => {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setter(parsed);
+          }
         }
-      })
-      .catch((err) => {
-        console.warn("[DataContext] Live members fetch warning:", err);
-      });
+      };
 
-    // 2. Fetch live businesses from Supabase API
-    fetch("/api/businesses", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.businesses)) {
-          setBusinesses(data.businesses);
-          sync(STORAGE_KEYS.businesses, data.businesses);
-        }
-      })
-      .catch((err) => console.warn("[DataContext] Live businesses fetch warning:", err));
+      loadCached(STORAGE_KEYS.members, setMembers);
+      loadCached(STORAGE_KEYS.businesses, setBusinesses);
+      loadCached(STORAGE_KEYS.jobs, setJobPostings);
+      loadCached(STORAGE_KEYS.advertisements, setAdvertisements);
+      loadCached(STORAGE_KEYS.events, setEvents);
+      loadCached(STORAGE_KEYS.donations, setDonations);
+      loadCached(STORAGE_KEYS.announcements, setAnnouncements);
+    } catch (e) {
+      console.warn("[DataContext] Cache hydration warning:", e);
+    }
 
-    // 3. Fetch live jobs from Supabase API
-    fetch("/api/jobs", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.jobs)) {
-          setJobPostings(data.jobs);
-          sync(STORAGE_KEYS.jobs, data.jobs);
-        }
-      })
-      .catch((err) => console.warn("[DataContext] Live jobs fetch warning:", err));
+    // Background live synchronization with Supabase APIs (does not block user surfing)
+    const fetchFreshData = async () => {
+      // 1. Members
+      fetch("/api/members")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.members)) {
+            setMembers(data.members);
+            sync(STORAGE_KEYS.members, data.members);
+          }
+        })
+        .catch(() => {});
 
-    // 4. Fetch live advertisements from Supabase API
-    fetch("/api/advertisements", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.advertisements)) {
-          setAdvertisements(data.advertisements);
-          sync(STORAGE_KEYS.advertisements, data.advertisements);
-        }
-      })
-      .catch((err) => console.warn("[DataContext] Live advertisements fetch warning:", err));
+      // 2. Businesses
+      fetch("/api/businesses")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.businesses)) {
+            setBusinesses(data.businesses);
+            sync(STORAGE_KEYS.businesses, data.businesses);
+          }
+        })
+        .catch(() => {});
 
-    // 5. Fetch live events from Supabase API
-    fetch("/api/events", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.events)) {
-          setEvents(data.events);
-          sync(STORAGE_KEYS.events, data.events);
-        }
-      })
-      .catch((err) => console.warn("[DataContext] Live events fetch warning:", err));
+      // 3. Jobs
+      fetch("/api/jobs")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.jobs)) {
+            setJobPostings(data.jobs);
+            sync(STORAGE_KEYS.jobs, data.jobs);
+          }
+        })
+        .catch(() => {});
 
-    // 6. Fetch live donations from Supabase API
-    fetch("/api/donations", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.donations)) {
-          setDonations(data.donations);
-          sync(STORAGE_KEYS.donations, data.donations);
-        }
-      })
-      .catch((err) => console.warn("[DataContext] Live donations fetch warning:", err));
+      // 4. Advertisements
+      fetch("/api/advertisements")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.advertisements)) {
+            setAdvertisements(data.advertisements);
+            sync(STORAGE_KEYS.advertisements, data.advertisements);
+          }
+        })
+        .catch(() => {});
 
-    // 7. Fetch live announcements from Supabase API
-    fetch("/api/announcements", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.announcements)) {
-          setAnnouncements(data.announcements);
-          sync(STORAGE_KEYS.announcements, data.announcements);
-        }
-      })
-      .catch((err) => console.warn("[DataContext] Live announcements fetch warning:", err));
+      // 5. Events
+      fetch("/api/events")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.events)) {
+            setEvents(data.events);
+            sync(STORAGE_KEYS.events, data.events);
+          }
+        })
+        .catch(() => {});
+
+      // 6. Donations
+      fetch("/api/donations")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.donations)) {
+            setDonations(data.donations);
+            sync(STORAGE_KEYS.donations, data.donations);
+          }
+        })
+        .catch(() => {});
+
+      // 7. Announcements
+      fetch("/api/announcements")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.announcements)) {
+            setAnnouncements(data.announcements);
+            sync(STORAGE_KEYS.announcements, data.announcements);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchFreshData();
   }, []);
 
   const sync = <T,>(key: string, data: T) => {
@@ -779,10 +806,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).catch((err) => console.warn("[addAnnouncement error]", err));
   };
 
+  const updateAnnouncement = (id: string, updates: Partial<Announcement>) => {
+    const updated = announcements.map((a) => (a.id === id ? { ...a, ...updates } : a));
+    setAnnouncements(updated);
+    sync(STORAGE_KEYS.announcements, updated);
+
+    fetch("/api/announcements", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.warn("[updateAnnouncement error]", err));
+  };
+
   const deleteAnnouncement = (id: string) => {
     const updated = announcements.filter((a) => a.id !== id);
     setAnnouncements(updated);
     sync(STORAGE_KEYS.announcements, updated);
+
+    fetch(`/api/announcements?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => console.warn("[deleteAnnouncement error]", err));
   };
 
   // Activity Logs
@@ -861,6 +904,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifyDonation,
         updateBankDetails,
         addAnnouncement,
+        updateAnnouncement,
         deleteAnnouncement,
         addLog,
         resetDemoData,

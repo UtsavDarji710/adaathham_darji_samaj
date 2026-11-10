@@ -50,7 +50,7 @@ export default function HomePage() {
     advertisements,
     donations,
   } = useData();
-  const { currentUser, loginWithPassword, logout } = useAuth();
+  const { currentUser, loginWithPassword, logout, isAdmin } = useAuth();
   const router = useRouter();
 
   // Quick Login State for Hero Section
@@ -811,6 +811,15 @@ export default function HomePage() {
             <span className="text-[11px] font-bold text-saffron-800 bg-saffron-50 border border-saffron-200 px-2.5 py-1 rounded-xl">
               કુલ {displayAnnouncements.length} સૂચનાઓ
             </span>
+            {isAdmin && (
+              <Link
+                href="/admin/announcements"
+                className="px-3 py-1 bg-saffron-600 hover:bg-saffron-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors hidden sm:inline-flex items-center gap-1"
+              >
+                <span>સૂચના સંચાલન</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            )}
           </div>
         }
         renderItem={(item) => (

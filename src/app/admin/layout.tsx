@@ -18,6 +18,7 @@ import {
   Info,
   CheckCircle,
   HeartHandshake,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_CREDENTIALS } from "@/lib/roleCredentials";
@@ -32,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/advertisements", label: "જાહેરાતો", icon: Megaphone },
     { href: "/admin/events", label: "કાર્યક્રમો", icon: Calendar },
     { href: "/admin/donations", label: "દાન & હિસાબ", icon: Heart },
+    { href: "/admin/announcements", label: "સૂચનાઓ", icon: Bell },
     { href: "/admin/committee", label: "સમિતિ", icon: Award },
     { href: "/admin/matrimony", label: "મેટ્રિમોની", icon: HeartHandshake },
   ];

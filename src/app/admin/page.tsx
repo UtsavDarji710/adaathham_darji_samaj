@@ -22,6 +22,7 @@ import {
   Settings,
   ArrowRight,
   TrendingUp,
+  Bell,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -306,6 +307,28 @@ export default function AdminDashboardPage() {
             </div>
             <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-rose-800">
               <span>{matrimonyPublicCount} પબ્લિક લિસ્ટિંગમાં સક્રિય</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Module 8: Announcements & Notices Management */}
+          <Link
+            href="/admin/announcements"
+            className="bg-white rounded-3xl border border-ivory-300 p-6 shadow-card hover:shadow-hover transition-all flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-saffron-100 text-saffron-800 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Bell className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-base text-charcoal-900 group-hover:text-saffron-800 transition-colors">
+                મહત્વપૂર્ણ સૂચનાઓ & પરિપત્રો (Notices & Circulars)
+              </h3>
+              <p className="text-xs text-charcoal-600 mt-1 leading-relaxed">
+                હોમપેજ પર પ્રદર્શિત થતી મહત્વપૂર્ણ સૂચનાઓ, શોક સંદેશ, આનંદના સમાચાર અને પરિપત્રોનું સંચાલન.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs font-bold text-saffron-800">
+              <span>{announcements.length} સક્રિય સૂચનાઓ</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>

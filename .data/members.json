@@ -94,8 +94,6 @@
     },
     "gender": "male",
     "blood_group": "B+",
-    "jati": "અડાઆઠમ દરજી",
-    "caste": "અડાઆઠમ દરજી",
     "is_deceased": false,
     "role": "member",
     "is_lifetime_member": false,
@@ -138,12 +136,6 @@
       "experience_years": "3 years"
     },
     "education": {
-      "highest_degree": "B Tech",
-      "education_category": "સ્નાતક (Graduate)",
-      "education_details": "B Tech",
-      "institution": "",
-      "field_of_study": "સ્નાતક (Graduate)",
-      "passing_year": "",
       "degrees": [
         {
           "id": "deg-1794225713598-p5ur",
@@ -155,7 +147,13 @@
           "field_of_study": "સ્નાતક (Graduate)"
         }
       ],
-      "family_education": []
+      "institution": "",
+      "passing_year": "",
+      "field_of_study": "સ્નાતક (Graduate)",
+      "highest_degree": "B Tech",
+      "family_education": [],
+      "education_details": "B Tech",
+      "education_category": "સ્નાતક (Graduate)"
     },
     "password_hash": "a855099bc0d6de797584ed52dfa327445675da2b37611f1e22c49ffd4cd8dc8e61f5009ed5c542d82076fe9b892a1882f3490633d80618ba6b533a304818a4f0",
     "salt": "4a978097c3352a4304e69efe73a4dbff"
