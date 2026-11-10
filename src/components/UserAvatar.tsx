@@ -39,12 +39,15 @@ export function UserAvatar({
 
   const hasCustomRadius = className.includes("rounded-");
   const shapeClass = hasCustomRadius ? "" : (shape === "circle" ? "rounded-full" : "rounded-2xl");
+  const hasWidth = /\bw-\S+/.test(className);
+  const hasHeight = /\bh-\S+/.test(className);
+  const sizeFallback = !hasWidth && !hasHeight ? "w-12 h-12" : "";
 
   if (isBrokenOrEmpty) {
     return (
       <div
         onClick={onClick}
-        className={`flex items-center justify-center bg-gradient-to-br from-amber-50 to-saffron-100 border border-saffron-200 text-saffron-700 flex-shrink-0 select-none overflow-hidden ${shapeClass} ${className}`}
+        className={`flex items-center justify-center bg-gradient-to-br from-amber-50 to-saffron-100 border border-saffron-200 text-saffron-700 flex-shrink-0 select-none overflow-hidden ${shapeClass} ${sizeFallback} ${className}`}
         title={alt || fallbackName || "સભ્ય પ્રોફાઇલ"}
       >
         <User className="w-1/2 h-1/2 text-saffron-600 stroke-[2.2]" />
@@ -58,7 +61,7 @@ export function UserAvatar({
       alt={alt || fallbackName || "User"}
       onError={() => setHasError(true)}
       onClick={onClick}
-      className={`object-cover flex-shrink-0 ${shapeClass} ${className}`}
+      className={`object-cover flex-shrink-0 ${shapeClass} ${sizeFallback} ${className}`}
     />
   );
 }

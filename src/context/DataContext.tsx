@@ -205,6 +205,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch {}
+
+      try {
+        const val = localStorage.getItem(STORAGE_KEYS.events);
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed) && parsed.some((e: any) => e.cover_image?.includes("unsplash"))) {
+            const cleaned = parsed.map((e: any) => ({
+              ...e,
+              cover_image: e.cover_image?.includes("unsplash") ? null : e.cover_image,
+            }));
+            localStorage.setItem(STORAGE_KEYS.events, JSON.stringify(cleaned));
+            setEvents(cleaned);
+          }
+        }
+      } catch {}
     };
 
     purgeLegacyMockData();
@@ -606,7 +621,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mobile_number: don.mobile_number || "",
       donor_photo: don.donor_photo,
       hasthe_names: don.hasthe_names || [],
-      donation_purpose: don.donation_purpose || "સમાજના વિકાસ માટે",
+      donation_purpose: don.donation_purpose || "સમાજના વિકાશ માટે",
       specific_purpose: don.specific_purpose || don.purpose,
       donation_year: don.donation_year || String(new Date().getFullYear()),
       amount: don.amount || 0,

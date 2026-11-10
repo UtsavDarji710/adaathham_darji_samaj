@@ -379,6 +379,20 @@ export interface CommunityEvent {
   organizer: string;
 }
 
+export const SAMITI_DONATION_PURPOSES: string[] = [
+  "સમાજના વિકાશ માટે",
+  "ઉચ્ચ શિક્ષણ માટે સહાય",
+  "વિધવા સહાય",
+  "વિકલાંગ સહાય",
+  "આરોગ્ય સહાય",
+  "સ્નેહ સંમેલન સહાય",
+  "રમતગમત સહાય",
+  "સમુહલગ્ન સહાય",
+  "અન્ય (Other)",
+];
+
+export type DonationPurpose = string;
+
 export interface Donation {
   id: string;
   donation_id: string; // e.g. DON-2026-001
@@ -388,7 +402,7 @@ export interface Donation {
   mobile_number: string;
   donor_photo?: string; // Donor photo uploaded
   hasthe_names: string[]; // Multiple હસ્તે names
-  donation_purpose: string; // e.g. "સમાજના વિકાસ માટે", "શિક્ષણ સહાય", "આરોગ્ય સહાય", "સામાજિક કાર્યક્રમ", "અન્ય"
+  donation_purpose: string; // e.g. "સમાજના વિકાશ માટે", "ઉચ્ચ શિક્ષણ માટે સહાય", etc.
   specific_purpose?: string; // custom purpose description
   donation_year: string; // e.g. "2026"
   amount: number;

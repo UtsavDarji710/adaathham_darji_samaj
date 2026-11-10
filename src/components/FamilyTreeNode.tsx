@@ -48,7 +48,7 @@ const FamilyTreeNode = ({ data }: { data: NodeData }) => {
             onError={(e) => {
               e.currentTarget.src = "/default-avatar.svg";
             }}
-            className="w-13 h-13 rounded-xl object-cover border-2 border-ivory-200 group-hover:border-saffron-400 transition-colors"
+            className="w-12 h-12 rounded-xl object-cover border-2 border-ivory-200 group-hover:border-saffron-400 transition-colors"
           />
           {member.is_lifetime_member && (
             <span

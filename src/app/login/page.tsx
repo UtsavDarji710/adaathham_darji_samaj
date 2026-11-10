@@ -368,37 +368,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Test Credentials Quick Reference */}
-          <div className="p-3 rounded-2xl bg-ivory-50 border border-ivory-200 text-[11px] text-charcoal-600 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-charcoal-800">
-              <Sparkles className="w-3.5 h-3.5 text-saffron-600" />
-              <span>ટેસ્ટ ડેમો એકાઉન્ટ્સ (Demo Credentials):</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[10px]">
-              <div
-                onClick={() => {
-                  setUsername("utsav");
-                  setPassword("Samaj@123");
-                }}
-                className="p-2 rounded-xl bg-white border border-ivory-300 hover:border-saffron-400 cursor-pointer transition-all shadow-2xs"
-              >
-                <span className="block font-bold text-saffron-800">👑 એડમિન (Admin)</span>
-                <span className="text-charcoal-700">યુઝર: utsav</span>
-                <span className="block text-charcoal-500">પાસ: Samaj@123</span>
-              </div>
-              <div
-                onClick={() => {
-                  setUsername("dinesh");
-                  setPassword("Samaj@123");
-                }}
-                className="p-2 rounded-xl bg-white border border-ivory-300 hover:border-forest-400 cursor-pointer transition-all shadow-2xs"
-              >
-                <span className="block font-bold text-forest-800">👤 સભ્ય (Member)</span>
-                <span className="text-charcoal-700">યુઝર: dinesh</span>
-                <span className="block text-charcoal-500">પાસ: Samaj@123</span>
-              </div>
-            </div>
-          </div>
 
           <div className="text-center text-xs text-charcoal-600 border-t border-ivory-200 pt-3">
             હજુ સુધી ખાતું નથી?{" "}

@@ -22,7 +22,7 @@ import { Member, SAMITI_NATIVE_PLACES } from "@/types";
 import { UserAvatar } from "@/components/UserAvatar";
 
 export default function MembersDirectoryPage() {
-  const { members } = useData();
+  const { members, businesses } = useData();
   const { currentUser, isAdmin } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,25 +46,104 @@ export default function MembersDirectoryPage() {
     return Array.from(list);
   }, [members]);
 
+  // Helper to extract valid business detail (from member profile or linked business directory)
+  const getMemberBusiness = (member: Member) => {
+    if (member.business?.business_name && member.business.business_name.trim().length > 0) {
+      return member.business;
+    }
+    const cleanPhone = (member.phone || "").replace(/\D/g, "");
+    const linkedBiz = businesses.find((b) => {
+      if (b.owner_id && (b.owner_id === member.id || (member.auth_user_id && b.owner_id === member.auth_user_id))) {
+        return true;
+      }
+      const bCleanPhone = (b.phone || "").replace(/\D/g, "");
+      if (cleanPhone && bCleanPhone && cleanPhone === bCleanPhone) {
+        return true;
+      }
+      if (b.owner_name && member.name && b.owner_name.trim().toLowerCase() === member.name.trim().toLowerCase()) {
+        return true;
+      }
+      return false;
+    });
+
+    if (linkedBiz && linkedBiz.name && linkedBiz.name.trim().length > 0) {
+      return {
+        business_name: linkedBiz.name,
+        category: linkedBiz.category,
+        role: "Owner",
+        city: linkedBiz.city,
+        phone: linkedBiz.phone,
+        address: linkedBiz.address,
+        is_public: linkedBiz.status === "active" && (linkedBiz as any).is_public !== false,
+      };
+    }
+    return null;
+  };
+
+  // Helper to determine business visibility
+  const canViewBusiness = (member: Member, biz: { is_public?: boolean } | null) => {
+    if (!biz) return false;
+    if (isAdmin || (currentUser && currentUser.id === member.id)) return true;
+    if (biz.is_public === false) return false;
+    const priv = member.privacy?.business || "public";
+    if (priv === "private" || priv === "family") return false;
+    if (priv === "members" && !currentUser) return false;
+    return true;
+  };
+
+  // Helper to extract valid employment detail
+  const getMemberEmployment = (member: Member) => {
+    const emp = member.employment;
+    if (!emp) return null;
+    const hasTitle = Boolean(emp.job_title && emp.job_title.trim().length > 0);
+    const hasCompany = Boolean(emp.company && emp.company.trim().length > 0);
+    if (!hasTitle && !hasCompany) return null;
+    return emp;
+  };
+
+  // Helper to determine employment visibility
+  const canViewEmployment = (member: Member, emp: { is_public?: boolean } | null) => {
+    if (!emp) return false;
+    if (isAdmin || (currentUser && currentUser.id === member.id)) return true;
+    if (emp.is_public === false) return false;
+    const priv = member.privacy?.employment || "public";
+    if (priv === "private" || priv === "family") return false;
+    if (priv === "members" && !currentUser) return false;
+    return true;
+  };
+
+  // Helper to determine education visibility
+  const canViewEducation = (member: Member) => {
+    if (isAdmin || currentUser?.id === member.id) return true;
+    const priv = member.privacy?.education || "public";
+    if (priv === "public") return true;
+    if (priv === "members" && currentUser) return true;
+    return false;
+  };
+
   // Filter members based on query and dropdowns
   const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return members.filter((m) => {
+      const biz = getMemberBusiness(m);
+      const emp = getMemberEmployment(m);
+
       const matchSearch =
-        searchQuery.trim() === "" ||
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.native_place.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.business?.business_name && m.business.business_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (m.business?.category && m.business.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (m.employment?.company && m.employment.company.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (m.employment?.job_title && m.employment.job_title.toLowerCase().includes(searchQuery.toLowerCase()));
+        q === "" ||
+        m.name.toLowerCase().includes(q) ||
+        m.city.toLowerCase().includes(q) ||
+        m.native_place.toLowerCase().includes(q) ||
+        (biz?.business_name && biz.business_name.toLowerCase().includes(q)) ||
+        (biz?.category && biz.category.toLowerCase().includes(q)) ||
+        (emp?.company && emp.company.toLowerCase().includes(q)) ||
+        (emp?.job_title && emp.job_title.toLowerCase().includes(q));
 
       const matchCity = selectedCity === "all" || m.city === selectedCity;
       const matchNative = selectedNative === "all" || m.native_place === selectedNative;
 
       return matchSearch && matchCity && matchNative;
     });
-  }, [members, searchQuery, selectedCity, selectedNative]);
+  }, [members, businesses, searchQuery, selectedCity, selectedNative]);
 
   // Helper to determine phone visibility (default: private)
   const canViewPhone = (member: Member) => {
@@ -111,7 +190,7 @@ export default function MembersDirectoryPage() {
           </p>
         </div>
 
-        {currentUser && (
+        {!currentUser && (
           <Link
             href="/register"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors w-max"
@@ -261,45 +340,69 @@ export default function MembersDirectoryPage() {
                 </div>
 
                 {/* Details list */}
-                <div className="space-y-1.5 pt-2 border-t border-ivory-200 text-xs text-charcoal-600">
-                  <div className="flex items-center justify-between">
-                    <span className="text-charcoal-500 text-[11px]">સંપર્ક:</span>
-                    {hasPhoneAccess ? (
-                      <a href={`tel:${member.phone}`} className="font-bold text-forest-800 hover:underline">
-                        {member.phone}
-                      </a>
-                    ) : (
-                      <span className="text-charcoal-400 italic text-[11px] flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> ખાનગી
-                      </span>
-                    )}
-                  </div>
+                {(() => {
+                  const biz = getMemberBusiness(member);
+                  const emp = getMemberEmployment(member);
+                  const showBiz = biz && canViewBusiness(member, biz);
+                  const showEmp = emp && canViewEmployment(member, emp);
+                  const showEdu =
+                    member.education &&
+                    canViewEducation(member) &&
+                    Boolean(member.education.highest_degree?.trim() || member.education.field_of_study?.trim());
 
-                  {member.business ? (
-                    <div className="flex items-center justify-between">
-                      <span className="text-charcoal-500 text-[11px]">બિઝનેસ:</span>
-                      <span className="font-medium text-charcoal-800 truncate max-w-[150px]" title={member.business.business_name}>
-                        {member.business.business_name}
-                      </span>
-                    </div>
-                  ) : member.employment ? (
-                    <div className="flex items-center justify-between">
-                      <span className="text-charcoal-500 text-[11px]">નોકરી:</span>
-                      <span className="font-medium text-charcoal-800 truncate max-w-[150px]" title={member.employment.job_title}>
-                        {member.employment.job_title} ({member.employment.company})
-                      </span>
-                    </div>
-                  ) : null}
+                  return (
+                    <div className="space-y-1.5 pt-2 border-t border-ivory-200 text-xs text-charcoal-600">
+                      <div className="flex items-center justify-between">
+                        <span className="text-charcoal-500 text-[11px]">સંપર્ક:</span>
+                        {hasPhoneAccess ? (
+                          <a href={`tel:${member.phone}`} className="font-bold text-forest-800 hover:underline">
+                            {member.phone}
+                          </a>
+                        ) : (
+                          <span className="text-charcoal-400 italic text-[11px] flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> ખાનગી
+                          </span>
+                        )}
+                      </div>
 
-                  {member.education && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-charcoal-500 text-[11px]">શિક્ષણ:</span>
-                      <span className="font-medium text-charcoal-800 truncate max-w-[150px]">
-                        {member.education.highest_degree}
-                      </span>
+                      {showBiz && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-charcoal-500 text-[11px]">વ્યવસાય:</span>
+                          <span className="font-medium text-charcoal-800 truncate max-w-[150px]" title={biz.business_name}>
+                            {biz.business_name}
+                          </span>
+                        </div>
+                      )}
+
+                      {showEmp && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-charcoal-500 text-[11px]">નોકરી:</span>
+                          <span
+                            className="font-medium text-charcoal-800 truncate max-w-[150px]"
+                            title={
+                              emp.job_title && emp.company
+                                ? `${emp.job_title} (${emp.company})`
+                                : emp.job_title || emp.company
+                            }
+                          >
+                            {emp.job_title && emp.company
+                              ? `${emp.job_title} (${emp.company})`
+                              : emp.job_title || emp.company}
+                          </span>
+                        </div>
+                      )}
+
+                      {showEdu && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-charcoal-500 text-[11px]">શિક્ષણ:</span>
+                          <span className="font-medium text-charcoal-800 truncate max-w-[150px]">
+                            {member.education?.highest_degree || member.education?.field_of_study}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
 
               <div className="pt-3 mt-4 border-t border-ivory-200 flex items-center justify-between text-xs">
@@ -462,68 +565,86 @@ export default function MembersDirectoryPage() {
                 )}
               </div>
 
-              {activeModalMember.business && (
-                <div className="p-3 rounded-xl bg-saffron-50/50 border border-saffron-200 space-y-1">
-                  <span className="text-[11px] font-bold text-saffron-900 flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5 text-saffron-700" />
-                    ૧. બિઝનેસ / પેઢીની વિગતો (Business & Firm)
-                  </span>
-                  <div className="text-xs">
-                    <span className="font-bold text-charcoal-900">{activeModalMember.business.business_name}</span>
-                    {activeModalMember.business.category && (
-                      <span className="text-charcoal-600"> ({activeModalMember.business.category})</span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-charcoal-600 space-y-0.5">
-                    {activeModalMember.business.role && <div>હોદ્દો: <span className="font-semibold text-charcoal-800">{activeModalMember.business.role}</span></div>}
-                    {activeModalMember.business.city && <div>શહેર: <span className="font-semibold text-charcoal-800">{activeModalMember.business.city}</span></div>}
-                    {activeModalMember.business.phone && <div>સંપર્ક: <span className="font-bold text-forest-800">{activeModalMember.business.phone}</span></div>}
-                    {activeModalMember.business.address && <div>પેઢીનું સરનામું: <span className="text-charcoal-700">{activeModalMember.business.address}</span></div>}
-                  </div>
-                </div>
-              )}
+              {(() => {
+                const modalBiz = getMemberBusiness(activeModalMember);
+                const showBiz = modalBiz && canViewBusiness(activeModalMember, modalBiz);
+                if (!showBiz) return null;
 
-              {activeModalMember.employment && (
-                <div className="p-3 rounded-xl bg-forest-50/50 border border-forest-200 space-y-1">
-                  <span className="text-[11px] font-bold text-forest-900 flex items-center gap-1.5">
-                    <span className="text-sm">💼</span>
-                    ૨. નોકરી / રોજગારની વિગતો (Job & Employment)
-                  </span>
-                  <div className="text-xs">
-                    <span className="font-bold text-charcoal-900">{activeModalMember.employment.company}</span>
-                    {activeModalMember.employment.job_title && (
-                      <span className="text-charcoal-700 font-semibold"> — {activeModalMember.employment.job_title}</span>
-                    )}
+                return (
+                  <div className="p-3 rounded-xl bg-saffron-50/50 border border-saffron-200 space-y-1">
+                    <span className="text-[11px] font-bold text-saffron-900 flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-saffron-700" />
+                      ૧. વ્યવસાય / પેઢીની વિગતો (Business & Firm)
+                    </span>
+                    <div className="text-xs">
+                      <span className="font-bold text-charcoal-900">{modalBiz.business_name}</span>
+                      {modalBiz.category && (
+                        <span className="text-charcoal-600"> ({modalBiz.category})</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-charcoal-600 space-y-0.5">
+                      {modalBiz.role && <div>હોદ્દો: <span className="font-semibold text-charcoal-800">{modalBiz.role}</span></div>}
+                      {modalBiz.city && <div>શહેર: <span className="font-semibold text-charcoal-800">{modalBiz.city}</span></div>}
+                      {modalBiz.phone && <div>સંપર્ક: <span className="font-bold text-forest-800">{modalBiz.phone}</span></div>}
+                      {modalBiz.address && <div>પેઢીનું સરનામું: <span className="text-charcoal-700">{modalBiz.address}</span></div>}
+                    </div>
                   </div>
-                  <div className="text-[11px] text-charcoal-600 space-y-0.5">
-                    {activeModalMember.employment.job_type && (
-                      <div>ક્ષેત્ર: <span className="font-semibold text-charcoal-800">{activeModalMember.employment.job_type}</span></div>
-                    )}
-                    {activeModalMember.employment.city && (
-                      <div>કામનું શહેર: <span className="font-semibold text-charcoal-800">{activeModalMember.employment.city}</span></div>
-                    )}
-                    {activeModalMember.employment.phone && (
-                      <div>મોબાઇલ નંબર: <span className="font-bold text-forest-800">{activeModalMember.employment.phone}</span></div>
-                    )}
-                    {activeModalMember.employment.industry && (
-                      <div>ઉદ્યોગ / ક્ષેત્ર: {activeModalMember.employment.industry}</div>
-                    )}
-                    {activeModalMember.employment.experience_years && (
-                      <div>અનુભવ: {activeModalMember.employment.experience_years}</div>
-                    )}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
-              {activeModalMember.education && (
+              {(() => {
+                const modalEmp = getMemberEmployment(activeModalMember);
+                const showEmp = modalEmp && canViewEmployment(activeModalMember, modalEmp);
+                if (!showEmp) return null;
+
+                return (
+                  <div className="p-3 rounded-xl bg-forest-50/50 border border-forest-200 space-y-1">
+                    <span className="text-[11px] font-bold text-forest-900 flex items-center gap-1.5">
+                      <span className="text-sm">💼</span>
+                      ૨. નોકરી / રોજગારની વિગતો (Job & Employment)
+                    </span>
+                    <div className="text-xs">
+                      {modalEmp.company && <span className="font-bold text-charcoal-900">{modalEmp.company}</span>}
+                      {modalEmp.job_title && (
+                        <span className="text-charcoal-700 font-semibold">
+                          {modalEmp.company ? ` — ${modalEmp.job_title}` : modalEmp.job_title}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-charcoal-600 space-y-0.5">
+                      {modalEmp.job_type && (
+                        <div>ક્ષેત્ર: <span className="font-semibold text-charcoal-800">{modalEmp.job_type}</span></div>
+                      )}
+                      {modalEmp.city && (
+                        <div>કામનું શહેર: <span className="font-semibold text-charcoal-800">{modalEmp.city}</span></div>
+                      )}
+                      {modalEmp.phone && (
+                        <div>મોબાઇલ નંબર: <span className="font-bold text-forest-800">{modalEmp.phone}</span></div>
+                      )}
+                      {modalEmp.industry && (
+                        <div>ઉદ્યોગ / ક્ષેત્ર: {modalEmp.industry}</div>
+                      )}
+                      {modalEmp.experience_years && (
+                        <div>અનુભવ: {modalEmp.experience_years}</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {activeModalMember.education && canViewEducation(activeModalMember) && (activeModalMember.education.highest_degree?.trim() || activeModalMember.education.field_of_study?.trim()) && (
                 <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
                   <span className="text-[11px] text-charcoal-500 block">શૈક્ષણિક વિગતો:</span>
                   <span className="font-bold text-charcoal-900 block">
-                    {activeModalMember.education.highest_degree} ({activeModalMember.education.field_of_study})
+                    {activeModalMember.education.highest_degree}
+                    {activeModalMember.education.field_of_study && ` (${activeModalMember.education.field_of_study})`}
                   </span>
-                  <span className="text-charcoal-600 block mt-0.5">
-                    સંસ્થા: {activeModalMember.education.institution} (ઉત્તીર્ણ વર્ષ: {activeModalMember.education.passing_year})
-                  </span>
+                  {(activeModalMember.education.institution || activeModalMember.education.passing_year) && (
+                    <span className="text-charcoal-600 block mt-0.5">
+                      {activeModalMember.education.institution && `સંસ્થા: ${activeModalMember.education.institution}`}
+                      {activeModalMember.education.passing_year && ` (ઉત્તીર્ણ વર્ષ: ${activeModalMember.education.passing_year})`}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

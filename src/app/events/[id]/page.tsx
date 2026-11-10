@@ -48,7 +48,7 @@ export default function EventDetailPage() {
       <div className="bg-white rounded-3xl border border-ivory-300 shadow-card overflow-hidden">
         {/* Cover Image */}
         <div className="relative aspect-[21/9] bg-ivory-200">
-          {event.cover_image ? (
+          {event.cover_image && !event.cover_image.includes("unsplash") ? (
             <img
               src={event.cover_image}
               alt={event.title}

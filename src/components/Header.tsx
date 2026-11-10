@@ -127,7 +127,7 @@ export default function Header() {
 
       {/* Main Navigation Bar */}
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-15 sm:h-16">
+        <div className="flex items-center justify-between h-16">
           {/* Brand Logo & Name (Default Home Page) */}
           <Link
             href="/"

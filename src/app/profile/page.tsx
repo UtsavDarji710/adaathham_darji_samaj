@@ -3724,15 +3724,8 @@ export default function ProfilePage() {
                   આપે હજુ સુધી કોઈ દાન નોંધાવેલ નથી.
                 </h4>
                 <p className="text-xs text-charcoal-500 max-w-md mx-auto">
-                  સમાજ ભવન, શિક્ષણ સહાય કે ધાર્મિક મહોત્સવમાં સહયોગ આપવા માટે નીચે ક્લિક કરીને દાન નોંધણી કરી શકો છો.
+                  સમાજ ભવન, શિક્ષણ સહાય કે ધાર્મિક મહોત્સવમાં સહયોગ આપવા માટે ઉપર આપેલ બટન પરથી દાન નોંધણી કરી શકો છો.
                 </p>
-                <Link
-                  href="/donations"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-saffron-600 text-white font-bold text-xs hover:bg-saffron-700 transition-colors shadow-2xs mt-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>દાન નોંધાવો</span>
-                </Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

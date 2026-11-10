@@ -121,12 +121,12 @@ export function AutoScrollSlider<T extends { id?: string | number }>({
           {headerRight}
         </div>
 
-        {/* Clean, Non-Duplicated Display Row */}
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 py-2">
+        {/* Clean, Non-Duplicated Responsive Grid for <= 3 items */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 py-2 justify-items-center">
           {items.map((item, idx) => (
             <div
               key={item.id ? String(item.id) : `item-${idx}`}
-              className="flex-shrink-0 transition-transform duration-200 hover:-translate-y-1"
+              className="w-full flex justify-center transition-transform duration-200 hover:-translate-y-1"
             >
               {renderItem(item, idx)}
             </div>

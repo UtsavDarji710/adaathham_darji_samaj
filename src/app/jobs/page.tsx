@@ -311,7 +311,7 @@ export default function JobsPage() {
                         src={m.photo_url}
                         alt={m.name}
                         fallbackName={m.name}
-                        className="w-13 h-13 rounded-2xl border border-ivory-300 shadow-2xs"
+                        className="w-14 h-14 rounded-2xl border border-ivory-300 shadow-2xs flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">

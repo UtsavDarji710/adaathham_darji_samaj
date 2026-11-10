@@ -179,7 +179,7 @@ export default function EventsPage() {
           >
             <div>
               <div className="relative aspect-[16/10] overflow-hidden bg-ivory-200">
-                {evt.cover_image ? (
+                {evt.cover_image && !evt.cover_image.includes("unsplash") ? (
                   <img
                     src={evt.cover_image}
                     alt={evt.title}

@@ -168,16 +168,6 @@ export default function AdvertisementsPage() {
             અડાઆઠમ દરજી સેવા સમિતિના સભ્યો માટે પોતાના વ્યવસાય, દુકાન, બુટિક કે સેવાઓનો સમગ્ર સમાજમાં પ્રચાર કરવા માટેનું સત્તાવાર પ્લેટફોર્મ.
           </p>
         </div>
-
-        {currentUser && (
-          <button
-            onClick={() => setShowSubmitModal(true)}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-saffron-600 to-saffron-700 hover:from-saffron-700 hover:to-saffron-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all hover:scale-[1.02] flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>વ્યવસાય જાહેરાત મૂકો (Submit Ad)</span>
-          </button>
-        )}
       </div>
 
       {/* Navigation Tabs (Showcase vs My Ads) */}

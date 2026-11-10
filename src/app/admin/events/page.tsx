@@ -192,7 +192,7 @@ export default function AdminEventsPage() {
                 <tr key={evt.id} className="hover:bg-ivory-50/60 transition-colors">
                   {/* Thumbnail / Icon */}
                   <td className="py-3.5 px-4 w-16">
-                    {evt.cover_image ? (
+                    {evt.cover_image && !evt.cover_image.includes("unsplash") ? (
                       <img
                         src={evt.cover_image}
                         alt={evt.title}

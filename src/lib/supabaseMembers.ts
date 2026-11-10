@@ -117,8 +117,21 @@ export function dbRowToMember(row: any, matRow?: any): Member {
       dob: row.privacy_dob || DEFAULT_PRIVACY.dob || "public",
     },
     family_relations: Array.isArray(row.family_relations) ? row.family_relations : [],
-    business: row.employment && row.employment.business_detail ? row.employment.business_detail : undefined,
-    employment: row.employment && typeof row.employment === "object" ? row.employment : undefined,
+    business:
+      row.business && typeof row.business === "object" && row.business.business_name
+        ? row.business
+        : row.employment && row.employment.business_detail && row.employment.business_detail.business_name
+        ? row.employment.business_detail
+        : undefined,
+    employment:
+      row.employment &&
+      typeof row.employment === "object" &&
+      Boolean(
+        (row.employment.job_title && String(row.employment.job_title).trim()) ||
+        (row.employment.company && String(row.employment.company).trim())
+      )
+        ? row.employment
+        : undefined,
     education: row.education && typeof row.education === "object" ? row.education : undefined,
     password_hash: row.password_hash || undefined,
     salt: row.salt || undefined,

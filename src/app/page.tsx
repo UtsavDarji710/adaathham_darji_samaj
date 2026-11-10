@@ -35,7 +35,7 @@ import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 import { AutoScrollSlider } from "@/components/AutoScrollSlider";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Donation, Announcement, Circular, BusinessItem, CommunityEvent, CommitteeMember, DEFAULT_BUSINESS_COVER } from "@/types";
+import { Donation, Announcement, BusinessItem, CommunityEvent, DEFAULT_BUSINESS_COVER } from "@/types";
 
 export default function HomePage() {
   const {
@@ -44,7 +44,6 @@ export default function HomePage() {
     businesses,
     events,
     announcements,
-    circulars,
     committee,
     advertisements,
     donations,
@@ -144,32 +143,300 @@ export default function HomePage() {
     setCarouselIndex((prev) => (prev + 1) % approvedAds.length);
   };
 
+  // Upcoming Events Carousel for Hero Section (Auto-scrolls if > 1)
+  const displayEvents = upcomingEvents.length > 0 ? upcomingEvents : events;
+  const [eventCarouselIndex, setEventCarouselIndex] = useState(0);
+  const [isEventHovered, setIsEventHovered] = useState(false);
+
+  useEffect(() => {
+    if (displayEvents.length <= 1 || isEventHovered) return;
+    const timer = setInterval(() => {
+      setEventCarouselIndex((prev) => (prev + 1) % displayEvents.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [displayEvents.length, isEventHovered]);
+
+  const handlePrevEvent = () => {
+    setEventCarouselIndex((prev) => (prev - 1 + displayEvents.length) % displayEvents.length);
+  };
+
+  const handleNextEvent = () => {
+    setEventCarouselIndex((prev) => (prev + 1) % displayEvents.length);
+  };
+
   return (
     <div className="pb-12">
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION: SHOWS UPCOMING EVENTS ON RIGHT ONLY WHEN LOGGED IN */}
       <section className="relative overflow-hidden bg-gradient-to-b from-white via-ivory-50 to-ivory-100 pt-6 pb-10 sm:pt-8 sm:pb-12 lg:pt-10 lg:pb-14">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-saffron-100/50 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-forest-100/40 blur-3xl pointer-events-none" />
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center space-y-4 sm:space-y-5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-saffron-50 border border-saffron-200 text-saffron-800 text-[11px] sm:text-xs font-bold tracking-wide shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-saffron-600" />
-            <span>શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</span>
+        {currentUser ? (
+          /* LOGGED IN: 2-Column Hero layout with Profile on Left and Upcoming Events on Right */
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+              
+              {/* LEFT COLUMN: Title, Intro & Profile Card */}
+              <div className="lg:col-span-7 space-y-4 sm:space-y-5 text-center lg:text-left">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-saffron-50 border border-saffron-200 text-saffron-800 text-[11px] sm:text-xs font-bold tracking-wide shadow-2xs">
+                  <Sparkles className="w-3.5 h-3.5 text-saffron-600" />
+                  <span>શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</span>
+                </div>
+
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-charcoal-900 tracking-tight leading-tight">
+                  “આપણો સમાજ,{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-saffron-700 via-saffron-600 to-saffron-800">
+                    આપણો પરિવાર”
+                  </span>
+                </h1>
+
+                <p className="text-xs sm:text-sm md:text-base text-charcoal-600 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                  અડાઆઠમ દરજી સેવા સમિતિના તમામ પરિવારોને જોડતું સત્તાવાર ડિજિટલ પોર્ટલ. પરિવાર વિગતો શોધો, સભ્યો સાથે જોડાઓ અને સમાજના વ્યવસાયોને પ્રોત્સાહન આપો.
+                </p>
+
+                {/* Logged-in Profile Card */}
+                <div className="pt-1">
+                  <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-3xl border border-saffron-200 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <UserAvatar
+                        src={currentUser.photo_url}
+                        alt={currentUser.name}
+                        className="w-12 h-12 rounded-2xl border-2 border-saffron-400 shadow-xs flex-shrink-0"
+                      />
+                      <div className="text-left">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-sm text-charcoal-900">{currentUser.name}</h3>
+                          <span className="text-[10px] font-extrabold bg-saffron-100 text-saffron-800 px-2 py-0.5 rounded-full">
+                            {currentUser.role === "admin" ? "એડમિન" : currentUser.role === "president" ? "પ્રમુખ" : "સભ્ય"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-charcoal-500">
+                          {currentUser.phone ? `મોબાઈલ: ${currentUser.phone}` : "સ્વાગત છે આપનું ડિજિટલ પોર્ટલમાં"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <Link
+                        href="/profile"
+                        className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5"
+                      >
+                        <span>પ્રોફાઇલ જુઓ</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                      <button
+                        onClick={logout}
+                        className="p-2 text-charcoal-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-ivory-300"
+                        title="લોગઆઉટ"
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trust Indicators */}
+                <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-[10px] sm:text-xs text-charcoal-500 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-forest-600" />
+                    <span>૧૦૦% ચકાસાયેલા પરિવારો</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-forest-600" />
+                    <span>સંપૂર્ણ અંગત સુરક્ષા & ગોપનીયતા</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Upcoming Events Showcase (Auto-scrolls if > 1) */}
+              <div
+                className="lg:col-span-5"
+                onMouseEnter={() => setIsEventHovered(true)}
+                onMouseLeave={() => setIsEventHovered(false)}
+              >
+                <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-saffron-200/90 shadow-xl p-4 sm:p-5 relative overflow-hidden transition-all hover:shadow-2xl">
+                  {/* Header */}
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-ivory-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-saffron-100 text-saffron-700 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-sm sm:text-base text-charcoal-900 leading-tight">
+                          આગામી સમાજ કાર્યક્રમો
+                        </h3>
+                        <p className="text-[10px] text-charcoal-500">
+                          Upcoming Community Events
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {displayEvents.length > 1 && (
+                        <div className="flex items-center gap-1 mr-1">
+                          <button
+                            type="button"
+                            onClick={handlePrevEvent}
+                            className="p-1 rounded-lg bg-ivory-100 hover:bg-saffron-100 text-charcoal-700 hover:text-saffron-800 transition-colors"
+                            title="પાછળ"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[10px] font-bold text-charcoal-500 px-1">
+                            {eventCarouselIndex + 1}/{displayEvents.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleNextEvent}
+                            className="p-1 rounded-lg bg-ivory-100 hover:bg-saffron-100 text-charcoal-700 hover:text-saffron-800 transition-colors"
+                            title="આગળ"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <Link
+                        href="/events"
+                        className="px-2.5 py-1 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 text-[11px] font-bold rounded-lg border border-saffron-200 transition-colors"
+                      >
+                        બધા જુઓ →
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Events Carousel */}
+                  {displayEvents.length > 0 ? (
+                    <div className="relative">
+                      <div className="overflow-hidden rounded-2xl">
+                        <div
+                          className="flex transition-transform duration-500 ease-in-out"
+                          style={{
+                            transform: `translateX(-${eventCarouselIndex * 100}%)`,
+                          }}
+                        >
+                          {displayEvents.map((evt) => (
+                            <div key={evt.id} className="w-full flex-shrink-0">
+                              {/* Banner / Poster */}
+                              <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden bg-ivory-100 mb-3 group">
+                                {evt.cover_image && !evt.cover_image.includes("unsplash") ? (
+                                  <img
+                                    src={evt.cover_image}
+                                    alt={evt.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-saffron-100 via-amber-50 to-ivory-200 flex flex-col items-center justify-center p-4 text-center">
+                                    <div className="w-11 h-11 rounded-2xl bg-white/90 shadow-xs flex items-center justify-center mb-1.5">
+                                      <Calendar className="w-6 h-6 text-saffron-600" />
+                                    </div>
+                                    <span className="text-xs font-bold text-saffron-900/80 line-clamp-1">
+                                      {evt.title}
+                                    </span>
+                                    <span className="text-[10px] text-charcoal-500 mt-0.5">
+                                      શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Badges on Banner */}
+                                <div className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs text-saffron-800 font-bold text-[11px] px-2.5 py-0.5 rounded-lg shadow-2xs flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-saffron-600" />
+                                  <span>{evt.date}</span>
+                                </div>
+
+                                <span className="absolute bottom-2 right-2 text-[10px] font-bold bg-black/75 backdrop-blur-xs text-white px-2 py-0.5 rounded-md">
+                                  {evt.organizer || "અડાઆઠમ દરજી સેવા સમિતિ"}
+                                </span>
+                              </div>
+
+                              {/* Event Details */}
+                              <div className="space-y-2">
+                                <h4 className="font-extrabold text-sm sm:text-base text-charcoal-900 line-clamp-1 hover:text-saffron-700 transition-colors">
+                                  {evt.title}
+                                </h4>
+
+                                <p className="text-xs text-charcoal-600 line-clamp-2 leading-relaxed">
+                                  {evt.description}
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-ivory-200 text-xs text-charcoal-600">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <MapPin className="w-3.5 h-3.5 text-saffron-600 flex-shrink-0" />
+                                    <span className="truncate">{evt.location}, {evt.city}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 font-medium text-forest-700 sm:justify-end">
+                                    <span>સમય: {evt.time}</span>
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-between">
+                                  <span className="text-[10px] font-semibold text-saffron-700 bg-saffron-50 px-2 py-0.5 rounded-md border border-saffron-200">
+                                    આગામી ઉત્સવ / આયોજન
+                                  </span>
+                                  <Link
+                                    href={`/events/${evt.id}`}
+                                    className="px-3.5 py-1.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1"
+                                  >
+                                    <span>વિગતો અને ફોટો ગેલેરી</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dots Pagination if > 1 */}
+                      {displayEvents.length > 1 && (
+                        <div className="flex items-center justify-center gap-1.5 pt-3">
+                          {displayEvents.map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setEventCarouselIndex(i)}
+                              className={`h-1.5 rounded-full transition-all ${
+                                eventCarouselIndex === i
+                                  ? "w-5 bg-saffron-600"
+                                  : "w-1.5 bg-ivory-300 hover:bg-ivory-400"
+                              }`}
+                              aria-label={`Event ${i + 1}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-charcoal-500">
+                      <Calendar className="w-10 h-10 mx-auto text-charcoal-300 mb-2" />
+                      <p className="text-xs font-semibold">હાલમાં કોઈ આગામી કાર્યક્રમ નિર્ધારિત નથી.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
           </div>
+        ) : (
+          /* LOGGED OUT: Centered Hero Banner with Quick Login (Upcoming Events is hidden) */
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center space-y-4 sm:space-y-5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-saffron-50 border border-saffron-200 text-saffron-800 text-[11px] sm:text-xs font-bold tracking-wide shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-saffron-600" />
+              <span>શ્રી અડાઆઠમ દરજી સેવા સમિતિ, મોડાસા</span>
+            </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-charcoal-900 tracking-tight leading-tight">
-            “આપણો સમાજ,{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-saffron-700 via-saffron-600 to-saffron-800">
-              આપણો પરિવાર”
-            </span>
-          </h1>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-charcoal-900 tracking-tight leading-tight">
+              “આપણો સમાજ,{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-saffron-700 via-saffron-600 to-saffron-800">
+                આપણો પરિવાર”
+              </span>
+            </h1>
 
-          <p className="text-xs sm:text-sm md:text-base text-charcoal-600 max-w-2xl mx-auto font-normal leading-relaxed">
-            અડાઆઠમ દરજી સેવા સમિતિના તમામ પરિવારોને જોડતું સત્તાવાર ડિજિટલ પોર્ટલ. પરિવાર વિગતો શોધો, સભ્યો સાથે જોડાઓ અને સમાજના વ્યવસાયોને પ્રોત્સાહન આપો.
-          </p>
+            <p className="text-xs sm:text-sm md:text-base text-charcoal-600 max-w-2xl mx-auto font-normal leading-relaxed">
+              અડાઆઠમ દરજી સેવા સમિતિના તમામ પરિવારોને જોડતું સત્તાવાર ડિજિટલ પોર્ટલ. પરિવાર વિગતો શોધો, સભ્યો સાથે જોડાઓ અને સમાજના વ્યવસાયોને પ્રોત્સાહન આપો.
+            </p>
 
-          {/* Quick Login / Auth Card or Logged-in Profile */}
-          {!currentUser ? (
+            {/* Quick Login Form */}
             <div className="max-w-xl mx-auto pt-2">
               <form
                 onSubmit={handleQuickLogin}
@@ -266,60 +533,20 @@ export default function HomePage() {
                 </div>
               </form>
             </div>
-          ) : (
-            <div className="max-w-xl mx-auto pt-2">
-              <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-3xl border border-saffron-200 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <UserAvatar
-                    src={currentUser.photo_url}
-                    alt={currentUser.name}
-                    className="w-12 h-12 rounded-2xl border-2 border-saffron-400 shadow-xs flex-shrink-0"
-                  />
-                  <div className="text-left">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm text-charcoal-900">{currentUser.name}</h3>
-                      <span className="text-[10px] font-extrabold bg-saffron-100 text-saffron-800 px-2 py-0.5 rounded-full">
-                        {currentUser.role === "admin" ? "એડમિન" : currentUser.role === "president" ? "પ્રમુખ" : "સભ્ય"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-charcoal-500">
-                      {currentUser.phone ? `મોબાઈલ: ${currentUser.phone}` : "સ્વાગત છે આપનું ડિજિટલ પોર્ટલમાં"}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  <Link
-                    href="/profile"
-                    className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5"
-                  >
-                    <span>પ્રોફાઇલ જુઓ</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                  <button
-                    onClick={logout}
-                    className="p-2 text-charcoal-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-ivory-300"
-                    title="લોગઆઉટ"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
+            {/* Trust Indicators */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-charcoal-500 font-medium">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-forest-600" />
+                <span>૧૦૦% ચકાસાયેલા પરિવારો</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-forest-600" />
+                <span>સંપૂર્ણ અંગત સુરક્ષા & ગોપનીયતા</span>
               </div>
             </div>
-          )}
-
-          {/* Trust Indicators */}
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[10px] sm:text-xs text-charcoal-500 font-medium">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5 text-forest-600" />
-              <span>૧૦૦% ચકાસાયેલા પરિવારો</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-forest-600" />
-              <span>સંપૂર્ણ અંગત સુરક્ષા & ગોપનીયતા</span>
-            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Subsequent Sections with Consistent Vertical Rhythm */}
@@ -560,90 +787,11 @@ export default function HomePage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 5 HORIZONTAL AUTO-SCROLLING SLIDERS (MARQUEE / INFINITE LOOP)             */}
+      {/* 3 HORIZONTAL AUTO-SCROLLING SLIDERS (MARQUEE / INFINITE LOOP)             */}
+      {/* 1. Important Notices, 2. Community Businesses, 3. Donors List             */}
       {/* ========================================================================= */}
 
-      {/* 1. દાતાઓની યાદી (Donors List - Continuous Horizontal Auto-Scroll) */}
-      <AutoScrollSlider<Donation>
-        items={approvedDonors}
-        speedSeconds={28}
-        direction="left"
-        icon={<Heart className="w-5 h-5 text-rose-600 fill-rose-100" />}
-        title="દાતાઓની યાદી (Donors List)"
-        subtitle="સમાજ વિકાસ, શિક્ષણ અને આરોગ્ય ભંડોળમાં ઉદાર હાથે દાન આપનાર સન્માનનીય દાતાઓ. (સતત ઓટો-સ્ક્રોલિંગ)"
-        headerRight={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/donations"
-              className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 transition-colors flex items-center gap-1"
-            >
-              <span>તમામ દાતાઓ ({approvedDonors.length})</span>
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-            {currentUser && (
-              <Link
-                href="/donations"
-                className="px-3 py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors hidden sm:inline-flex"
-              >
-                + દાન નોંધાવો
-              </Link>
-            )}
-          </div>
-        }
-        renderItem={(donor) => (
-          <div className="w-[280px] sm:w-[320px] bg-white rounded-3xl border border-ivory-300 p-4 sm:p-5 shadow-card hover:shadow-hover transition-all flex flex-col justify-between h-[210px] relative overflow-hidden group">
-            {/* Top Accent Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 via-saffron-500 to-amber-500" />
-
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <Award className="w-3 h-3 text-rose-600" />
-                  <span>વર્ષ {donor.donation_year}</span>
-                </span>
-                <span className="text-[10px] font-bold text-charcoal-400">
-                  {donor.donation_id}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-rose-200 flex-shrink-0 shadow-2xs">
-                  <UserAvatar
-                    src={donor.donor_photo}
-                    alt={donor.donor_name}
-                    fallbackName={donor.donor_name}
-                    className="w-full h-full rounded-2xl"
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-extrabold text-xs sm:text-sm text-charcoal-900 truncate group-hover:text-rose-700 transition-colors">
-                    {donor.donor_name}
-                  </h4>
-                  <p className="text-[11px] text-charcoal-500 truncate mt-0.5">
-                    {donor.donation_purpose}
-                  </p>
-                </div>
-              </div>
-
-              {donor.hasthe_names && donor.hasthe_names.length > 0 && (
-                <p className="text-[10px] text-charcoal-500 mt-2 truncate bg-ivory-50 px-2 py-1 rounded-lg border border-ivory-200">
-                  હસ્તે: <strong>{donor.hasthe_names.join(", ")}</strong>
-                </p>
-              )}
-            </div>
-
-            <div className="pt-2 mt-2 border-t border-ivory-200 flex items-center justify-between">
-              <span className="text-xs font-bold text-charcoal-600">દાન રાશિ:</span>
-              <span className="text-sm font-black text-forest-800 bg-forest-50 border border-forest-200 px-2.5 py-0.5 rounded-lg shadow-2xs font-mono">
-                ₹{donor.amount.toLocaleString("en-IN")}
-              </span>
-            </div>
-          </div>
-        )}
-      />
-
-      {/* 2. મહત્વપૂર્ણ સૂચનાઓ (Important Notices - Continuous Horizontal Auto-Scroll) */}
+      {/* 1. મહત્વપૂર્ણ સૂચનાઓ (Important Notices - Continuous Horizontal Auto-Scroll) */}
       <AutoScrollSlider<Announcement>
         items={announcements}
         speedSeconds={45}
@@ -693,60 +841,7 @@ export default function HomePage() {
         )}
       />
 
-      {/* 3. પરિપત્રો (Circulars - Continuous Horizontal Auto-Scroll) */}
-      <AutoScrollSlider<Circular>
-        items={circulars}
-        speedSeconds={42}
-        direction="left"
-        icon={<FileText className="w-5 h-5 text-amber-600" />}
-        title="સત્તાવાર પરિપત્રો (Official Circulars)"
-        subtitle="શ્રી અડાઆઠમ દરજી સેવા સમિતિ દ્વારા બહાર પાડવામાં આવેલ અધિકૃત પરિપત્રો અને ઠરાવો."
-        headerRight={
-          <Link
-            href="/committee"
-            className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl border border-amber-200 transition-colors flex items-center gap-1"
-          >
-            <span>તમામ પરિપત્રો</span>
-            <ChevronRight className="w-3 h-3" />
-          </Link>
-        }
-        renderItem={(circ) => (
-          <div className="w-[300px] sm:w-[340px] md:w-[380px] bg-white rounded-3xl border border-amber-200/80 p-4 sm:p-5 shadow-card hover:shadow-hover transition-all flex flex-col justify-between h-[230px] group relative overflow-hidden">
-            {/* Stamp Style Watermark */}
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full border-4 border-amber-100/60 pointer-events-none flex items-center justify-center text-[10px] font-black text-amber-200 uppercase -rotate-12">
-              સત્તાવાર
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md font-mono">
-                  {circ.circular_no}
-                </span>
-                <span className="text-[11px] text-charcoal-500">{circ.date}</span>
-              </div>
-              <h3 className="font-extrabold text-xs sm:text-sm text-charcoal-900 mb-1 leading-snug line-clamp-2 group-hover:text-amber-800 transition-colors">
-                {circ.title}
-              </h3>
-              <p className="text-[11px] text-amber-800 font-medium mb-1 truncate">
-                વિષય: {circ.subject}
-              </p>
-              <p className="text-xs text-charcoal-600 line-clamp-2 leading-relaxed">
-                {circ.body}
-              </p>
-            </div>
-
-            <div className="pt-2 mt-2 border-t border-ivory-200 flex items-center justify-between text-[11px] text-charcoal-600">
-              <span className="truncate">સહી: {circ.signatory}</span>
-              <span className="font-bold text-amber-800 cursor-pointer hover:underline flex-shrink-0 flex items-center gap-1">
-                <span>વિગત</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-        )}
-      />
-
-      {/* 4. સમાજના વ્યવસાયો અને ઉદ્યોગો (Community Businesses & Industries - Continuous Horizontal Auto-Scroll) */}
+      {/* 2. સમાજના વ્યવસાયો અને ઉદ્યોગો (Community Businesses & Industries - Continuous Horizontal Auto-Scroll) */}
       <AutoScrollSlider<BusinessItem>
         items={activeBusinesses}
         speedSeconds={34}
@@ -836,71 +931,81 @@ export default function HomePage() {
         )}
       />
 
-      {/* 5. આગામી કાર્યક્રમો (Upcoming Events - Continuous Horizontal Auto-Scroll) */}
-      <AutoScrollSlider<CommunityEvent>
-        items={upcomingEvents.length > 0 ? upcomingEvents : events}
-        speedSeconds={38}
+      {/* 3. દાતાઓની યાદી (Donors List - Continuous Horizontal Auto-Scroll) */}
+      <AutoScrollSlider<Donation>
+        items={approvedDonors}
+        speedSeconds={28}
         direction="left"
-        icon={<Calendar className="w-5 h-5 text-saffron-600" />}
-        title="આગામી સમાજ કાર્યક્રમો (Upcoming Events)"
-        subtitle="સ્નેહમિલન, સાંસ્કૃતિક ઉત્સવો, રક્તદાન કેમ્પ અને ધાર્મિક મહોત્સવો."
+        icon={<Heart className="w-5 h-5 text-rose-600 fill-rose-100" />}
+        title="દાતાઓની યાદી (Donors List)"
+        subtitle="સમાજ વિકાસ, શિક્ષણ અને આરોગ્ય ભંડોળમાં ઉદાર હાથે દાન આપનાર સન્માનનીય દાતાઓ. (સતત ઓટો-સ્ક્રોલિંગ)"
         headerRight={
-          <Link
-            href="/events"
-            className="px-3.5 py-1.5 bg-saffron-50 hover:bg-saffron-100 text-saffron-800 text-xs font-bold rounded-xl border border-saffron-200 transition-colors flex items-center gap-1 group"
-          >
-            <span>સંપૂર્ણ યાદી</span>
-            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/donations"
+              className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 transition-colors flex items-center gap-1"
+            >
+              <span>તમામ દાતાઓ ({approvedDonors.length})</span>
+              <ChevronRight className="w-3 h-3" />
+            </Link>
+            {currentUser && (
+              <Link
+                href="/donations"
+                className="px-3 py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors hidden sm:inline-flex"
+              >
+                + દાન નોંધાવો
+              </Link>
+            )}
+          </div>
         }
-        renderItem={(evt) => (
-          <div className="w-[290px] sm:w-[320px] md:w-[340px] bg-white rounded-3xl border border-ivory-300 overflow-hidden shadow-card hover:shadow-hover transition-all flex flex-col group h-[310px]">
-            <div className="relative aspect-[16/10] overflow-hidden flex-shrink-0">
-              {evt.cover_image ? (
-                <img
-                  src={evt.cover_image}
-                  alt={evt.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-saffron-50 via-saffron-100/40 to-ivory-200 flex flex-col items-center justify-center p-3 text-center">
-                  <Calendar className="w-8 h-8 text-saffron-600/30 mb-1" />
-                  <span className="text-[11px] font-bold text-saffron-900/60 line-clamp-1">{evt.title}</span>
-                </div>
-              )}
-              <div className="absolute top-2.5 left-2.5 bg-white/95 text-saffron-800 font-bold text-xs px-2 py-0.5 rounded-lg shadow-2xs">
-                {evt.date}
+        renderItem={(donor) => (
+          <div className="w-[280px] sm:w-[320px] bg-white rounded-3xl border border-ivory-300 p-4 sm:p-5 shadow-card hover:shadow-hover transition-all flex flex-col justify-between h-[210px] relative overflow-hidden group">
+            {/* Top Accent Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 via-saffron-500 to-amber-500" />
+
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Award className="w-3 h-3 text-rose-600" />
+                  <span>વર્ષ {donor.donation_year}</span>
+                </span>
+                <span className="text-[10px] font-bold text-charcoal-400">
+                  {donor.donation_id}
+                </span>
               </div>
-              <span className="absolute bottom-2 right-2 text-[9px] font-bold bg-forest-900/80 text-white px-2 py-0.5 rounded-md">
-                {evt.organizer}
-              </span>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-rose-200 flex-shrink-0 shadow-2xs">
+                  <UserAvatar
+                    src={donor.donor_photo}
+                    alt={donor.donor_name}
+                    fallbackName={donor.donor_name}
+                    className="w-full h-full rounded-2xl"
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-extrabold text-xs sm:text-sm text-charcoal-900 truncate group-hover:text-rose-700 transition-colors">
+                    {donor.donor_name}
+                  </h4>
+                  <p className="text-[11px] text-charcoal-500 truncate mt-0.5">
+                    {donor.donation_purpose}
+                  </p>
+                </div>
+              </div>
+
+              {donor.hasthe_names && donor.hasthe_names.length > 0 && (
+                <p className="text-[10px] text-charcoal-500 mt-2 truncate bg-ivory-50 px-2 py-1 rounded-lg border border-ivory-200">
+                  હસ્તે: <strong>{donor.hasthe_names.join(", ")}</strong>
+                </p>
+              )}
             </div>
 
-            <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="font-bold text-xs sm:text-sm text-charcoal-900 group-hover:text-saffron-700 transition-colors leading-snug line-clamp-1">
-                  {evt.title}
-                </h3>
-                <p className="text-[11px] text-charcoal-600 mt-1 line-clamp-2 leading-relaxed">
-                  {evt.description}
-                </p>
-              </div>
-
-              <div className="pt-2 mt-2 border-t border-ivory-200 space-y-1 text-[11px] text-charcoal-600">
-                <div className="flex items-center gap-1.5 truncate">
-                  <MapPin className="w-3 h-3 text-saffron-600 flex-shrink-0" />
-                  <span className="truncate">{evt.location}, {evt.city}</span>
-                </div>
-                <div className="flex items-center justify-between pt-0.5">
-                  <span className="text-forest-700 font-semibold">{evt.time}</span>
-                  <Link
-                    href={`/events/${evt.id}`}
-                    className="text-saffron-700 font-bold hover:underline"
-                  >
-                    વિગતો →
-                  </Link>
-                </div>
-              </div>
+            <div className="pt-2 mt-2 border-t border-ivory-200 flex items-center justify-between">
+              <span className="text-xs font-bold text-charcoal-600">દાન રાશિ:</span>
+              <span className="text-sm font-black text-forest-800 bg-forest-50 border border-forest-200 px-2.5 py-0.5 rounded-lg shadow-2xs font-mono">
+                ₹{donor.amount.toLocaleString("en-IN")}
+              </span>
             </div>
           </div>
         )}

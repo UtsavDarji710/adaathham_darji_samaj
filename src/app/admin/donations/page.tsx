@@ -33,18 +33,10 @@ import {
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
-import { Donation, Member } from "@/types";
+import { Donation, Member, SAMITI_DONATION_PURPOSES } from "@/types";
 import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
 
-const DONATION_PURPOSES = [
-  "સમાજના વિકાસ માટે",
-  "સમાજ ભવન નિર્માણ ફંડ",
-  "શિક્ષણ સહાય & સ્કોલરશીપ",
-  "આરોગ્ય & તબીબી સહાય",
-  "સામાજિક કાર્યક્રમ / મહોત્સવ",
-  "અન્નક્ષેત્ર / ભોજન સહાય",
-  "અન્ય (Other)",
-];
+const DONATION_PURPOSES = [...SAMITI_DONATION_PURPOSES];
 
 const PAYMENT_METHODS = [
   "રોકડ (Cash)",

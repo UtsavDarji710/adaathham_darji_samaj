@@ -28,16 +28,10 @@ import {
 } from "lucide-react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
-import { Donation } from "@/types";
+import { Donation, SAMITI_DONATION_PURPOSES } from "@/types";
 import ImageUploadWithCrop from "@/components/ImageUploadWithCrop";
 
-const PURPOSES = [
-  "સમાજના વિકાસ માટે",
-  "શિક્ષણ સહાય",
-  "આરોગ્ય સહાય",
-  "સામાજિક કાર્યક્રમ",
-  "અન્ય (Other)",
-];
+const PURPOSES = [...SAMITI_DONATION_PURPOSES];
 
 const YEARS = ["2026", "2025", "2024", "2023", "2022"];
 

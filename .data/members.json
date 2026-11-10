@@ -90,14 +90,14 @@
         "show_occupation": true,
         "show_contact": true
       },
-      "updated_at": "2026-11-09T12:59:40.249+00:00"
+      "updated_at": "2026-11-09T13:28:12.802+00:00"
     },
     "gender": "male",
     "blood_group": "B+",
     "jati": "અડાઆઠમ દરજી",
     "caste": "અડાઆઠમ દરજી",
     "is_deceased": false,
-    "role": "president",
+    "role": "member",
     "is_lifetime_member": false,
     "committee_order": 99,
     "completeness": 95,
@@ -106,10 +106,11 @@
       "phone": "members",
       "address": "members",
       "photo": "public",
-      "family": "members",
+      "family": "public",
       "business": "public",
-      "employment": "members",
-      "education": "members"
+      "employment": "public",
+      "education": "public",
+      "dob": "public"
     },
     "family_relations": [
       {
@@ -137,12 +138,16 @@
       "experience_years": "3 years"
     },
     "education": {
-      "dod": "",
-      "jati": "અડાઆઠમ દરજી",
+      "highest_degree": "B Tech",
+      "education_category": "સ્નાતક (Graduate)",
+      "education_details": "B Tech",
+      "institution": "",
+      "field_of_study": "સ્નાતક (Graduate)",
+      "passing_year": "",
       "degrees": [
         {
           "id": "deg-1794225713598-p5ur",
-          "degree": "hgv",
+          "degree": "B Tech",
           "member_id": "self",
           "institution": "",
           "member_name": "Utsav Darji",
@@ -150,13 +155,7 @@
           "field_of_study": "સ્નાતક (Graduate)"
         }
       ],
-      "institution": "",
-      "passing_year": "",
-      "field_of_study": "સ્નાતક (Graduate)",
-      "highest_degree": "hgv",
-      "family_education": [],
-      "education_details": "hgv",
-      "education_category": "સ્નાતક (Graduate)"
+      "family_education": []
     },
     "password_hash": "a855099bc0d6de797584ed52dfa327445675da2b37611f1e22c49ffd4cd8dc8e61f5009ed5c542d82076fe9b892a1882f3490633d80618ba6b533a304818a4f0",
     "salt": "4a978097c3352a4304e69efe73a4dbff"
