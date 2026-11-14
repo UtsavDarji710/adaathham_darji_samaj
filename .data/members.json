@@ -281,17 +281,37 @@
     "piyar_name": "",
     "is_public_in_family": false,
     "marital_status": "પરણિત (Married)",
+    "is_available_for_matrimony": false,
+    "matrimony": {
+      "is_available": false,
+      "is_public_listing": false,
+      "is_saved": true,
+      "height": "5' 8\"",
+      "weight": "",
+      "complexion": "ઘઉંવર્ણ (Wheatish)",
+      "subcaste_gotra": "",
+      "about_me": "",
+      "partner_expectations": "",
+      "hobbies": "",
+      "privacy": {
+        "show_name": true,
+        "show_photo": true,
+        "show_age": true,
+        "show_native_place": true,
+        "show_education": true,
+        "show_occupation": true,
+        "show_contact": false
+      },
+      "updated_at": "2026-11-09T13:46:44.438+00:00"
+    },
     "gender": "male",
-    "dob": null,
     "blood_group": "B+",
+    "is_deceased": false,
     "role": "admin",
     "is_lifetime_member": false,
-    "committee_role": null,
     "committee_order": 99,
     "completeness": 95,
-    "family_relations": [],
-    "employment": {},
-    "education": {},
+    "created_at": "2026-11-09T13:25:10.172184+00:00",
     "privacy": {
       "phone": "private",
       "address": "private",
@@ -302,7 +322,10 @@
       "education": "private",
       "dob": "public"
     },
-    "created_at": "2026-11-09T13:25:10.172184+00:00"
+    "family_relations": [],
+    "education": {},
+    "password_hash": "fe7684872d16fb5fdb52099e5c509e5a2f0f4b785f01e84f7448032f968fc682b1db33c1274f252304a8e9278082f4962339e818f1fb5f6d97500c8017f5dd75",
+    "salt": "4c1de4b72e4258e6e4a00377f09783e7"
   },
   {
     "id": "ca7981d7-cd80-4107-9e71-497aad39beee",
@@ -420,15 +443,51 @@
     "sasri_name": "",
     "piyar_name": "",
     "is_public_in_family": false,
-    "marital_status": "પરણિત (Married)",
+    "marital_status": "સગાઈ થયેલ (Engaged)",
+    "is_available_for_matrimony": false,
+    "matrimony": {
+      "is_available": false,
+      "is_public_listing": false,
+      "is_saved": true,
+      "height": "5' 8\"",
+      "weight": "",
+      "complexion": "ઘઉંવર્ણ (Wheatish)",
+      "subcaste_gotra": "",
+      "about_me": "overall good",
+      "partner_expectations": "Graduate",
+      "hobbies": "",
+      "privacy": {
+        "show_name": true,
+        "show_photo": true,
+        "show_age": false,
+        "show_native_place": true,
+        "show_education": true,
+        "show_occupation": true,
+        "show_contact": true
+      },
+      "updated_at": "2026-11-10T18:21:16.737+00:00"
+    },
     "gender": "male",
     "dob": "2001-10-07",
     "blood_group": "B+",
+    "jati": "અડાઆઠમ દરજી",
+    "caste": "અડાઆઠમ દરજી",
+    "is_deceased": false,
     "role": "member",
     "is_lifetime_member": false,
-    "committee_role": null,
     "committee_order": 99,
     "completeness": 95,
+    "created_at": "2026-11-08T21:15:34.860177+00:00",
+    "privacy": {
+      "phone": "members",
+      "address": "members",
+      "photo": "public",
+      "family": "public",
+      "business": "public",
+      "employment": "public",
+      "education": "public",
+      "dob": "public"
+    },
     "family_relations": [
       {
         "id": "rel-1794172585633-pzcm",
@@ -457,17 +516,8 @@
     "education": {
       "jati": "અડાઆઠમ દરજી"
     },
-    "privacy": {
-      "phone": "members",
-      "address": "members",
-      "photo": "public",
-      "family": "public",
-      "business": "public",
-      "employment": "public",
-      "education": "public",
-      "dob": "public"
-    },
-    "created_at": "2026-11-08T21:15:34.860177+00:00"
+    "password_hash": "a855099bc0d6de797584ed52dfa327445675da2b37611f1e22c49ffd4cd8dc8e61f5009ed5c542d82076fe9b892a1882f3490633d80618ba6b533a304818a4f0",
+    "salt": "4a978097c3352a4304e69efe73a4dbff"
   },
   {
     "id": "549391b9-64bc-4e80-9ff1-a718d25bd47d",

@@ -133,6 +133,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const committee = useMemo(() => {
     const list: CommitteeMember[] = [];
     members.forEach((m) => {
+      // Exclude administrative organization account unless explicitly assigned a committee role
+      if (
+        (m.role === "admin" && !m.committee_role) ||
+        m.username?.toLowerCase() === "adss" ||
+        m.email?.toLowerCase() === "adaathamdarjisevasamitimodasa@gmail.com" ||
+        m.name?.trim().toUpperCase() === "ADAATHAM DARJI SEVA SAMITI"
+      ) {
+        return;
+      }
       if (m.committee_role || (m.role && m.role !== "member")) {
         list.push({
           id: m.id,

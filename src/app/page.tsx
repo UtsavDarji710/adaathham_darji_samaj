@@ -89,8 +89,14 @@ export default function HomePage() {
     }
   };
 
-  // Statistics calculated dynamically from live state
-  const totalMembers = members.length;
+  // Statistics calculated dynamically from live state (excluding administrative accounts)
+  const totalMembers = members.filter(
+    (m) =>
+      m.role !== "admin" &&
+      m.username?.toLowerCase() !== "adss" &&
+      m.email?.toLowerCase() !== "adaathamdarjisevasamitimodasa@gmail.com" &&
+      m.name?.trim().toUpperCase() !== "ADAATHAM DARJI SEVA SAMITI"
+  ).length;
   const totalFamilies = relationships.length > 0 
     ? new Set(relationships.map((r) => r.from_member_id)).size 
     : totalMembers;

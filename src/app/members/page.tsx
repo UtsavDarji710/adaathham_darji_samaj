@@ -30,21 +30,32 @@ export default function MembersDirectoryPage() {
   const [selectedNative, setSelectedNative] = useState("all");
   const [activeModalMember, setActiveModalMember] = useState<Member | null>(null);
 
+  // Filter out system administrator account(s) from frontend members directory
+  const directoryMembers = useMemo(() => {
+    return members.filter((m) => {
+      if (m.role === "admin") return false;
+      if (m.username?.toLowerCase() === "adss") return false;
+      if (m.email?.toLowerCase() === "adaathamdarjisevasamitimodasa@gmail.com") return false;
+      if (m.name?.trim().toUpperCase() === "ADAATHAM DARJI SEVA SAMITI") return false;
+      return true;
+    });
+  }, [members]);
+
   // Extract unique cities & native places for filtering
   const cities = useMemo(() => {
-    return Array.from(new Set(members.map((m) => m.city))).filter(Boolean);
-  }, [members]);
+    return Array.from(new Set(directoryMembers.map((m) => m.city))).filter(Boolean);
+  }, [directoryMembers]);
 
   // Use all official Samiti native places (used in profile) plus any custom registered places
   const nativePlaces = useMemo(() => {
     const list = new Set<string>(SAMITI_NATIVE_PLACES);
-    members.forEach((m) => {
+    directoryMembers.forEach((m) => {
       if (m.native_place && m.native_place.trim()) {
         list.add(m.native_place.trim());
       }
     });
     return Array.from(list);
-  }, [members]);
+  }, [directoryMembers]);
 
   // Helper to extract valid business detail (from member profile or linked business directory)
   const getMemberBusiness = (member: Member) => {
@@ -124,7 +135,7 @@ export default function MembersDirectoryPage() {
   // Filter members based on query and dropdowns
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return members.filter((m) => {
+    return directoryMembers.filter((m) => {
       const biz = getMemberBusiness(m);
       const emp = getMemberEmployment(m);
 
@@ -143,7 +154,7 @@ export default function MembersDirectoryPage() {
 
       return matchSearch && matchCity && matchNative;
     });
-  }, [members, businesses, searchQuery, selectedCity, selectedNative]);
+  }, [directoryMembers, businesses, searchQuery, selectedCity, selectedNative]);
 
   // Helper to determine phone visibility (default: private)
   const canViewPhone = (member: Member) => {
@@ -435,11 +446,11 @@ export default function MembersDirectoryPage() {
           <Users className="w-12 h-12 text-charcoal-300 mx-auto mb-3" />
           <p className="text-sm font-bold text-charcoal-700">કોઈ સભ્ય મળ્યો નથી.</p>
           <p className="text-xs text-charcoal-500 mt-1 mb-4">
-            {members.length === 0
+            {directoryMembers.length === 0
               ? "હજુ સુધી કોઈ સભ્ય નોંધાયેલ નથી. પ્રથમ સભ્ય તરીકે જોડાવા માટે નવી નોંધણી કરો."
               : "કૃપા કરીને અન્ય નામ અથવા ફિલ્ટર પસંદ કરો."}
           </p>
-          {members.length === 0 && (
+          {directoryMembers.length === 0 && (
             <Link
               href="/register"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs shadow-xs transition-colors"

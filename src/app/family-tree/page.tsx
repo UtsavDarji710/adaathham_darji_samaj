@@ -132,6 +132,16 @@ function FamilyTreeContent() {
     const q = searchQuery.toLowerCase().trim();
 
     return members.filter((m) => {
+      // Exclude system admin / organization account from family search
+      if (
+        m.role === "admin" ||
+        m.username?.toLowerCase() === "adss" ||
+        m.email?.toLowerCase() === "adaathamdarjisevasamitimodasa@gmail.com" ||
+        m.name?.trim().toUpperCase() === "ADAATHAM DARJI SEVA SAMITI"
+      ) {
+        return false;
+      }
+
       // Village filter
       if (selectedVillage !== "all" && m.native_place !== selectedVillage) {
         return false;
